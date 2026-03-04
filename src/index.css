@@ -1,0 +1,457 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Folio — Design System
+   ============================================ */
+
+@layer base {
+
+  /* Light mode — dark I-beam cursor */
+  :root {
+    color-scheme: light;
+  }
+
+  /* Dark mode — white I-beam cursor */
+  .dark {
+    color-scheme: dark;
+  }
+
+  /* --- Root Defaults --- */
+  html {
+    @apply antialiased;
+    scroll-behavior: smooth;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    @apply bg-folio-bg text-folio-text font-sans text-body;
+    transition: background-color 200ms ease, color 200ms ease;
+    overflow: hidden;
+    overscroll-behavior: none;
+    caret-color: #1a1a1a;
+  }
+
+  .dark body {
+    @apply bg-folio-dark-bg text-folio-dark-text;
+    caret-color: #e5e5e5;
+  }
+
+  .dark body {
+    @apply bg-folio-dark-bg text-folio-dark-text;
+    caret-color: #e5e5e5;
+  }
+
+  ::selection {
+    @apply bg-folio-accent/20 text-folio-text;
+  }
+
+  .dark ::selection {
+    @apply bg-folio-dark-accent/20 text-folio-dark-text;
+  }
+
+  /* --- Caret Token Defaults --- */
+  .ProseMirror-parent {
+    --caret-color: #5B4FCF;
+  }
+
+  .dark .ProseMirror-parent {
+    --caret-color: #7C6AFB;
+  }
+
+  /* --- Scrollbar --- */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-folio-border rounded-full;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-folio-dark-border;
+  }
+}
+
+/* ============================================
+   TipTap Editor — Prose Styling
+   ============================================ */
+
+.prose-folio {
+  @apply font-sans text-body max-w-prose-folio mx-auto;
+  caret-color: theme('colors.folio.accent');
+  scroll-behavior: auto !important;
+  /* Prevent browser smooth scroll interference */
+}
+
+.dark .prose-folio {
+  caret-color: theme('colors.folio.dark-accent');
+}
+
+/* NoteTitle — the document name */
+.note-title {
+  font-size: 3rem;
+  /* 48px — significantly larger than H1 */
+  font-weight: 300;
+  /* lighter weight creates contrast with bold H1s */
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-bottom: 2rem;
+}
+
+/* Headings */
+.prose-folio h1 {
+  @apply text-folio-text;
+  font-family: theme('fontFamily.serif');
+  font-size: 1.75rem;
+  /* 28px — noticeably smaller than the title */
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-folio h2 {
+  @apply text-folio-text;
+  font-family: theme('fontFamily.serif');
+  font-size: 1.35rem;
+  /* 22px */
+  font-weight: 600;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-folio h3 {
+  @apply text-folio-text;
+  font-family: theme('fontFamily.serif');
+  font-size: 1.2rem;
+  /* 19.2px */
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.dark .prose-folio h1,
+.dark .prose-folio h2,
+.dark .prose-folio h3 {
+  @apply text-folio-dark-text;
+}
+
+/* Paragraphs */
+.prose-folio p {
+  @apply mb-4;
+}
+
+/* Bold & Italic */
+.prose-folio strong {
+  @apply font-bold;
+}
+
+.prose-folio em {
+  @apply italic;
+}
+
+/* Links */
+.prose-folio a {
+  @apply text-folio-accent underline decoration-folio-accent/40 underline-offset-2 transition-colors duration-folio;
+}
+
+.prose-folio a:hover {
+  @apply text-folio-accent-hover decoration-folio-accent-hover/60;
+}
+
+.dark .prose-folio a {
+  @apply text-folio-dark-accent decoration-folio-dark-accent/40;
+}
+
+.dark .prose-folio a:hover {
+  @apply text-folio-dark-accent-hover decoration-folio-dark-accent-hover/60;
+}
+
+/* Inline Code */
+.prose-folio code {
+  @apply font-mono text-code bg-folio-bg-secondary px-1.5 py-0.5 rounded;
+}
+
+.dark .prose-folio code {
+  @apply bg-folio-dark-bg-secondary;
+}
+
+/* Code Blocks */
+.prose-folio pre {
+  @apply bg-folio-bg-secondary rounded-lg p-5 my-6 overflow-x-auto;
+}
+
+.prose-folio pre code {
+  @apply bg-transparent p-0 rounded-none text-code leading-relaxed;
+}
+
+.dark .prose-folio pre {
+  @apply bg-folio-dark-bg-secondary;
+}
+
+/* Blockquotes */
+.prose-folio blockquote {
+  @apply border-l-[3px] border-folio-accent/30 pl-5 my-6 italic text-folio-text-secondary;
+}
+
+.dark .prose-folio blockquote {
+  @apply border-folio-dark-accent/30 text-folio-dark-text-secondary;
+}
+
+/* Lists */
+.prose-folio ul {
+  @apply list-disc pl-6 mb-4 space-y-1;
+}
+
+.prose-folio ol {
+  @apply list-decimal pl-6 mb-4 space-y-1;
+}
+
+.prose-folio li {
+  @apply pl-1;
+}
+
+.prose-folio li>p {
+  @apply mb-1;
+}
+
+/* Task lists */
+ul[data-type="taskList"] {
+  list-style: none;
+  padding: 0;
+}
+
+ul[data-type="taskList"] li {
+  display: flex;
+}
+
+ul[data-type="taskList"] li>label {
+  flex: 0 0 auto;
+  margin-right: 0.5rem;
+  user-select: none;
+}
+
+ul[data-type="taskList"] li>div {
+  flex: 1 1 auto;
+}
+
+ul[data-type="taskList"] input[type="checkbox"] {
+  cursor: pointer;
+}
+
+/* Horizontal Rule */
+.prose-folio hr {
+  @apply border-t border-folio-border my-10;
+}
+
+.dark .prose-folio hr {
+  @apply border-folio-dark-border;
+}
+
+/* --- Placeholder --- */
+.prose-folio p.is-empty::before {
+  content: attr(data-placeholder);
+  @apply text-folio-text-secondary/50 float-left h-0 pointer-events-none;
+}
+
+.dark .prose-folio p.is-empty::before {
+  @apply text-folio-dark-text-secondary/50;
+}
+
+/* ============================================
+   Syntax Highlighting (lowlight)
+   ============================================ */
+
+.prose-folio .hljs-comment,
+.prose-folio .hljs-quote {
+  @apply text-folio-text-secondary/60;
+}
+
+.prose-folio .hljs-keyword,
+.prose-folio .hljs-selector-tag {
+  @apply text-[#7C3AED];
+}
+
+.prose-folio .hljs-string,
+.prose-folio .hljs-addition {
+  @apply text-[#059669];
+}
+
+.prose-folio .hljs-number,
+.prose-folio .hljs-literal {
+  @apply text-[#D97706];
+}
+
+.prose-folio .hljs-title,
+.prose-folio .hljs-section {
+  @apply text-[#2563EB];
+}
+
+.prose-folio .hljs-built_in {
+  @apply text-[#0891B2];
+}
+
+.prose-folio .hljs-attr,
+.prose-folio .hljs-attribute {
+  @apply text-[#9333EA];
+}
+
+.prose-folio .hljs-deletion {
+  @apply text-[#DC2626];
+}
+
+.dark .prose-folio .hljs-comment,
+.dark .prose-folio .hljs-quote {
+  @apply text-folio-dark-text-secondary/60;
+}
+
+.dark .prose-folio .hljs-keyword,
+.dark .prose-folio .hljs-selector-tag {
+  @apply text-[#A78BFA];
+}
+
+.dark .prose-folio .hljs-string,
+.dark .prose-folio .hljs-addition {
+  @apply text-[#34D399];
+}
+
+.dark .prose-folio .hljs-number,
+.dark .prose-folio .hljs-literal {
+  @apply text-[#FBBF24];
+}
+
+.dark .prose-folio .hljs-title,
+.dark .prose-folio .hljs-section {
+  @apply text-[#60A5FA];
+}
+
+.dark .prose-folio .hljs-built_in {
+  @apply text-[#22D3EE];
+}
+
+.dark .prose-folio .hljs-attr,
+.dark .prose-folio .hljs-attribute {
+  @apply text-[#C084FC];
+}
+
+.dark .prose-folio .hljs-deletion {
+  @apply text-[#F87171];
+}
+
+/* ============================================
+   Floating Toolbar
+   ============================================ */
+
+.floating-toolbar {
+  @apply flex items-center gap-0.5 px-1.5 py-1 rounded-lg shadow-lg border transition-all duration-folio;
+  @apply bg-white border-folio-border;
+}
+
+.dark .floating-toolbar {
+  @apply bg-folio-dark-bg-secondary border-folio-dark-border shadow-2xl;
+}
+
+.floating-toolbar button {
+  @apply w-8 h-8 flex items-center justify-center rounded-md text-ui font-sans transition-colors duration-folio;
+  @apply text-folio-text-secondary hover:text-folio-text hover:bg-folio-bg-secondary;
+}
+
+.dark .floating-toolbar button {
+  @apply text-folio-dark-text-secondary hover:text-folio-dark-text hover:bg-folio-dark-bg;
+}
+
+.floating-toolbar button.is-active {
+  @apply text-folio-accent bg-folio-accent/10;
+}
+
+.dark .floating-toolbar button.is-active {
+  @apply text-folio-dark-accent bg-folio-dark-accent/10;
+}
+
+/* ============================================
+   Sidebar
+   ============================================ */
+
+.sidebar {
+  @apply h-full transition-all duration-folio overflow-hidden;
+  @apply bg-folio-bg-secondary;
+}
+
+.dark .sidebar {
+  @apply bg-folio-dark-bg-secondary;
+}
+
+/* ============================================
+   Status Bar
+   ============================================ */
+
+.status-bar {
+  @apply flex items-center justify-between px-5 py-2 text-ui font-sans border-t transition-all duration-folio;
+  @apply text-folio-text-secondary border-folio-border bg-folio-bg;
+}
+
+.dark .status-bar {
+  @apply text-folio-dark-text-secondary border-folio-dark-border bg-folio-dark-bg;
+}
+
+/* ============================================
+   Typewriter Mode
+   ============================================ */
+
+.ProseMirror[data-typewriter-mode="true"] {
+  /* Padding moved to container wrapper */
+}
+
+.typewriter-active-container {
+  padding-top: 45vh;
+  padding-bottom: 45vh;
+}
+
+/* 
+  Force the scroll container to handle scroll anchoring instead of the browser
+  to prevent native caret visibility auto-scrolling during Typewriter animation 
+*/
+.overflow-y-auto {
+  overflow-anchor: none;
+}
+
+.typewriter-blur-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+
+  /* The blur itself */
+  backdrop-filter: blur(3px);
+
+  /* The gradient mask:
+     - Fully opaque (blur active) at top and bottom
+     - Transparent (no blur) in the center ~120px window
+     - Soft transition between the two */
+  -webkit-mask-image: linear-gradient(to bottom,
+      black 0%,
+      black 15%,
+      transparent 35%,
+      transparent 65%,
+      black 85%,
+      black 100%);
+  mask-image: linear-gradient(to bottom,
+      black 0%,
+      black 15%,
+      transparent 35%,
+      transparent 65%,
+      black 85%,
+      black 100%);
+}
+
+/* Prevent text selection in the titlebar / drag region */
+[style*="app-region: drag"] {
+  user-select: none;
+  -webkit-user-select: none;
+}

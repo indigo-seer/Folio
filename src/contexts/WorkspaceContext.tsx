@@ -1,0 +1,192 @@
+import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { loadConfig, saveConfig, hashPath, Workspace } from '../lib/config';
+import { BootState } from '../App';
+
+interface WorkspaceContextType {
+    workspaces: Workspace[];
+    activeWorkspaceId: string | null;
+    setWorkspaces: (ws: Workspace[]) => void;
+    setActiveWorkspaceId: (id: string | null) => void;
+    handleOpenWorkspace: (isLeavingOnboarding?: boolean) => Promise<void>;
+    handleSelectWorkspace: (id: string) => Promise<void>;
+    handleRemoveWorkspace: (id: string) => Promise<void>;
+    handleUpdateWorkspaceName: (id: string, newName: string) => Promise<void>;
+}
+
+export const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
+
+export function WorkspaceProvider({
+    children,
+    fileSystem,
+    tabs,
+    setBootState,
+    showToast
+}: {
+    children: ReactNode;
+    fileSystem: any;
+    tabs: any;
+    setBootState: (state: BootState) => void;
+    showToast: (msg: string) => void;
+}) {
+    const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+    const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+
+    const handleOpenWorkspace = useCallback(async (isLeavingOnboarding?: boolean) => {
+        const result = await fileSystem.openVault();
+        if (result) {
+            tabs.clearTabs();
+            const config = await loadConfig();
+            const id = await hashPath(result.path);
+
+            let updatedWorkspaces = [...(config.workspaces || [])];
+            const existingIndex = updatedWorkspaces.findIndex(w => w.id === id || w.path === result.path);
+
+            let newWorkspace: Workspace;
+            if (existingIndex >= 0) {
+                newWorkspace = {
+                    ...updatedWorkspaces[existingIndex],
+                    id,
+                    lastOpened: Date.now()
+                };
+                updatedWorkspaces.splice(existingIndex, 1);
+            } else {
+                newWorkspace = {
+                    id,
+                    path: result.path,
+                    displayName: result.name,
+                    lastOpened: Date.now(),
+                    createdAt: Date.now()
+                };
+            }
+
+            // Re-order active to top, prune lowest
+            updatedWorkspaces = [newWorkspace, ...updatedWorkspaces].sort((a, b) => b.lastOpened - a.lastOpened);
+            if (updatedWorkspaces.length > 7) {
+                updatedWorkspaces = updatedWorkspaces.slice(0, 7);
+            }
+
+            config.workspaces = updatedWorkspaces;
+            config.activeWorkspaceId = id;
+
+            setWorkspaces(updatedWorkspaces);
+            setActiveWorkspaceId(id);
+
+            await saveConfig(config);
+            setBootState(BootState.ReadyWithWorkspace);
+
+            if (isLeavingOnboarding) {
+                showToast('Getting Started notes are still in your Documents folder if you ever want them.');
+            }
+        }
+    }, [fileSystem, tabs, setBootState, showToast]);
+
+    const handleSelectWorkspace = useCallback(async (id: string) => {
+        try {
+            const config = await loadConfig();
+            const targetWorkspace = config.workspaces.find(w => w.id === id);
+            if (!targetWorkspace) return;
+
+            const { exists } = await import('@tauri-apps/plugin-fs');
+            if (!(await exists(targetWorkspace.path))) {
+                console.warn('Selected workspace path no longer exists:', targetWorkspace.path);
+                return;
+            }
+
+            tabs.clearTabs();
+            await fileSystem.loadVault(targetWorkspace.path);
+
+            targetWorkspace.lastOpened = Date.now();
+            let updatedWorkspaces = [...config.workspaces]
+                .sort((a, b) => b.lastOpened - a.lastOpened)
+                .slice(0, 7);
+
+            config.activeWorkspaceId = targetWorkspace.id;
+            config.workspaces = updatedWorkspaces;
+
+            setWorkspaces(updatedWorkspaces);
+            setActiveWorkspaceId(targetWorkspace.id);
+            await saveConfig(config);
+            setBootState(BootState.ReadyWithWorkspace);
+        } catch (err) {
+            console.error('Error switching workspace', err);
+        }
+    }, [fileSystem, tabs, setBootState]);
+
+    const handleRemoveWorkspace = useCallback(async (id: string) => {
+        try {
+            const config = await loadConfig();
+            const updatedWorkspaces = config.workspaces.filter(w => w.id !== id);
+
+            config.workspaces = updatedWorkspaces;
+
+            if (config.activeWorkspaceId === id) {
+                if (updatedWorkspaces.length > 0) {
+                    const sortedRemaining = [...updatedWorkspaces].sort((a, b) => b.lastOpened - a.lastOpened);
+                    const nextWorkspace = sortedRemaining[0];
+                    config.activeWorkspaceId = nextWorkspace.id;
+
+                    tabs.clearTabs();
+                    await fileSystem.loadVault(nextWorkspace.path);
+                    setActiveWorkspaceId(nextWorkspace.id);
+                    setBootState(BootState.ReadyWithWorkspace);
+                } else {
+                    config.activeWorkspaceId = null;
+                    setActiveWorkspaceId(null);
+                    setBootState(BootState.ReadyWithoutWorkspace);
+                    tabs.clearTabs();
+                }
+            }
+
+            setWorkspaces(updatedWorkspaces);
+            await saveConfig(config);
+        } catch (err) {
+            console.error('Error removing workspace', err);
+        }
+    }, [fileSystem, tabs, setBootState]);
+
+    const handleUpdateWorkspaceName = useCallback(async (id: string, newName: string) => {
+        try {
+            const trimmedName = newName.trim();
+            if (!trimmedName) return;
+
+            const config = await loadConfig();
+            let updated = false;
+            const updatedWorkspaces = config.workspaces.map(w => {
+                if (w.id === id) {
+                    updated = true;
+                    return { ...w, displayName: trimmedName };
+                }
+                return w;
+            });
+
+            if (updated) {
+                config.workspaces = updatedWorkspaces;
+                await saveConfig(config);
+                setWorkspaces(updatedWorkspaces);
+            }
+        } catch (err) {
+            console.error('Error updating workspace name', err);
+        }
+    }, []);
+
+    return (
+        <WorkspaceContext.Provider value={{
+            workspaces,
+            activeWorkspaceId,
+            setWorkspaces,
+            setActiveWorkspaceId,
+            handleOpenWorkspace,
+            handleSelectWorkspace,
+            handleRemoveWorkspace,
+            handleUpdateWorkspaceName
+        }}>
+            {children}
+        </WorkspaceContext.Provider>
+    );
+}
+
+export function useWorkspace() {
+    const ctx = useContext(WorkspaceContext);
+    if (!ctx) throw new Error('useWorkspace must be used within WorkspaceProvider');
+    return ctx;
+}
