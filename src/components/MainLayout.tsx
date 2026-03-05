@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState, useRef } from 'react';
 import { useSettings } from '../hooks/useSettings';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { Sidebar } from './Sidebar';
@@ -36,26 +36,64 @@ export function MainLayout({
 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [isUIVisible, setIsUIVisible] = useState(true);
+    const isUIVisibleRef = useRef(true);
+
+    const updateUIVisibility = (visible: boolean) => {
+        setIsUIVisible(visible);
+        isUIVisibleRef.current = visible;
+    };
 
     const [isTypewriterSuspended, setIsTypewriterSuspended] = useState(false);
 
     // Focus Mode logic
     useEffect(() => {
         if (!isFocusMode) {
-            setIsUIVisible(true);
+            updateUIVisibility(true);
             return;
         }
 
         let timeoutId: number;
-        const handleMouseMove = () => {
-            setIsUIVisible(true);
-            window.clearTimeout(timeoutId);
-            timeoutId = window.setTimeout(() => {
-                setIsUIVisible(false);
-            }, 1500); // Hide after 1.5s of inactivity
+        let lastX: number | null = null;
+        let lastY: number | null = null;
+        let accumulatedDistance = 0;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            // If the UI is already visible, just reset the timeout
+            if (isUIVisibleRef.current) {
+                window.clearTimeout(timeoutId);
+                timeoutId = window.setTimeout(() => {
+                    updateUIVisibility(false);
+                }, 1500);
+                return;
+            }
+
+            // UI is hidden, calculate intentional movement stroke
+            if (lastX === null || lastY === null) {
+                lastX = e.clientX;
+                lastY = e.clientY;
+                return;
+            }
+
+            const dx = Math.abs(e.clientX - lastX);
+            const dy = Math.abs(e.clientY - lastY);
+            accumulatedDistance += dx + dy;
+
+            lastX = e.clientX;
+            lastY = e.clientY;
+
+            // Require 75 pixels of continuous brushing to reveal the UI
+            if (accumulatedDistance > 75) {
+                updateUIVisibility(true);
+                accumulatedDistance = 0; // reset for the next stroke
+
+                window.clearTimeout(timeoutId);
+                timeoutId = window.setTimeout(() => {
+                    updateUIVisibility(false);
+                }, 1500); // Hide after 1.5s of inactivity
+            }
         };
 
-        setIsUIVisible(false);
+        updateUIVisibility(false);
 
         document.addEventListener('mousemove', handleMouseMove);
         return () => {
@@ -80,7 +118,13 @@ export function MainLayout({
     return (
         <div className={`flex h-screen overflow-hidden ${isFocusMode ? 'bg-folio-bg dark:bg-folio-dark-bg' : ''}`}>
             {/* Sidebar */}
-            <div className={`transition-opacity duration-700 ease-in-out flex-shrink-0 ${isFocusMode && !isUIVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div
+                className={`transition-all duration-700 ease-in-out flex-shrink-0 relative overflow-hidden ${isFocusMode && !isUIVisible ? 'opacity-0' : 'opacity-100'}`}
+                style={{
+                    width: isFocusMode && !isUIVisible ? '0px' : sidebarCollapsed ? '0px' : '260px',
+                    pointerEvents: isFocusMode && !isUIVisible ? 'none' : 'auto'
+                }}
+            >
                 <Sidebar
                     isCollapsed={sidebarCollapsed}
                     onToggle={() => setSidebarCollapsed(prev => !prev)}
@@ -106,7 +150,13 @@ export function MainLayout({
             {/* Main Area */}
             <div className="flex-1 flex flex-col min-w-0 bg-folio-bg dark:bg-folio-dark-bg transition-colors duration-folio relative">
                 {/* Tab Bar Container */}
-                <div className={`transition-opacity duration-700 ease-in-out flex-shrink-0 ${isFocusMode && !isUIVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                <div
+                    className={`transition-all duration-700 ease-in-out flex-shrink-0 overflow-hidden ${isFocusMode && !isUIVisible ? 'opacity-0' : 'opacity-100'}`}
+                    style={{
+                        height: isFocusMode && !isUIVisible ? '0px' : '45px',
+                        pointerEvents: isFocusMode && !isUIVisible ? 'none' : 'auto'
+                    }}
+                >
                     <TabBar
                         tabs={tabs.tabs}
                         activeTabId={activeTabId}
@@ -147,7 +197,13 @@ export function MainLayout({
                 </div>
 
                 {/* Status Bar */}
-                <div className={`transition-opacity duration-700 ease-in-out ${isFocusMode && !isUIVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                <div
+                    className={`transition-all duration-700 ease-in-out overflow-hidden ${isFocusMode && !isUIVisible ? 'opacity-0' : 'opacity-100'}`}
+                    style={{
+                        maxHeight: isFocusMode && !isUIVisible ? '0px' : '40px', // status bar is typically ~37px tall
+                        pointerEvents: isFocusMode && !isUIVisible ? 'none' : 'auto'
+                    }}
+                >
                     {activeTabId && (
                         <StatusBar
                             activeFileName={activeFileName}

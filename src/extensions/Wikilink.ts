@@ -39,12 +39,22 @@ export const Wikilink = Node.create<WikilinkOptions>({
         return [
             {
                 tag: 'span[data-type="wikilink"]',
+                getAttrs: (element) => ({
+                    noteName: typeof element === 'string' ? null : element.getAttribute('data-note-name'),
+                }),
             },
         ]
     },
 
-    renderHTML({ HTMLAttributes }) {
-        return ['span', mergeAttributes({ 'data-type': 'wikilink' }, this.options.HTMLAttributes, HTMLAttributes)]
+    renderHTML({ HTMLAttributes, node }) {
+        return [
+            'span',
+            mergeAttributes(
+                { 'data-type': 'wikilink', 'data-note-name': node.attrs.noteName },
+                this.options.HTMLAttributes,
+                HTMLAttributes
+            )
+        ]
     },
 
     // ---- Markdown round-trip via @tiptap/markdown ----

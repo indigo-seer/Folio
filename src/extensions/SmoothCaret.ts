@@ -114,6 +114,25 @@ export const SmoothCaret = Extension.create({
                         }
                     }
 
+                    // To keep the caret anchored during Focus Mode layout collapse (700ms transition),
+                    // we continuously poll its position anytime the window resizes or DOM mutates.
+                    let layoutSyncFrame: number | null = null;
+                    const syncOverTransition = () => {
+                        let frames = 0;
+                        const tick = () => {
+                            updatePosition();
+                            frames++;
+                            if (frames < 60) { // ~1 second of syncing to cover the 700ms transition
+                                layoutSyncFrame = requestAnimationFrame(tick);
+                            }
+                        };
+                        if (layoutSyncFrame) cancelAnimationFrame(layoutSyncFrame);
+                        layoutSyncFrame = requestAnimationFrame(tick);
+                    }
+
+                    const obs = new MutationObserver(() => syncOverTransition());
+                    obs.observe(document.body, { attributes: true, childList: true, subtree: true });
+
                     // Attach scroll listener to scroll container and window
                     if (scrollContainer) {
                         scrollContainer.addEventListener('scroll', updatePosition, { passive: true })
@@ -185,6 +204,8 @@ export const SmoothCaret = Extension.create({
                             window.removeEventListener('scroll', updatePosition)
                             window.removeEventListener('resize', updatePosition)
 
+                            obs.disconnect()
+                            if (layoutSyncFrame) cancelAnimationFrame(layoutSyncFrame)
                             if (typingTimeout) window.clearTimeout(typingTimeout)
                             if (pulseFrame) cancelAnimationFrame(pulseFrame)
                         }

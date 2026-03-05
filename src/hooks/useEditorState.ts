@@ -3,6 +3,29 @@ import type { Editor as TipTapEditor } from '@tiptap/react';
 import { marked } from 'marked';
 import { updateWordCountGlobally } from './useWordCount';
 
+// Register Wikilink tokenizer with marked
+marked.use({
+    extensions: [{
+        name: 'wikilink',
+        level: 'inline',
+        start(src: string) { return src.indexOf('[['); },
+        tokenizer(src: string) {
+            const match = src.match(/^\[\[([^\]]+)\]\]/);
+            if (match) {
+                return {
+                    type: 'wikilink',
+                    raw: match[0],
+                    noteName: match[1],
+                };
+            }
+            return undefined;
+        },
+        renderer(token: any) {
+            return `<span data-type="wikilink" data-note-name="${token.noteName}">[[${token.noteName}]]</span>`;
+        }
+    }]
+});
+
 /**
  * Strip YAML front-matter from externally-authored Markdown files.
  * Front-matter starts at the very first line with `---` and ends with `---`.

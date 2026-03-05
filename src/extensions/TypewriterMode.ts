@@ -64,10 +64,14 @@ export const TypewriterMode = Extension.create({
                     const onTypewriterToggle = () => {
                         if (view.dom.getAttribute('data-typewriter-mode') === 'true') {
                             setManualScroll(false)
-                            // Small delay to let React render the DOM changes (e.g. padding/margins)
-                            setTimeout(() => {
-                                center(true)
-                            }, 50)
+                            // We need to wait for the .typewriter-active-container CSS transition
+                            // and React's DOM insertion to actually finish applying the 45vh padding
+                            // before we measure bounding client rects.
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => {
+                                    center(true)
+                                })
+                            })
                         }
                     }
                     window.addEventListener('folio:typewriter-toggled', onTypewriterToggle)
@@ -152,18 +156,14 @@ export const TypewriterMode = Extension.create({
                                 ? { top: 0, height: window.innerHeight }
                                 : scrollParent!.getBoundingClientRect()
 
-                        // Compensate for the new dynamic 45vh padding on the container
-                        let containerPadding = 0
-                        if (scrollParent && scrollParent !== document.documentElement) {
-                            const cs = window.getComputedStyle(scrollParent as Element)
-                            containerPadding = parseFloat(cs.paddingTop) || 0
-                        }
 
+                        // cursorY is the pixel distance from the TOP OF THE SCROLL BOX strictly to the caret
                         const cursorY = coords.top - containerRect.top
-                        const targetY =
-                            (containerRect.height / 2) -
-                            ((coords.bottom - coords.top) / 2)
 
+                        // targetY is the exact middle of the screen
+                        const targetY = (containerRect.height / 2) - ((coords.bottom - coords.top) / 2)
+
+                        // The difference between where the cursor is currently on the screen versus where it should be
                         const scrollDiff = cursorY - targetY
 
                         const currentScroll =
@@ -171,9 +171,10 @@ export const TypewriterMode = Extension.create({
                                 ? window.scrollY
                                 : scrollParent!.scrollTop
 
-                        const absoluteTarget = currentScroll + scrollDiff - containerPadding
+                        // Apply the diff to the current real scroll
+                        let absoluteTarget = currentScroll + scrollDiff
 
-                        if (Math.abs(scrollDiff - containerPadding) > 3) {
+                        if (Math.abs(scrollDiff) > 3) {
                             animateTo(absoluteTarget, smooth)
                         }
                     }
