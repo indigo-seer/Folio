@@ -9,6 +9,9 @@ export const tauriFs: FileSystemAdapter = {
     },
 
     loadVault: async (path: string) => {
+        const { invoke } = await import('@tauri-apps/api/core')
+        await invoke('grant_vault_scope', { path })
+
         const { exists, readDir } = await import('@tauri-apps/plugin-fs')
         if (!(await exists(path))) throw new Error(`Vault path does not exist: ${path}`)
         await readDir(path) // Verify readability

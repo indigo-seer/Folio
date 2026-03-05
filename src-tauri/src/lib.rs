@@ -1,10 +1,20 @@
-use tauri::Manager; // ← add this at the top
+use tauri::{AppHandle, Manager};
+use tauri_plugin_fs::FsExt;
+
+#[tauri::command]
+fn grant_vault_scope(app: AppHandle, path: String) -> Result<(), String> {
+    // Add path to allowed fs scope with recursive access (true)
+    app.fs_scope()
+        .allow_directory(&path, true)
+        .map_err(|e: tauri::Error| e.to_string())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_dialog::init())
+    .invoke_handler(tauri::generate_handler![grant_vault_scope])
     .setup(|app| {
       #[cfg(target_os = "macos")]
       {

@@ -40,21 +40,6 @@
         },
         {
           "path": "$DESKTOP/**"
-        },
-        {
-          "path": "/home/**"
-        },
-        {
-          "path": "/storage/**"
-        },
-        {
-          "path": "/mnt/**"
-        },
-        {
-          "path": "**"
-        },
-        {
-          "path": "**/*"
         }
       ]
     }
