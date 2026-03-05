@@ -151,10 +151,12 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
     });
 
     const vaultContextValue = useMemo(() => ({
+        vault: fileSystem.vault,
+        fileSystem,
         notes: fileSystem.vault.notes,
         backlinkIndex: fileSystem.vault.backlinkIndex,
         onWikilinkClick: fileOperations.handleWikilinkClick
-    }), [fileSystem.vault.notes, fileSystem.vault.backlinkIndex, fileOperations.handleWikilinkClick]);
+    }), [fileSystem, fileSystem.vault, fileSystem.vault.notes, fileSystem.vault.backlinkIndex, fileOperations.handleWikilinkClick]);
 
     return (
         <VaultContext.Provider value={vaultContextValue}>

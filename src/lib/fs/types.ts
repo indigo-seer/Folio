@@ -20,7 +20,9 @@ export interface FileSystemAdapter {
     loadVault: (path: string) => Promise<{ path: string, name: string }>;
     scanDirectory: (path: string) => Promise<FileNode[]>;
     readFile: (path: string) => Promise<string>;
+    readBinaryFile?: (path: string) => Promise<Uint8Array>;
     writeFile: (path: string, content: string) => Promise<void>;
+    writeBinaryFile?: (path: string, content: Uint8Array) => Promise<void>;
     createFile: (rootPath: string, name: string, parentPath?: string) => Promise<string>;
     createFolder: (rootPath: string, name: string, parentPath?: string) => Promise<string>;
     renameFile: (oldPath: string, newFilename: string) => Promise<string>;

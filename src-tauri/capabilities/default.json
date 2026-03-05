@@ -9,6 +9,8 @@
     "core:default",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
     "fs:allow-read-dir",
     "fs:allow-remove",
     "fs:allow-rename",
@@ -28,25 +30,25 @@
           "path": "$HOME/**"
         },
         {
-          "path": "$HOME/**/*"
+          "path": "$APPCONFIG/**"
+        },
+        {
+          "path": "$APPCONFIG"
         },
         {
           "path": "$DOCUMENT/**"
         },
         {
-          "path": "$DOCUMENT/**/*"
-        },
-        {
           "path": "$DESKTOP/**"
         },
         {
-          "path": "$DESKTOP/**/*"
+          "path": "/home/**"
         },
         {
-          "path": "$APPCONFIG/**"
+          "path": "/storage/**"
         },
         {
-          "path": "$APPCONFIG"
+          "path": "/mnt/**"
         },
         {
           "path": "**"

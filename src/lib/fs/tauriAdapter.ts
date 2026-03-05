@@ -24,7 +24,7 @@ export const tauriFs: FileSystemAdapter = {
         try {
             const entries = await readDir(dirPath)
             for (const entry of entries) {
-                if (entry.name?.startsWith('.')) continue
+                if (entry.name?.startsWith('.') || entry.name === 'attachments') continue
                 const entryPath = await join(dirPath, entry.name!)
 
                 if ((entry as any).isFile && entry.name?.endsWith('.md')) {
@@ -48,6 +48,16 @@ export const tauriFs: FileSystemAdapter = {
     writeFile: async (path: string, content: string) => {
         const { writeTextFile } = await import('@tauri-apps/plugin-fs')
         await writeTextFile(path, content)
+    },
+
+    readBinaryFile: async (path: string) => {
+        const { readFile } = await import('@tauri-apps/plugin-fs')
+        return readFile(path)
+    },
+
+    writeBinaryFile: async (path: string, content: Uint8Array) => {
+        const { writeFile } = await import('@tauri-apps/plugin-fs')
+        await writeFile(path, content)
     },
 
     createFile: async (rootPath: string, name: string, parentPath?: string) => {

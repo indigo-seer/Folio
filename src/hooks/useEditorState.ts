@@ -1,6 +1,8 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import type { Editor as TipTapEditor } from '@tiptap/react';
 import { marked } from 'marked';
+import { tipTapToMarkdown } from '../lib/markdown';
+import { fs } from '../lib/fs';
 import { updateWordCountGlobally } from './useWordCount';
 
 // Register Wikilink tokenizer with marked
@@ -65,102 +67,141 @@ export function useEditorState({
     const editorScrollRef = useRef<HTMLDivElement | null>(null);
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isLoadingRef = useRef(false);
+    const isSyncingRef = useRef(false);
     const renderedTabIdRef = useRef<string | null>(null);
+    const lastFlushedTabRef = useRef<string | null>(null);
 
     // Sync editor content with active tab
     useEffect(() => {
         let isMounted = true;
         const syncEditor = async () => {
-            // If we are switching away from a tab, save its scroll and cursor position
-            if (renderedTabIdRef.current && renderedTabIdRef.current !== activeTabId) {
-                if (editorScrollRef.current && editorRef.current) {
-                    fileSystem.saveEditorState(renderedTabIdRef.current, {
-                        scroll: editorScrollRef.current.scrollTop,
-                        cursor: editorRef.current.state.selection.head
-                    });
-                }
-            }
-
-            if (!activeTabId) {
-                editorRef.current?.commands.setContent('');
-                renderedTabIdRef.current = null;
-                return;
-            }
-
-            if (activeTabId === renderedTabIdRef.current) return;
-
-            const tab = tabs.find(t => t.id === activeTabId);
-            if (!tab || tab.type !== 'markdown' || !tab.path) return;
-
-            // Guard: editor must be initialised before we can setContent
-            if (!editorRef.current) return;
-
-            isLoadingRef.current = true;
-            setIsNewNote(false);
+            // Prevent re-entrant calls (writeFile state updates cause effect re-fire)
+            if (isSyncingRef.current) return;
+            isSyncingRef.current = true;
 
             try {
-                const raw = await fileSystem.readFile(tab.path);
-                const markdown = stripFrontMatter(raw);
+                // If we are switching away from a tab, flush content to disk immediately
+                if (renderedTabIdRef.current && renderedTabIdRef.current !== activeTabId) {
+                    // Only flush if we haven't already flushed this exact tab
+                    if (editorRef.current && lastFlushedTabRef.current !== renderedTabIdRef.current) {
+                        // Cancel any pending debounced save
+                        if (saveTimerRef.current) {
+                            clearTimeout(saveTimerRef.current);
+                            saveTimerRef.current = null;
+                        }
 
-                if (!isMounted) return;
-                if (!editorRef.current) {
-                    isLoadingRef.current = false;
+                        // Immediately flush content to disk using raw FS adapter
+                        // (NOT fileSystem.writeFile which triggers setVault → re-render → loop)
+                        const prevTab = tabs.find((t: any) => t.id === renderedTabIdRef.current);
+                        if (prevTab?.path) {
+                            try {
+                                const json = editorRef.current.getJSON();
+                                const md = tipTapToMarkdown(json);
+                                console.log('[Folio Debug] Tab-switch flush:', prevTab.path, 'length:', md.length);
+                                await fs.writeFile(prevTab.path, md);
+                                lastFlushedTabRef.current = renderedTabIdRef.current;
+                            } catch (err) {
+                                console.error('[Folio Debug] Tab-switch flush FAILED:', err);
+                            }
+                        }
+                    }
+
+                    if (editorScrollRef.current && editorRef.current) {
+                        fileSystem.saveEditorState(renderedTabIdRef.current, {
+                            scroll: editorScrollRef.current.scrollTop,
+                            cursor: editorRef.current.state.selection.head
+                        });
+                    }
+                }
+
+                if (!activeTabId) {
+                    editorRef.current?.commands.setContent('');
+                    renderedTabIdRef.current = null;
+                    isSyncingRef.current = false;
                     return;
                 }
 
-                // @tiptap/markdown: The safest cross-version method to load Markdown is rendering
-                // it to HTML via the embedded marked parser before giving it to Tiptap.
+                if (activeTabId === renderedTabIdRef.current) {
+                    isSyncingRef.current = false;
+                    return;
+                }
+
+                const tab = tabs.find(t => t.id === activeTabId);
+                if (!tab || tab.type !== 'markdown' || !tab.path) return;
+
+                // Guard: editor must be initialised before we can setContent
+                if (!editorRef.current) return;
+
+                isLoadingRef.current = true;
+                setIsNewNote(false);
+
                 try {
-                    const html = await marked.parse(markdown);
-                    editorRef.current.commands.setContent(html);
-                } catch (e) {
-                    console.error("Markdown parsing error fallback", e);
-                    editorRef.current.commands.setContent(markdown);
-                }
+                    const raw = await fileSystem.readFile(tab.path);
+                    const markdown = stripFrontMatter(raw);
 
-                renderedTabIdRef.current = activeTabId;
-
-                requestAnimationFrame(() => {
-                    if (!isMounted || !editorRef.current) return;
-
-                    const savedState = fileSystem.getEditorState(tab.path!);
-
-                    // Restore scroll
-                    if (editorScrollRef.current && savedState.scroll > 0) {
-                        editorScrollRef.current.scrollTop = savedState.scroll;
-                    } else if (editorScrollRef.current) {
-                        editorScrollRef.current.scrollTop = 0;
+                    if (!isMounted) return;
+                    if (!editorRef.current) {
+                        isLoadingRef.current = false;
+                        return;
                     }
 
-                    // Restore cursor or focus top
-                    if (savedState.cursor > 1) { // 1 is default start
-                        try {
-                            editorRef.current.commands.setTextSelection(savedState.cursor);
-                        } catch {
-                            // Cursor position may be out of range for a different file
+                    // @tiptap/markdown: The safest cross-version method to load Markdown is rendering
+                    // it to HTML via the embedded marked parser before giving it to Tiptap.
+                    try {
+                        const html = await marked.parse(markdown);
+                        editorRef.current.commands.setContent(html);
+                    } catch (e) {
+                        console.error("Markdown parsing error fallback", e);
+                        editorRef.current.commands.setContent(markdown);
+                    }
+
+                    renderedTabIdRef.current = activeTabId;
+                    lastFlushedTabRef.current = null; // Reset flush tracker for new tab
+
+                    requestAnimationFrame(() => {
+                        if (!isMounted || !editorRef.current) return;
+
+                        const savedState = fileSystem.getEditorState(tab.path!);
+
+                        // Restore scroll
+                        if (editorScrollRef.current && savedState.scroll > 0) {
+                            editorScrollRef.current.scrollTop = savedState.scroll;
+                        } else if (editorScrollRef.current) {
+                            editorScrollRef.current.scrollTop = 0;
                         }
-                        editorRef.current.commands.focus();
-                    } else {
-                        editorRef.current.commands.focus('start');
-                    }
 
-                    updateWordCountGlobally(editorRef.current);
-                    isLoadingRef.current = false;
-                });
-            } catch (err) {
-                console.error('Failed to load note:', err);
-                if (isMounted) {
-                    if (editorRef.current) {
-                        const errMessage = err instanceof Error ? err.message : String(err);
-                        const errorHtml = `<h1>Error Loading Note</h1><p style="color: #ef4444;">Failed to load note content.</p><pre><code>${errMessage}</code></pre>`;
-                        try {
-                            editorRef.current.commands.setContent(errorHtml);
-                        } catch (e) {
-                            console.error('Failed to set error content', e);
+                        // Restore cursor or focus top
+                        if (savedState.cursor > 1) { // 1 is default start
+                            try {
+                                editorRef.current.commands.setTextSelection(savedState.cursor);
+                            } catch {
+                                // Cursor position may be out of range for a different file
+                            }
+                            editorRef.current.commands.focus();
+                        } else {
+                            editorRef.current.commands.focus('start');
                         }
+
+                        updateWordCountGlobally(editorRef.current);
+                        isLoadingRef.current = false;
+                    });
+                } catch (err) {
+                    console.error('Failed to load note:', err);
+                    if (isMounted) {
+                        if (editorRef.current) {
+                            const errMessage = err instanceof Error ? err.message : String(err);
+                            const errorHtml = `<h1>Error Loading Note</h1><p style="color: #ef4444;">Failed to load note content.</p><pre><code>${errMessage}</code></pre>`;
+                            try {
+                                editorRef.current.commands.setContent(errorHtml);
+                            } catch (e) {
+                                console.error('Failed to set error content', e);
+                            }
+                        }
+                        isLoadingRef.current = false;
                     }
-                    isLoadingRef.current = false;
                 }
+            } finally {
+                isSyncingRef.current = false;
             }
         };
 
@@ -184,13 +225,13 @@ export function useEditorState({
             if (!tab || !tab.path) return;
 
             try {
-                // @tiptap/markdown: get markdown from editor using the v3 storage API
-                const md = (editorRef.current.storage.markdown as any)?.getMarkdown?.();
-                if (typeof md === 'string') {
-                    await fileSystem.writeFile(tab.path, md);
-                }
+                const json = editorRef.current.getJSON();
+                const md = tipTapToMarkdown(json);
+                console.log('[Folio Debug] Autosave: markdown length:', md.length, 'preview:', md.substring(0, 100));
+                await fileSystem.writeFile(tab.path, md);
+                console.log('[Folio Debug] Autosave: Write complete');
             } catch (err) {
-                console.error('Auto-save failed:', err);
+                console.error('[Folio Debug] Autosave FAILED:', err);
             }
         }, 1000);
     }, [activeTabId, tabs, fileSystem, isMoveModalOpen]);

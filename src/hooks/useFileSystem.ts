@@ -64,6 +64,11 @@ export function useFileSystem() {
         return fs.readFile(path)
     }, [])
 
+    const readBinaryFile = useCallback(async (path: string): Promise<Uint8Array> => {
+        if (!fs.readBinaryFile) throw new Error('Binary read not supported')
+        return fs.readBinaryFile(path)
+    }, [])
+
     const writeFile = useCallback(async (path: string, content: string): Promise<void> => {
         await fs.writeFile(path, content)
 
@@ -86,6 +91,35 @@ export function useFileSystem() {
             return { ...prev, backlinkIndex: newIndex }
         })
     }, [])
+
+    const writeBinaryFile = useCallback(async (path: string, content: Uint8Array): Promise<void> => {
+        if (!fs.writeBinaryFile) throw new Error('Binary write not supported')
+        await fs.writeBinaryFile(path, content)
+    }, [])
+
+    const ensureAttachmentFolder = useCallback(async (): Promise<string> => {
+        if (!vault.rootPath) throw new Error('No vault open')
+        // Try creating it using the standard adapter routing
+        try {
+            const { sep } = await import('@tauri-apps/api/path')
+            const separator = await sep()
+            const path = `${vault.rootPath}${separator}attachments`
+
+            // Check if exists
+            try {
+                const { exists } = await import('@tauri-apps/plugin-fs')
+                if (await exists(path)) return path
+            } catch {
+                // Ignore exist errors
+            }
+
+            await fs.createFolder(vault.rootPath, 'attachments')
+            return path
+        } catch (e) {
+            console.warn('Silent skip: Attachment folder exists or creation failed', e)
+            return vault.rootPath
+        }
+    }, [vault.rootPath])
 
     const createFile = useCallback(async (filename: string, parentPath?: string): Promise<string> => {
         if (!vault.rootPath) throw new Error('No vault open')
@@ -207,7 +241,10 @@ export function useFileSystem() {
         loadVault,
         openVault,
         readFile,
+        readBinaryFile,
         writeFile,
+        writeBinaryFile,
+        ensureAttachmentFolder,
         createFile,
         createFolder,
         renameFile,
@@ -222,7 +259,10 @@ export function useFileSystem() {
         loadVault,
         openVault,
         readFile,
+        readBinaryFile,
         writeFile,
+        writeBinaryFile,
+        ensureAttachmentFolder,
         createFile,
         createFolder,
         renameFile,
