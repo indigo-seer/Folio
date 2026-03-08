@@ -5,6 +5,7 @@ interface UseGlobalShortcutsProps {
     setIsTypewriterMode: React.Dispatch<React.SetStateAction<boolean>>;
     setIsQuickSwitcherOpen: (isOpen: boolean) => void;
     handleNewNote: () => void;
+    handleExportPdf: () => void;
     activeTabId: string | null;
     setActiveTabId: (id: string | null) => void;
     closeTab: (id: string) => void;
@@ -15,6 +16,7 @@ export function useGlobalShortcuts({
     setIsTypewriterMode,
     setIsQuickSwitcherOpen,
     handleNewNote,
+    handleExportPdf,
     activeTabId,
     setActiveTabId,
     closeTab
@@ -52,6 +54,11 @@ export function useGlobalShortcuts({
                 setActiveTabId(null);
                 setIsQuickSwitcherOpen(true);
             }
+            // Cmd+Shift+E / Ctrl+Shift+E to export current note as PDF
+            else if (isCtrlOrCmd && e.shiftKey && (e.key.toLowerCase() === 'e' || e.code === 'KeyE')) {
+                e.preventDefault();
+                handleExportPdf();
+            }
             // Cmd+W / Ctrl+W to close current tab
             else if (isCtrlOrCmd && !e.shiftKey && (e.key.toLowerCase() === 'w' || e.code === 'KeyW')) {
                 e.preventDefault();
@@ -62,5 +69,5 @@ export function useGlobalShortcuts({
         };
         window.addEventListener('keydown', handleKeyDown, true);
         return () => window.removeEventListener('keydown', handleKeyDown, true);
-    }, [setIsFocusMode, setIsTypewriterMode, setIsQuickSwitcherOpen, handleNewNote, activeTabId, setActiveTabId, closeTab]);
+    }, [setIsFocusMode, setIsTypewriterMode, setIsQuickSwitcherOpen, handleNewNote, handleExportPdf, activeTabId, setActiveTabId, closeTab]);
 }

@@ -25,18 +25,22 @@ export function ModalRoot({
     const { workspaces, activeWorkspaceId, handleRemoveWorkspace, handleUpdateWorkspaceName } = useWorkspace();
 
     const quickSwitcherCommands = useMemo<QuickSwitcherCommand[]>(() => {
+        const activeTab = tabs.tabs.find((t: any) => t.id === activeTabId);
+        const hasActiveMarkdownTab = Boolean(activeTab && activeTab.path && activeTab.id !== 'folio-graph');
+
         const baseCommands: QuickSwitcherCommand[] = [
             { id: 'new-note', label: 'Create New Note...', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg> },
             { id: 'new-folder', label: 'Create New Folder...', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" /></svg> }
         ]
-        if (activeTabId) {
+        if (hasActiveMarkdownTab) {
             baseCommands.push(
+                { id: 'export-note-pdf', label: 'Export Current Note as PDF...', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><path d="M9 15h6" /><path d="M9 19h6" /></svg> },
                 { id: 'move-note', label: 'Move Current Note...', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 9l2 2 2-2" /><path d="M5 22h14c1.1 0 2-.9 2-2V7.5L14.5 2H6c-1.1 0-2 .9-2 2v4" /><polyline points="14 2 14 8 20 8" /></svg> },
                 { id: 'delete-note', label: 'Delete Current Note...', icon: <svg className="w-full h-full text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg> }
             )
         }
         return baseCommands
-    }, [activeTabId]);
+    }, [activeTabId, tabs.tabs]);
 
     const handleQuickSwitcherSelect = (item: UnifiedItem) => {
         modals.closeQuickSwitcher();
@@ -57,6 +61,9 @@ export function ModalRoot({
                             modals.openMoveModal(path, 'file');
                         }
                     }
+                    break;
+                case 'export-note-pdf':
+                    fileOperations.handleExportNoteAsPdf();
                     break;
                 case 'delete-note':
                     if (activeTabId) {

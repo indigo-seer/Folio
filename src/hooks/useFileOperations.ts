@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useModals } from '../contexts/ModalContext';
+import { exportNoteAsPdf } from '../lib/pdfExport';
 
 interface UseFileOperationsProps {
     fileSystem: any;
@@ -182,6 +183,32 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         }
     }, [tabs, fileSystem]);
 
+    const handleExportNoteAsPdf = useCallback(async () => {
+        const activeTab = tabs.tabs.find((t: any) => t.id === activeTabId);
+        if (!activeTab || !activeTab.path || activeTab.id === 'folio-graph') {
+            modals.showToast('Open a note first to export it as PDF.');
+            return;
+        }
+
+        const editorElement = document.querySelector('.ProseMirror');
+        if (!(editorElement instanceof HTMLElement)) {
+            modals.showToast('Editor is still loading. Please try again.');
+            return;
+        }
+
+        try {
+            await exportNoteAsPdf({
+                noteTitle: activeTab.title || 'Untitled',
+                noteHtml: editorElement.innerHTML,
+                isDarkMode: document.documentElement.classList.contains('dark')
+            });
+            modals.showToast('Print dialog opened. Choose "Save as PDF".');
+        } catch (err) {
+            console.error('Failed to export PDF:', err);
+            modals.showToast('Failed to export note as PDF.');
+        }
+    }, [tabs.tabs, activeTabId, modals]);
+
     return useMemo(() => ({
         handleNewNote,
         handleCreateFolder,
@@ -190,7 +217,8 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         handleSidebarRename,
         handleMoveFile,
         handleCreateAndMove,
-        handleDeleteFile
+        handleDeleteFile,
+        handleExportNoteAsPdf
     }), [
         handleNewNote,
         handleCreateFolder,
@@ -199,6 +227,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         handleSidebarRename,
         handleMoveFile,
         handleCreateAndMove,
-        handleDeleteFile
+        handleDeleteFile,
+        handleExportNoteAsPdf
     ]);
 }

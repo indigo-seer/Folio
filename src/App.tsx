@@ -145,6 +145,7 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
         setIsTypewriterMode: toggleTypewriter as any,
         setIsQuickSwitcherOpen: () => modals.openQuickSwitcher(),
         handleNewNote: () => fileOperations.handleNewNote(),
+        handleExportPdf: () => fileOperations.handleExportNoteAsPdf(),
         activeTabId: tabs.activeTabId,
         setActiveTabId: tabs.setActiveTabId,
         closeTab: tabs.closeTab
