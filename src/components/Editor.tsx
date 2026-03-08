@@ -42,6 +42,7 @@ export function Editor({ onUpdate, onReady, isTypewriterMode = false }: EditorPr
     isTauriRef.current = isTauriEnv
     const ensureAttachmentFolderRef = useRef(ensureAttachmentFolder)
     const writeBinaryFileRef = useRef(writeBinaryFile)
+    const scannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     useEffect(() => {
         ensureAttachmentFolderRef.current = ensureAttachmentFolder
@@ -72,8 +73,13 @@ export function Editor({ onUpdate, onReady, isTypewriterMode = false }: EditorPr
 
             if (!isTauriRef.current || !currentVaultRoot || isProcessingBase64Ref.current) return
 
-            // Defer execution until after the current transaction is fully applied
-            setTimeout(() => {
+            // Use a 1000ms debounce to prevent O(N) tree traversals on every single keystroke,
+            // which was choking the main thread and causing caret animation lag and dropped frames.
+            if (scannerTimeoutRef.current) {
+                clearTimeout(scannerTimeoutRef.current)
+            }
+
+            scannerTimeoutRef.current = setTimeout(() => {
                 const ephemeralNodes: Array<{ pos: number; src: string }> = []
                 e.state.doc.descendants((node, pos) => {
                     if (node.type.name === 'image') {
@@ -137,7 +143,7 @@ export function Editor({ onUpdate, onReady, isTypewriterMode = false }: EditorPr
                         isProcessingBase64Ref.current = false
                     }
                 })()
-            }, 50)
+            }, 1000)
         },
     })
 

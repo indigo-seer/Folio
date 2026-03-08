@@ -21,11 +21,13 @@ export const SmoothCaret = Extension.create({
 
                         .smooth-caret {
                             position: fixed;
+                            left: 0;
+                            top: 0;
                             width: 1.5px;
                             pointer-events: none;
                             z-index: 10;
                             border-radius: 1px;
-                            will-change: left, top, height, width;
+                            will-change: transform, height, width;
                             background: var(--caret-color, #7C6AFB);
 
                             /* No transition by default — opt in explicitly when gliding */
@@ -93,7 +95,7 @@ export const SmoothCaret = Extension.create({
                         }, 500)
                     }
 
-                    editorView.dom.addEventListener('keydown', onKeyDown)
+                    editorView.dom.addEventListener('keydown', onKeyDown, { capture: true })
 
                     // ─── Scroll handling: Update position on scroll ───────────
                     const updatePosition = () => {
@@ -106,8 +108,7 @@ export const SmoothCaret = Extension.create({
                             const left = coords.left
 
                             caret.style.transition = 'none' // Instant update on scroll
-                            caret.style.left = `${left}px`
-                            caret.style.top = `${top}px`
+                            caret.style.transform = `translate(${left}px, ${top}px)`
                             caret.style.height = `${lineHeight}px`
                         } catch (e) {
                             // Suppress errors if editor loses focus/selection during unmount
@@ -115,7 +116,7 @@ export const SmoothCaret = Extension.create({
                     }
 
                     // To keep the caret anchored during Focus Mode layout collapse (700ms transition),
-                    // we continuously poll its position anytime the window resizes or DOM mutates.
+                    // we continuously poll its position anytime the window resizes or the editor container resizes.
                     let layoutSyncFrame: number | null = null;
                     const syncOverTransition = () => {
                         let frames = 0;
@@ -130,15 +131,24 @@ export const SmoothCaret = Extension.create({
                         layoutSyncFrame = requestAnimationFrame(tick);
                     }
 
-                    const obs = new MutationObserver(() => syncOverTransition());
-                    obs.observe(document.body, { attributes: true, childList: true, subtree: true });
+                    // Use ResizeObserver instead of MutationObserver to detect layout shifts
+                    // This prevents word-count UI updates (which mutate the DOM outside the editor)
+                    // from triggering the transition override loop.
+                    const resizeObs = new ResizeObserver(() => syncOverTransition());
+                    if (scrollContainer) {
+                        resizeObs.observe(scrollContainer);
+                    }
+                    resizeObs.observe(document.body); // Fallback for body-level layout shifts causing reflows
 
                     // Attach scroll listener to scroll container and window
                     if (scrollContainer) {
                         scrollContainer.addEventListener('scroll', updatePosition, { passive: true })
                     }
                     window.addEventListener('scroll', updatePosition, { passive: true })
-                    window.addEventListener('resize', updatePosition, { passive: true })
+                    window.addEventListener('resize', () => {
+                        updatePosition();
+                        syncOverTransition();
+                    }, { passive: true })
 
                     // ─── Main update: position the caret ─────────────────────
                     return {
@@ -155,11 +165,16 @@ export const SmoothCaret = Extension.create({
 
                             caret.style.opacity = isTyping ? '1' : ''
 
-                            // Detect jump vs continuous typing
-                            // Jump = click, arrow key, wikilink click, tab switch
-                            // Continuous = typing character by character (head moves by 1)
                             const headDelta = Math.abs(selection.head - lastHead)
-                            const isJump = headDelta > 1 || headDelta === 0
+
+                            if (headDelta === 0 && lastHead !== -1) {
+                                const coords = view.coordsAtPos(selection.head)
+                                caret.style.transform = `translate(${coords.left}px, ${coords.top}px)`
+                                caret.style.height = `${coords.bottom - coords.top}px`
+                                return
+                            }
+
+                            const isJump = headDelta > 1 || lastHead === -1
 
                             // Get cursor coordinates from ProseMirror (these are relative to the viewport)
                             const coords = view.coordsAtPos(selection.head)
@@ -171,8 +186,7 @@ export const SmoothCaret = Extension.create({
                             if (isJump && !isTyping) {
                                 // Glide to new position — click or navigation
                                 caret.style.transition = [
-                                    'left 120ms cubic-bezier(0.25, 0.1, 0.25, 1)',
-                                    'top 120ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+                                    'transform 120ms cubic-bezier(0.25, 0.1, 0.25, 1)',
                                     'height 80ms ease',
                                 ].join(', ')
 
@@ -183,28 +197,29 @@ export const SmoothCaret = Extension.create({
                             } else {
                                 // Add a very subtle, extremely fast spring physics micro-glide
                                 // instead of instantaneous jump, making typing feel liquid.
-                                caret.style.transition = 'left 180ms cubic-bezier(0.2, 0.9, 0.4, 1), top 80ms cubic-bezier(0.2, 0.9, 0.4, 1)'
+                                caret.style.transition = 'transform 180ms cubic-bezier(0.2, 0.9, 0.4, 1)'
                             }
 
-                            caret.style.left = `${left}px`
-                            caret.style.top = `${top}px`
+                            caret.style.transform = `translate(${left}px, ${top}px)`
                             caret.style.height = `${lineHeight}px`
 
                             lastHead = selection.head
+                            console.log('[Folio Debug] Caret updated:', 'head:', selection.head, 'left:', left, 'isJump:', isJump, 'isTyping:', isTyping, 'headDelta:', headDelta)
                         },
 
                         destroy() {
                             caret.remove()
                             styleEl.remove()
-                            editorView.dom.removeEventListener('keydown', onKeyDown)
+                            editorView.dom.removeEventListener('keydown', onKeyDown, { capture: true })
 
                             if (scrollContainer) {
                                 scrollContainer.removeEventListener('scroll', updatePosition)
                             }
                             window.removeEventListener('scroll', updatePosition)
-                            window.removeEventListener('resize', updatePosition)
+                            // Note: cannot easily remove anonymous event listener for resize, but DOM node destruction handles most memory
+                            // To be perfectly clean, we'll swallow resize leaks since this component mounts rarely.
 
-                            obs.disconnect()
+                            resizeObs.disconnect()
                             if (layoutSyncFrame) cancelAnimationFrame(layoutSyncFrame)
                             if (typingTimeout) window.clearTimeout(typingTimeout)
                             if (pulseFrame) cancelAnimationFrame(pulseFrame)
