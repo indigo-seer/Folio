@@ -1,8 +1,20 @@
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
+
 interface ExportNoteAsPdfOptions {
     noteTitle: string
     noteHtml: string
     isDarkMode: boolean
 }
+
+interface ExportedPdfResult {
+    bytes: Uint8Array
+    fileName: string
+}
+
+const MIN_PAGE_HEIGHT_PX = 1123 // A4-ish visual baseline at 96dpi
+const MAX_PDF_DIMENSION_PT = 14000 // practical single-page PDF cap
+const PX_TO_PT = 0.75
 
 function escapeHtml(text: string): string {
     return text
@@ -13,161 +25,129 @@ function escapeHtml(text: string): string {
         .replace(/'/g, '&#39;')
 }
 
-function getStylesheetMarkup(doc: Document): string {
-    const nodes = doc.querySelectorAll('style, link[rel="stylesheet"]')
-    return Array.from(nodes)
-        .map((node) => node.outerHTML)
-        .join('\n')
+function sanitizeFileName(name: string): string {
+    const cleaned = name
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
+        .trim()
+    return cleaned || 'Untitled'
 }
 
-async function waitForImages(doc: Document): Promise<void> {
-    const images = Array.from(doc.images)
+async function waitForImages(root: HTMLElement): Promise<void> {
+    const images = Array.from(root.querySelectorAll('img'))
     if (images.length === 0) return
 
-    await Promise.all(
-        images.map((img) => {
-            if (img.complete) return Promise.resolve()
-            return new Promise<void>((resolve) => {
+    await Promise.all(images.map(async (img) => {
+        if (img.complete) return
+        try {
+            await img.decode()
+        } catch {
+            await new Promise<void>((resolve) => {
                 img.addEventListener('load', () => resolve(), { once: true })
                 img.addEventListener('error', () => resolve(), { once: true })
             })
-        })
-    )
+        }
+    }))
 }
 
-export async function exportNoteAsPdf({ noteTitle, noteHtml, isDarkMode }: ExportNoteAsPdfOptions): Promise<void> {
-    const iframe = document.createElement('iframe')
-    iframe.setAttribute('aria-hidden', 'true')
-    iframe.style.position = 'fixed'
-    iframe.style.right = '0'
-    iframe.style.bottom = '0'
-    iframe.style.width = '0'
-    iframe.style.height = '0'
-    iframe.style.border = '0'
-    iframe.style.visibility = 'hidden'
-    document.body.appendChild(iframe)
+async function nextFrame(): Promise<void> {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+}
 
-    const frameDoc = iframe.contentDocument
-    const frameWindow = iframe.contentWindow
-    if (!frameDoc || !frameWindow) {
-        iframe.remove()
-        throw new Error('Failed to initialize export frame')
+export async function exportNoteAsPdf({ noteTitle, noteHtml, isDarkMode }: ExportNoteAsPdfOptions): Promise<ExportedPdfResult> {
+    const title = sanitizeFileName(noteTitle)
+
+    const exportRoot = document.createElement('div')
+    exportRoot.setAttribute('aria-hidden', 'true')
+    exportRoot.className = isDarkMode ? 'dark' : ''
+    exportRoot.style.position = 'fixed'
+    exportRoot.style.left = '-20000px'
+    exportRoot.style.top = '0'
+    exportRoot.style.pointerEvents = 'none'
+    exportRoot.style.zIndex = '-1'
+    exportRoot.style.overflow = 'hidden'
+    exportRoot.style.width = `${Math.max(900, Math.min(1600, window.innerWidth || 1200))}px`
+
+    exportRoot.innerHTML = `
+      <main class="folio-pdf-shell bg-folio-bg dark:bg-folio-dark-bg text-folio-text dark:text-folio-dark-text" style="width:100%; padding:2.5rem 0 3rem;">
+        <section style="max-width:76ch; margin:0 auto; padding:0 1.5rem 0.5rem;">
+          <h1 class="note-title font-serif">${escapeHtml(title)}</h1>
+        </section>
+        <section style="max-width:76ch; margin:0 auto; padding:0 1.5rem;">
+          <div class="prose-folio">${noteHtml}</div>
+        </section>
+      </main>
+    `
+
+    document.body.appendChild(exportRoot)
+
+    const shell = exportRoot.firstElementChild as HTMLElement | null
+    if (!shell) {
+        exportRoot.remove()
+        throw new Error('Failed to initialize PDF export layout')
     }
 
-    const title = noteTitle.trim() || 'Untitled'
-    const documentClass = isDarkMode ? 'dark' : ''
-    const styles = getStylesheetMarkup(document)
-
-    frameDoc.open()
-    frameDoc.write(`<!doctype html>
-<html lang="en" class="${documentClass}">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(title)} - Folio</title>
-    ${styles}
-    <style>
-      html, body {
-        overflow: visible !important;
-        overscroll-behavior: auto !important;
-      }
-
-      body {
-        margin: 0;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-
-      .folio-pdf-shell {
-        min-height: 100vh;
-        padding: 2.5rem 0 3rem;
-      }
-
-      .folio-pdf-title-wrap,
-      .folio-pdf-content-wrap {
-        max-width: 76ch;
-        margin: 0 auto;
-        padding: 0 1.5rem;
-      }
-
-      .folio-pdf-title-wrap {
-        padding-bottom: 0.5rem;
-      }
-
-      .folio-pdf-content-wrap .ProseMirror {
-        min-height: 0 !important;
-        padding-bottom: 0 !important;
-      }
-
-      .folio-pdf-content-wrap [contenteditable="true"] {
-        caret-color: transparent !important;
-      }
-
-      @page {
-        margin: 0;
-        size: auto;
-      }
-
-      @media print {
-        html,
-        body {
-          margin: 0 !important;
-          padding: 0 !important;
+    try {
+        await nextFrame()
+        await nextFrame()
+        await waitForImages(shell)
+        if (document.fonts?.ready) {
+            await document.fonts.ready
         }
 
-        .folio-pdf-shell {
-          min-height: auto;
+        const contentWidthPx = Math.ceil(shell.getBoundingClientRect().width)
+        const contentHeightPx = Math.max(MIN_PAGE_HEIGHT_PX, Math.ceil(shell.scrollHeight))
+        shell.style.minHeight = `${contentHeightPx}px`
+
+        await nextFrame()
+
+        let scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1.5))
+        const maxRenderedPixels = 35_000_000
+        const estimatedPixels = contentWidthPx * contentHeightPx * scale * scale
+        if (estimatedPixels > maxRenderedPixels) {
+            scale = Math.max(1, Math.sqrt(maxRenderedPixels / (contentWidthPx * contentHeightPx)))
         }
 
-        .note-title {
-          margin-top: 0 !important;
-          page-break-after: avoid;
+        const bgColor = getComputedStyle(shell).backgroundColor || '#ffffff'
+        const canvas = await html2canvas(shell, {
+            backgroundColor: bgColor,
+            width: contentWidthPx,
+            height: contentHeightPx,
+            windowWidth: contentWidthPx,
+            windowHeight: contentHeightPx,
+            scale,
+            useCORS: true,
+            allowTaint: true,
+            logging: false
+        })
+
+        const imageData = canvas.toDataURL('image/png')
+        let pdfWidthPt = contentWidthPx * PX_TO_PT
+        let pdfHeightPt = contentHeightPx * PX_TO_PT
+
+        if (pdfHeightPt > MAX_PDF_DIMENSION_PT || pdfWidthPt > MAX_PDF_DIMENSION_PT) {
+            const shrinkFactor = Math.min(
+                MAX_PDF_DIMENSION_PT / pdfHeightPt,
+                MAX_PDF_DIMENSION_PT / pdfWidthPt
+            )
+            pdfWidthPt *= shrinkFactor
+            pdfHeightPt *= shrinkFactor
         }
 
-        .prose-folio h1,
-        .prose-folio h2,
-        .prose-folio h3 {
-          break-after: avoid;
-          break-inside: avoid;
-        }
+        const pdf = new jsPDF({
+            unit: 'pt',
+            format: [pdfWidthPt, pdfHeightPt],
+            orientation: 'portrait',
+            compress: true
+        })
 
-        .prose-folio pre,
-        .prose-folio blockquote,
-        .prose-folio img {
-          break-inside: avoid;
-        }
-      }
-    </style>
-  </head>
-  <body class="${documentClass}">
-    <main class="folio-pdf-shell">
-      <section class="folio-pdf-title-wrap">
-        <h1 class="note-title">${escapeHtml(title)}</h1>
-      </section>
-      <section class="folio-pdf-content-wrap">
-        <div class="prose-folio ProseMirror">${noteHtml}</div>
-      </section>
-    </main>
-  </body>
-</html>`)
-    frameDoc.close()
+        pdf.addImage(imageData, 'PNG', 0, 0, pdfWidthPt, pdfHeightPt, undefined, 'FAST')
+        const arrayBuffer = pdf.output('arraybuffer')
 
-    await new Promise((resolve) => frameWindow.requestAnimationFrame(resolve))
-    await waitForImages(frameDoc)
-    if (frameDoc.fonts?.ready) {
-        await frameDoc.fonts.ready
+        return {
+            bytes: new Uint8Array(arrayBuffer),
+            fileName: `${title}.pdf`
+        }
+    } finally {
+        exportRoot.remove()
     }
-
-    let cleanedUp = false
-    const cleanup = () => {
-        if (cleanedUp) return
-        cleanedUp = true
-        iframe.remove()
-    }
-
-    frameWindow.addEventListener('afterprint', cleanup, { once: true })
-    setTimeout(cleanup, 15000)
-
-    frameWindow.focus()
-    frameWindow.print()
 }

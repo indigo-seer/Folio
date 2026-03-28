@@ -197,17 +197,53 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         }
 
         try {
-            await exportNoteAsPdf({
+            const exported = await exportNoteAsPdf({
                 noteTitle: activeTab.title || 'Untitled',
                 noteHtml: editorElement.innerHTML,
                 isDarkMode: document.documentElement.classList.contains('dark')
             });
-            modals.showToast('Print dialog opened. Choose "Save as PDF".');
+
+            if (fileSystem.isTauriEnv && typeof fileSystem.writeBinaryFile === 'function') {
+                const { save } = await import('@tauri-apps/plugin-dialog');
+                const suggestedPath = activeTab.path.endsWith('.md')
+                    ? activeTab.path.replace(/\.md$/i, '.pdf')
+                    : `${activeTab.path}.pdf`;
+                const selectedPath = await save({
+                    title: 'Export Note as PDF',
+                    defaultPath: suggestedPath,
+                    filters: [{ name: 'PDF Document', extensions: ['pdf'] }]
+                });
+
+                if (!selectedPath) {
+                    modals.showToast('PDF export canceled.');
+                    return;
+                }
+
+                const targetPath = selectedPath.toLowerCase().endsWith('.pdf')
+                    ? selectedPath
+                    : `${selectedPath}.pdf`;
+
+                await fileSystem.writeBinaryFile(targetPath, exported.bytes);
+                const targetName = targetPath.split(/[\/\\]/).pop() || exported.fileName;
+                modals.showToast(`Exported ${targetName}`);
+            } else {
+                const blob = new Blob([exported.bytes as unknown as BlobPart], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = exported.fileName;
+                link.rel = 'noopener';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 0);
+                modals.showToast(`Exported ${exported.fileName}`);
+            }
         } catch (err) {
             console.error('Failed to export PDF:', err);
             modals.showToast('Failed to export note as PDF.');
         }
-    }, [tabs.tabs, activeTabId, modals]);
+    }, [tabs.tabs, activeTabId, modals, fileSystem]);
 
     return useMemo(() => ({
         handleNewNote,
