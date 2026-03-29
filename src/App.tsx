@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { SettingsProvider } from './hooks/useSettings';
 import { useFileSystem } from './hooks/useFileSystem';
 import { useTabs } from './hooks/useTabs';
@@ -99,15 +99,16 @@ function BootloaderWrappedContent({ bootState, setBootState, fileSystem, tabs, i
 
 function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, isTypewriterMode, setIsTypewriterMode, isOnboardingOpen, handleOnboardingComplete }: any) {
     const modals = useModals();
+    const [focusedPane, setFocusedPane] = useState<'main' | 'split'>('main');
 
     const {
-        editorRef,
-        editorScrollRef,
+        editorRef: mainEditorRef,
+        editorScrollRef: mainEditorScrollRef,
         isNewNote,
         setIsNewNote,
-        corruptionWarnings,
-        handleEditorUpdate,
-        handleEditorReady
+        corruptionWarnings: mainCorruptionWarnings,
+        handleEditorUpdate: handleMainEditorUpdate,
+        handleEditorReady: handleMainEditorReady
     } = useEditorState({
         activeTabId: tabs.activeTabId,
         tabs: tabs.tabs,
@@ -115,7 +116,25 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
         isMoveModalOpen: modals.state.move.isOpen
     });
 
+    const {
+        editorScrollRef: splitEditorScrollRef,
+        corruptionWarnings: splitCorruptionWarnings,
+        handleEditorUpdate: handleSplitEditorUpdate,
+        handleEditorReady: handleSplitEditorReady
+    } = useEditorState({
+        activeTabId: tabs.splitTabId || null,
+        tabs: tabs.tabs,
+        fileSystem,
+        isMoveModalOpen: modals.state.move.isOpen
+    })
+
     const renderedTabIdRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (!tabs.splitTabId) {
+            setFocusedPane('main');
+        }
+    }, [tabs.splitTabId]);
 
     // Hook: File Operations
     const fileOperations = useFileOperations({
@@ -130,16 +149,20 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
     const toggleTypewriter = useCallback(() => {
         setIsTypewriterMode((prev: boolean) => {
             const next = !prev;
-            if (next && editorRef.current) {
+            if (next && mainEditorRef.current) {
                 // Give the attribute time to propagate then center by focusing
                 requestAnimationFrame(() => {
-                    editorRef.current?.commands.focus();
+                    mainEditorRef.current?.commands.focus();
                     window.dispatchEvent(new CustomEvent('folio:typewriter-toggled'));
                 });
             }
             return next;
         });
-    }, [setIsTypewriterMode, editorRef]);
+    }, [setIsTypewriterMode, mainEditorRef]);
+
+    const focusedTabId = focusedPane === 'split' && tabs.splitTabId
+        ? tabs.splitTabId
+        : tabs.activeTabId;
 
     // Hook: Global Shortcuts
     useGlobalShortcuts({
@@ -148,9 +171,16 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
         setIsQuickSwitcherOpen: () => modals.openQuickSwitcher(),
         handleNewNote: () => fileOperations.handleNewNote(),
         handleExportPdf: () => fileOperations.handleExportNoteAsPdf(),
-        activeTabId: tabs.activeTabId,
-        setActiveTabId: tabs.setActiveTabId,
-        closeTab: tabs.closeTab
+        activeTabId: focusedTabId,
+        closeTab: (id: string) => {
+            if (focusedPane === 'split' && tabs.splitTabId === id && tabs.closeTabInPane) {
+                tabs.closeTabInPane('split', id)
+            } else if (tabs.closeTabInPane) {
+                tabs.closeTabInPane('main', id)
+            } else {
+                tabs.closeTab(id)
+            }
+        }
     });
 
     const vaultContextValue = useMemo(() => ({
@@ -168,6 +198,10 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                 tabs={tabs}
                 fileOperations={fileOperations}
                 activeTabId={tabs.activeTabId}
+                focusedPane={focusedPane}
+                onFocusPane={setFocusedPane}
+                splitTabId={tabs.splitTabId}
+                onCloseSplit={tabs.closeSplitTab}
                 isFocusMode={isFocusMode}
                 setIsFocusMode={setIsFocusMode}
                 isTypewriterMode={isTypewriterMode}
@@ -175,12 +209,12 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                 editorNode={
                     <div
                         className={`absolute inset-0 overflow-y-auto overscroll-none ${isTypewriterMode ? 'typewriter-active-container' : ''}`}
-                        ref={editorScrollRef}
+                        ref={mainEditorScrollRef}
                     >
                         <div>
                             {tabs.activeTabId && tabs.activeTabId !== 'folio-graph' && (
                                 <>
-                                    <CorruptionBanner warnings={corruptionWarnings} />
+                                    <CorruptionBanner warnings={mainCorruptionWarnings} />
                                     <NoteTitle
                                         title={tabs.tabs.find((t: any) => t.id === tabs.activeTabId)?.title || 'Folio'}
                                         onRename={fileOperations.handleRename}
@@ -191,17 +225,41 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                         </div>
                         <div>
                             <Editor
-                                onUpdate={handleEditorUpdate}
-                                onReady={handleEditorReady}
+                                onUpdate={handleMainEditorUpdate}
+                                onReady={handleMainEditorReady}
+                                onFocus={() => setFocusedPane('main')}
                                 isTypewriterMode={isTypewriterMode}
                             />
                         </div>
                     </div>
                 }
+                splitEditorNode={
+                    tabs.splitTabId ? (
+                        <div className={`absolute inset-0 overflow-y-auto overscroll-none ${isTypewriterMode ? 'typewriter-active-container' : ''}`} ref={splitEditorScrollRef}>
+                            <div>
+                                <CorruptionBanner warnings={splitCorruptionWarnings} />
+                                <div className="max-w-prose-folio mx-auto px-6 pt-10 pb-2">
+                                    <h1 className="note-title text-folio-text dark:text-folio-dark-text font-serif font-light m-0 pb-1 border-b-2 border-transparent">
+                                        {tabs.tabs.find((t: any) => t.id === tabs.splitTabId)?.title || 'Untitled'}
+                                    </h1>
+                                </div>
+                            </div>
+                            <div>
+                                <Editor
+                                    onUpdate={handleSplitEditorUpdate}
+                                    onReady={handleSplitEditorReady}
+                                    onFocus={() => setFocusedPane('split')}
+                                    isTypewriterMode={isTypewriterMode}
+                                />
+                            </div>
+                        </div>
+                    ) : null
+                }
             />
 
             <ModalRoot
-                activeTabId={tabs.activeTabId}
+                activeTabId={focusedTabId}
+                focusedPane={focusedPane}
                 tabs={tabs}
                 fileSystem={fileSystem}
                 fileOperations={fileOperations}

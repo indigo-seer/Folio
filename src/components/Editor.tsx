@@ -9,10 +9,11 @@ import { getEditorExtensions, setVaultRootPath } from '../lib/editor/extensions'
 interface EditorProps {
     onUpdate?: (editor: ReturnType<typeof useEditor>) => void
     onReady?: (editor: ReturnType<typeof useEditor>) => void
+    onFocus?: (editor: ReturnType<typeof useEditor>) => void
     isTypewriterMode?: boolean
 }
 
-export function Editor({ onUpdate, onReady, isTypewriterMode = false }: EditorProps) {
+export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }: EditorProps) {
     // Context for vault state and filesystem operations
     const { notes, vault, fileSystem } = useContext(VaultContext)
     const { ensureAttachmentFolder, writeBinaryFile, isTauriEnv } = fileSystem
@@ -24,8 +25,10 @@ export function Editor({ onUpdate, onReady, isTypewriterMode = false }: EditorPr
     // Use refs to avoid re-running effects when callbacks change
     const onUpdateRef = useRef(onUpdate)
     const onReadyRef = useRef(onReady)
+    const onFocusRef = useRef(onFocus)
     onUpdateRef.current = onUpdate
     onReadyRef.current = onReady
+    onFocusRef.current = onFocus
 
     const extensions = useMemo(
         () => getEditorExtensions(notesRef),
@@ -145,6 +148,9 @@ export function Editor({ onUpdate, onReady, isTypewriterMode = false }: EditorPr
                     }
                 })()
             }, 1000)
+        },
+        onFocus: ({ editor: e }) => {
+            if (onFocusRef.current) onFocusRef.current(e as ReturnType<typeof useEditor>)
         },
     })
 

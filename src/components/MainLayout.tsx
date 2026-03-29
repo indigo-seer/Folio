@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState, useRef } from 'react';
+import { ReactNode, useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '../hooks/useSettings';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { Sidebar } from './Sidebar';
@@ -12,7 +12,12 @@ interface MainLayoutProps {
     tabs: any;
     fileOperations: any;
     activeTabId: string | null;
+    focusedPane?: 'main' | 'split';
+    onFocusPane?: (pane: 'main' | 'split') => void;
     editorNode: ReactNode;
+    splitTabId?: string | null;
+    splitEditorNode?: ReactNode;
+    onCloseSplit?: () => void;
     isFocusMode: boolean;
     setIsFocusMode: (f: boolean) => void;
     isTypewriterMode: boolean;
@@ -24,7 +29,12 @@ export function MainLayout({
     tabs,
     fileOperations,
     activeTabId,
+    focusedPane = 'main',
+    onFocusPane,
     editorNode,
+    splitTabId = null,
+    splitEditorNode = null,
+    onCloseSplit,
     isFocusMode,
     setIsFocusMode,
     isTypewriterMode,
@@ -37,6 +47,9 @@ export function MainLayout({
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [isUIVisible, setIsUIVisible] = useState(true);
     const isUIVisibleRef = useRef(true);
+    const splitHostRef = useRef<HTMLDivElement | null>(null);
+    const [splitRatio, setSplitRatio] = useState(0.5);
+    const [isResizingSplit, setIsResizingSplit] = useState(false);
 
     const updateUIVisibility = (visible: boolean) => {
         setIsUIVisible(visible);
@@ -44,6 +57,20 @@ export function MainLayout({
     };
 
     const [isTypewriterSuspended, setIsTypewriterSuspended] = useState(false);
+    const hasSplitPane = Boolean(splitTabId && splitEditorNode);
+    const safeSplitRatio = Math.min(0.78, Math.max(0.22, splitRatio));
+    const mainPaneWidth = `${safeSplitRatio * 100}%`;
+    const splitPaneWidth = `${(1 - safeSplitRatio) * 100}%`;
+
+    const updateSplitRatioFromClientX = useCallback((clientX: number) => {
+        const host = splitHostRef.current;
+        if (!host) return;
+        const rect = host.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const nextRatio = (clientX - rect.left) / rect.width;
+        const clampedRatio = Math.min(0.78, Math.max(0.22, nextRatio));
+        setSplitRatio(clampedRatio);
+    }, []);
 
     // Focus Mode logic
     useEffect(() => {
@@ -112,6 +139,39 @@ export function MainLayout({
         return () => window.removeEventListener('folio:typewriter-manual-scroll', handleTypewriterSuspend);
     }, []);
 
+    useEffect(() => {
+        if (!isResizingSplit) return;
+
+        const previousCursor = document.body.style.cursor;
+        const previousUserSelect = document.body.style.userSelect;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        const handleMouseMove = (event: MouseEvent) => {
+            updateSplitRatioFromClientX(event.clientX);
+        };
+
+        const handleMouseUp = () => {
+            setIsResizingSplit(false);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            document.body.style.cursor = previousCursor;
+            document.body.style.userSelect = previousUserSelect;
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizingSplit, updateSplitRatioFromClientX]);
+
+    useEffect(() => {
+        if (!hasSplitPane && isResizingSplit) {
+            setIsResizingSplit(false);
+        }
+    }, [hasSplitPane, isResizingSplit]);
+
     const activeTab = tabs.tabs.find((t: any) => t.id === activeTabId);
     const activeFileName = activeTab?.title || 'Folio';
 
@@ -158,10 +218,23 @@ export function MainLayout({
                     }}
                 >
                     <TabBar
-                        tabs={tabs.tabs}
+                        tabs={tabs.mainTabs || tabs.tabs}
                         activeTabId={activeTabId}
-                        onTabSelect={tabs.setActiveTabId}
-                        onTabClose={tabs.closeTab}
+                        splitTabs={tabs.splitTabs || []}
+                        splitTabId={splitTabId}
+                        splitRatio={safeSplitRatio}
+                        focusedPane={focusedPane}
+                        onTabSelect={(id) => {
+                            onFocusPane?.('main')
+                            tabs.setActiveTabId(id)
+                        }}
+                        onTabClose={(id) => (tabs.closeTabInPane ? tabs.closeTabInPane('main', id) : tabs.closeTab(id))}
+                        onSplitTabSelect={(id) => {
+                            onFocusPane?.('split')
+                            tabs.setSplitTabId(id)
+                        }}
+                        onSplitTabClose={(id) => (tabs.closeTabInPane ? tabs.closeTabInPane('split', id) : tabs.closeTab(id))}
+                        onPaneFocus={onFocusPane}
                         sidebarCollapsed={sidebarCollapsed}
                         onToggleSidebar={() => setSidebarCollapsed(false)}
                         theme={theme}
@@ -189,8 +262,54 @@ export function MainLayout({
 
                 {/* Editor Area */}
                 <div className={`flex-1 relative ${activeTabId && activeTabId !== 'folio-graph' ? 'block' : 'hidden'}`}>
-                    {/* The Editor is passed as a child/prop to avoid recreating it on layout state changes */}
-                    {editorNode}
+                    <div
+                        className="absolute inset-0 flex bg-folio-bg dark:bg-folio-dark-bg"
+                        ref={splitHostRef}
+                    >
+                        <div
+                            className={`relative min-w-0 ${hasSplitPane ? 'flex-shrink-0' : 'flex-1'}`}
+                            style={hasSplitPane ? { width: mainPaneWidth, flexBasis: mainPaneWidth } : undefined}
+                            onMouseDown={() => onFocusPane?.('main')}
+                        >
+                            {editorNode}
+                        </div>
+                        {hasSplitPane && (
+                            <div
+                                className="relative min-w-0 flex-shrink-0 group/split-pane"
+                                style={{ width: splitPaneWidth, flexBasis: splitPaneWidth }}
+                                onMouseDown={() => onFocusPane?.('split')}
+                            >
+                                <div
+                                    role="separator"
+                                    aria-orientation="vertical"
+                                    aria-label="Resize split panes"
+                                    onMouseDown={(event) => {
+                                        event.preventDefault();
+                                        updateSplitRatioFromClientX(event.clientX);
+                                        setIsResizingSplit(true);
+                                    }}
+                                    className="absolute left-0 top-0 bottom-0 -translate-x-1/2 z-30 w-3 cursor-col-resize"
+                                    title="Drag to resize panes"
+                                >
+                                    <div className={`absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px transition-colors ${isResizingSplit ? 'bg-folio-accent/80 dark:bg-folio-dark-accent/80' : 'bg-folio-border/70 dark:bg-folio-dark-border/80'}`} />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => onCloseSplit?.()}
+                                    className="absolute top-3 left-2 z-20 w-6 h-6 rounded-md border border-folio-border/60 dark:border-folio-dark-border/70 bg-folio-bg/90 dark:bg-folio-dark-bg/90 text-folio-text-secondary dark:text-folio-dark-text-secondary hover:text-folio-text dark:hover:text-folio-dark-text hover:bg-folio-bg dark:hover:bg-folio-dark-bg transition-all opacity-0 pointer-events-none group-hover/split-pane:opacity-100 group-hover/split-pane:pointer-events-auto focus:opacity-100 focus:pointer-events-auto"
+                                    title="Close split pane"
+                                >
+                                    <svg className="w-3.5 h-3.5 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
+                                <div className="absolute inset-0">
+                                    {splitEditorNode}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     {isTypewriterMode && (
                         <div className={`typewriter-blur-overlay transition-opacity duration-500 ${isTypewriterSuspended ? 'opacity-0' : 'opacity-100'}`} />
                     )}

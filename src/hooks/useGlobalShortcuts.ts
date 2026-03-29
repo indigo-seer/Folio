@@ -7,7 +7,6 @@ interface UseGlobalShortcutsProps {
     handleNewNote: () => void;
     handleExportPdf: () => void;
     activeTabId: string | null;
-    setActiveTabId: (id: string | null) => void;
     closeTab: (id: string) => void;
 }
 
@@ -18,7 +17,6 @@ export function useGlobalShortcuts({
     handleNewNote,
     handleExportPdf,
     activeTabId,
-    setActiveTabId,
     closeTab
 }: UseGlobalShortcutsProps) {
     useEffect(() => {
@@ -51,7 +49,6 @@ export function useGlobalShortcuts({
             // Cmd+T / Ctrl+T to open New Tab (Quick Switcher with blank slate)
             else if (isCtrlOrCmd && !e.shiftKey && (e.key.toLowerCase() === 't' || e.code === 'KeyT')) {
                 e.preventDefault();
-                setActiveTabId(null);
                 setIsQuickSwitcherOpen(true);
             }
             // Cmd+Shift+E / Ctrl+Shift+E to export current note as PDF
@@ -69,5 +66,5 @@ export function useGlobalShortcuts({
         };
         window.addEventListener('keydown', handleKeyDown, true);
         return () => window.removeEventListener('keydown', handleKeyDown, true);
-    }, [setIsFocusMode, setIsTypewriterMode, setIsQuickSwitcherOpen, handleNewNote, handleExportPdf, activeTabId, setActiveTabId, closeTab]);
+    }, [setIsFocusMode, setIsTypewriterMode, setIsQuickSwitcherOpen, handleNewNote, handleExportPdf, activeTabId, closeTab]);
 }

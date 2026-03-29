@@ -51,6 +51,26 @@ function scrollToAnchor(anchor: string) {
 export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabIdRef, setIsNewNote }: UseFileOperationsProps) {
     const modals = useModals();
 
+    const openPathInMainTab = useCallback((path: string) => {
+        const title = path.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
+        tabs.openTab({
+            id: path,
+            type: 'markdown',
+            title,
+            path
+        });
+    }, [tabs]);
+
+    const openPathInSplitTab = useCallback((path: string) => {
+        const title = path.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
+        tabs.openTabInSplit({
+            id: path,
+            type: 'markdown',
+            title,
+            path
+        });
+    }, [tabs]);
+
     const handleNewNote = useCallback(async (parentPath?: string) => {
         try {
             const path = await fileSystem.createFile('Untitled', parentPath);
@@ -83,7 +103,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         }
     }, [fileSystem, modals]);
 
-    const handleWikilinkClick = useCallback(async (noteName: string, anchor?: string | null) => {
+    const handleWikilinkClick = useCallback(async (noteName: string, anchor?: string | null, openInSplit = false) => {
         // Same-note anchor: scroll within the current editor
         if (!noteName && anchor) {
             scrollToAnchor(anchor)
@@ -92,13 +112,12 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
 
         const path = findNotePath(fileSystem.vault.tree, noteName);
         if (path) {
-            const title = path.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
-            tabs.openTab({
-                id: path,
-                type: 'markdown',
-                title,
-                path
-            });
+            if (openInSplit) {
+                openPathInSplitTab(path)
+            } else {
+                openPathInMainTab(path)
+            }
+
             // If there's an anchor, scroll to it after a short delay to let content load
             if (anchor) {
                 setTimeout(() => scrollToAnchor(anchor), 300)
@@ -106,18 +125,24 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         } else {
             try {
                 const newPath = await fileSystem.createFile(noteName);
-                const title = newPath.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
-                tabs.openTab({
-                    id: newPath,
-                    type: 'markdown',
-                    title,
-                    path: newPath
-                });
+                if (openInSplit) {
+                    openPathInSplitTab(newPath)
+                } else {
+                    openPathInMainTab(newPath)
+                }
             } catch (err) {
                 console.error('Failed to create stub note:', err);
             }
         }
-    }, [fileSystem, tabs]);
+    }, [fileSystem, openPathInMainTab, openPathInSplitTab]);
+
+    const handleOpenInSplit = useCallback((path: string) => {
+        openPathInSplitTab(path)
+    }, [openPathInSplitTab])
+
+    const handleOpenNoteInSplit = useCallback(async (noteName: string) => {
+        await handleWikilinkClick(noteName, null, true)
+    }, [handleWikilinkClick])
 
     const handleRename = useCallback(async (newName: string) => {
         if (!activeTabId) return;
@@ -284,6 +309,8 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         handleNewNote,
         handleCreateFolder,
         handleWikilinkClick,
+        handleOpenInSplit,
+        handleOpenNoteInSplit,
         handleRename,
         handleSidebarRename,
         handleMoveFile,
@@ -294,6 +321,8 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         handleNewNote,
         handleCreateFolder,
         handleWikilinkClick,
+        handleOpenInSplit,
+        handleOpenNoteInSplit,
         handleRename,
         handleSidebarRename,
         handleMoveFile,

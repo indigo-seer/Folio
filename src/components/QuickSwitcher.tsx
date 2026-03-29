@@ -20,9 +20,10 @@ interface QuickSwitcherProps {
     commands?: QuickSwitcherCommand[]
     onClose: () => void
     onSelect: (item: UnifiedItem) => void
+    onSelectInSplit?: (item: UnifiedItem) => void
 }
 
-export function QuickSwitcher({ isOpen, commands = [], onClose, onSelect }: QuickSwitcherProps) {
+export function QuickSwitcher({ isOpen, commands = [], onClose, onSelect, onSelectInSplit }: QuickSwitcherProps) {
     const { notes } = useContext(VaultContext)
     const [query, setQuery] = useState('')
     const [selectedIndex, setSelectedIndex] = useState(0)
@@ -82,13 +83,17 @@ export function QuickSwitcher({ isOpen, commands = [], onClose, onSelect }: Quic
                 setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev))
             } else if (e.key === 'Enter' && results.length > 0) {
                 e.preventDefault()
-                onSelect(results[selectedIndex])
+                if ((e.altKey || e.ctrlKey || e.metaKey) && onSelectInSplit) {
+                    onSelectInSplit(results[selectedIndex])
+                } else {
+                    onSelect(results[selectedIndex])
+                }
             }
         }
 
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [isOpen, results, selectedIndex, onClose, onSelect])
+    }, [isOpen, results, selectedIndex, onClose, onSelect, onSelectInSplit])
 
     // Keep selected item in view
     useEffect(() => {
@@ -175,6 +180,9 @@ export function QuickSwitcher({ isOpen, commands = [], onClose, onSelect }: Quic
                         No notes found
                     </div>
                 )}
+                <div className="px-3 py-2 border-t border-black/5 dark:border-white/5 text-[11px] text-folio-text-secondary/70 dark:text-folio-dark-text-secondary/70">
+                    <span className="font-medium">Enter</span> to open in focused pane · <span className="font-medium">Alt/Ctrl/Cmd + Enter</span> to open in split
+                </div>
             </div>
         </div>
     )

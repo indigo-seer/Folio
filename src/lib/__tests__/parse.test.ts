@@ -45,4 +45,38 @@ describe('markdownToTipTap AST Parsing', () => {
         console.log("Math Output:", JSON.stringify(json.content, null, 2))
         expect(json.content?.some(n => n.type === 'mathBlock')).toBeTruthy()
     })
+
+    it('does not parse mid-document horizontal-rule pairs as frontmatter', () => {
+        const dummyRef = { current: new Set<string>() }
+        const extensions = getEditorExtensions(dummyRef)
+
+        const markdown = [
+            '- This list',
+            '',
+            '> [!note] Note',
+            '> Testing to see if this callout becomes weird',
+            '',
+            '---',
+            '',
+            '| Entry 1 | Entry 2 |',
+            '| --- | --- |',
+            '| A | B |',
+            '| C | D |',
+            '',
+            '---',
+        ].join('\n')
+
+        const editor = new Editor({
+            extensions,
+            content: markdown
+        })
+
+        const json = editor.getJSON()
+        const topLevel = json.content || []
+
+        expect(topLevel.some(n => n.type === 'frontmatter')).toBe(false)
+        expect(topLevel.some(n => n.type === 'table')).toBe(true)
+        expect(topLevel.filter(n => n.type === 'horizontalRule').length).toBeGreaterThanOrEqual(2)
+        expect(topLevel.some(n => n.type === 'callout')).toBe(true)
+    })
 })

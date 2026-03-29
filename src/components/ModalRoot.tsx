@@ -10,6 +10,7 @@ import { Toast } from './Toast';
 
 interface ModalRootProps {
     activeTabId: string | null;
+    focusedPane?: 'main' | 'split';
     tabs: any;
     fileSystem: any;
     fileOperations: any;
@@ -17,6 +18,7 @@ interface ModalRootProps {
 
 export function ModalRoot({
     activeTabId,
+    focusedPane = 'main',
     tabs,
     fileSystem,
     fileOperations
@@ -32,20 +34,34 @@ export function ModalRoot({
             { id: 'new-note', label: 'Create New Note...', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg> },
             { id: 'new-folder', label: 'Create New Folder...', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" /></svg> }
         ]
+        if (tabs.splitTabId) {
+            baseCommands.push(
+                {
+                    id: 'close-split-pane',
+                    label: 'Close Split Pane',
+                    icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="12" y1="4" x2="12" y2="20" /><line x1="16" y1="9" x2="19" y2="12" /><line x1="19" y1="12" x2="16" y2="15" /></svg>
+                }
+            )
+        }
         if (hasActiveMarkdownTab) {
             baseCommands.push(
+                { id: 'open-current-note-in-split', label: 'Open Current Note in Split', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="12" y1="4" x2="12" y2="20" /><polyline points="16 11 18 13 16 15" /></svg> },
                 { id: 'export-note-pdf', label: 'Export Current Note as PDF...', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><path d="M9 15h6" /><path d="M9 19h6" /></svg> },
                 { id: 'move-note', label: 'Move Current Note...', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 9l2 2 2-2" /><path d="M5 22h14c1.1 0 2-.9 2-2V7.5L14.5 2H6c-1.1 0-2 .9-2 2v4" /><polyline points="14 2 14 8 20 8" /></svg> },
                 { id: 'delete-note', label: 'Delete Current Note...', icon: <svg className="w-full h-full text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg> }
             )
         }
         return baseCommands
-    }, [activeTabId, tabs.tabs]);
+    }, [activeTabId, tabs.tabs, tabs.splitTabId]);
 
     const handleQuickSwitcherSelect = (item: UnifiedItem) => {
         modals.closeQuickSwitcher();
         if (item.type === 'note') {
-            fileOperations.handleWikilinkClick(item.name);
+            if (focusedPane === 'split' && tabs.splitTabId) {
+                fileOperations.handleOpenNoteInSplit(item.name);
+            } else {
+                fileOperations.handleWikilinkClick(item.name);
+            }
         } else if (item.type === 'command') {
             switch (item.id) {
                 case 'new-note':
@@ -65,6 +81,14 @@ export function ModalRoot({
                 case 'export-note-pdf':
                     fileOperations.handleExportNoteAsPdf();
                     break;
+                case 'open-current-note-in-split':
+                    if (activeTabId) {
+                        const path = tabs.tabs.find((t: any) => t.id === activeTabId)?.path
+                        if (path) {
+                            fileOperations.handleOpenInSplit(path)
+                        }
+                    }
+                    break;
                 case 'delete-note':
                     if (activeTabId) {
                         const path = tabs.tabs.find((t: any) => t.id === activeTabId)?.path;
@@ -73,6 +97,24 @@ export function ModalRoot({
                         }
                     }
                     break;
+                case 'close-split-pane':
+                    tabs.closeSplitTab();
+                    break;
+            }
+        }
+    };
+
+    const handleQuickSwitcherSelectInSplit = (item: UnifiedItem) => {
+        modals.closeQuickSwitcher();
+        if (item.type === 'note') {
+            fileOperations.handleOpenNoteInSplit(item.name);
+            return;
+        }
+        if (item.type === 'command') {
+            if (item.id === 'close-split-pane') {
+                tabs.closeSplitTab();
+            } else {
+                handleQuickSwitcherSelect(item);
             }
         }
     };
@@ -84,6 +126,7 @@ export function ModalRoot({
                 commands={quickSwitcherCommands}
                 onClose={modals.closeQuickSwitcher}
                 onSelect={handleQuickSwitcherSelect}
+                onSelectInSplit={handleQuickSwitcherSelectInSplit}
             />
 
             {modals.state.contextMenu.isOpen && (
@@ -103,6 +146,12 @@ export function ModalRoot({
                             }
                         ] : []),
                         ...(modals.state.contextMenu.kind === 'file' || modals.state.contextMenu.kind === 'directory' ? [
+                            ...(modals.state.contextMenu.kind === 'file' ? [
+                                {
+                                    label: 'Open in Split',
+                                    onClick: () => fileOperations.handleOpenInSplit(modals.state.contextMenu.path!)
+                                }
+                            ] : []),
                             {
                                 label: 'Rename',
                                 onClick: () => {

@@ -39,6 +39,7 @@ export function useEditorState({
 }: UseEditorStateProps) {
     const [isNewNote, setIsNewNote] = useState(false);
     const [editorReady, setEditorReady] = useState(false);
+    const [editorInstanceVersion, setEditorInstanceVersion] = useState(0);
     const [corruptionWarnings, setCorruptionWarnings] = useState<string[]>([]);
 
     const editorRef = useRef<TipTapEditor | null>(null);
@@ -47,6 +48,7 @@ export function useEditorState({
     const isLoadingRef = useRef(false);
     const isSyncingRef = useRef(false);
     const renderedTabIdRef = useRef<string | null>(null);
+    const hydratedTabIdRef = useRef<string | null>(null);
     const lastFlushedTabRef = useRef<string | null>(null);
 
     // Sync editor content with active tab
@@ -93,8 +95,11 @@ export function useEditorState({
                 }
 
                 if (!activeTabId) {
-                    editorRef.current?.commands.setContent('');
+                    editorRef.current?.commands.setContent('', {
+                        emitUpdate: false
+                    } as any);
                     renderedTabIdRef.current = null;
+                    hydratedTabIdRef.current = null;
                     isSyncingRef.current = false;
                     return;
                 }
@@ -111,6 +116,7 @@ export function useEditorState({
                 if (!editorRef.current) return;
 
                 isLoadingRef.current = true;
+                hydratedTabIdRef.current = null;
                 setIsNewNote(false);
 
                 try {
@@ -137,6 +143,7 @@ export function useEditorState({
                     } as any);
 
                     renderedTabIdRef.current = activeTabId;
+                    hydratedTabIdRef.current = activeTabId;
                     lastFlushedTabRef.current = null; // Reset flush tracker for new tab
 
                     requestAnimationFrame(() => {
@@ -178,6 +185,7 @@ export function useEditorState({
                                 console.error('Failed to set error content', e);
                             }
                         }
+                        hydratedTabIdRef.current = null;
                         isLoadingRef.current = false;
                     }
                 }
@@ -191,17 +199,21 @@ export function useEditorState({
         return () => {
             isMounted = false;
         };
-    }, [activeTabId, tabs, fileSystem, editorReady]);
+    }, [activeTabId, tabs, fileSystem, editorReady, editorInstanceVersion]);
 
     // Auto-save: debounced write back to disk
     const triggerAutoSave = useCallback(() => {
         if (isMoveModalOpen) return;
         if (isLoadingRef.current || !activeTabId || !editorRef.current) return;
+        if (renderedTabIdRef.current !== activeTabId) return;
+        if (hydratedTabIdRef.current !== activeTabId) return;
 
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
         saveTimerRef.current = setTimeout(async () => {
             if (!editorRef.current || !activeTabId) return;
+            if (renderedTabIdRef.current !== activeTabId) return;
+            if (hydratedTabIdRef.current !== activeTabId) return;
             const tab = tabs.find(t => t.id === activeTabId);
             if (!tab || !tab.path) return;
 
@@ -231,7 +243,15 @@ export function useEditorState({
     // Store editor ref on mount and signal readiness
     const handleEditorReady = useCallback((editor: TipTapEditor | null) => {
         if (editor) {
+            const isNewEditorInstance = editorRef.current !== editor;
             editorRef.current = editor;
+            if (isNewEditorInstance) {
+                // Force a hydration cycle for the current tab when the editor remounts.
+                renderedTabIdRef.current = null;
+                hydratedTabIdRef.current = null;
+                lastFlushedTabRef.current = null;
+                setEditorInstanceVersion(v => v + 1);
+            }
             setEditorReady(true);
         }
     }, []);
