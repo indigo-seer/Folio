@@ -86,13 +86,9 @@ export function WorkspaceProvider({
             const targetWorkspace = config.workspaces.find(w => w.id === id);
             if (!targetWorkspace) return;
 
-            const { exists } = await import('@tauri-apps/plugin-fs');
-            if (!(await exists(targetWorkspace.path))) {
-                console.warn('Selected workspace path no longer exists:', targetWorkspace.path);
-                return;
-            }
-
             tabs.clearTabs();
+            // Always route through loadVault() so dynamic fs scope is granted
+            // before any read checks are performed by the adapter.
             await fileSystem.loadVault(targetWorkspace.path);
 
             targetWorkspace.lastOpened = Date.now();
@@ -109,8 +105,9 @@ export function WorkspaceProvider({
             setBootState(BootState.ReadyWithWorkspace);
         } catch (err) {
             console.error('Error switching workspace', err);
+            showToast('Could not open this vault path. Check that the drive is mounted and try again.');
         }
-    }, [fileSystem, tabs, setBootState]);
+    }, [fileSystem, tabs, setBootState, showToast]);
 
     const handleRemoveWorkspace = useCallback(async (id: string) => {
         try {

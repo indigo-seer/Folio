@@ -33,23 +33,16 @@ export function useAppBootloader(
                     const activeWorkspace = config.workspaces.find(w => w.id === config.activeWorkspaceId);
                     if (activeWorkspace) {
                         try {
-                            const { exists } = await import('@tauri-apps/plugin-fs');
-                            const pathExists = await exists(activeWorkspace.path);
-
-                            if (pathExists) {
-                                await fileSystem.loadVault(activeWorkspace.path);
-                                setActiveWorkspaceId(activeWorkspace.id);
-                                setBootState(BootState.ReadyWithWorkspace);
-                                return;
-                            } else {
-                                console.warn('Configured active workspace path no longer exists:', activeWorkspace.path);
-                                config.activeWorkspaceId = null;
-                                await saveConfig(config);
-                            }
+                            // Always route through loadVault() so dynamic fs scope
+                            // is granted before any file checks occur.
+                            await fileSystem.loadVault(activeWorkspace.path);
+                            setActiveWorkspaceId(activeWorkspace.id);
+                            setBootState(BootState.ReadyWithWorkspace);
+                            return;
                         } catch (e) {
-                            console.warn('Auto-load failed or path invalid, clearing stale workspace', e);
-                            config.activeWorkspaceId = null;
-                            await saveConfig(config);
+                            // Keep the stored active workspace so removable/mounted
+                            // paths can auto-recover on next launch without re-adding.
+                            console.warn('Auto-load failed for active workspace (keeping config as-is):', activeWorkspace.path, e);
                         }
                     } else {
                         config.activeWorkspaceId = null;

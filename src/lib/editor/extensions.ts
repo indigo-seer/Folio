@@ -66,6 +66,7 @@ export function getEditorExtensions(notesRef: React.MutableRefObject<Set<string>
     return [
         StarterKit.configure({
             codeBlock: false,
+            link: false,
             heading: {
                 levels: [1, 2, 3, 4, 5, 6],
             },

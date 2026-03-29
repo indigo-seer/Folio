@@ -5,20 +5,6 @@ import { fs } from '../lib/fs';
 import { updateWordCountGlobally } from './useWordCount';
 import { detectCorruption } from '../lib/corruptionDetector';
 
-/**
- * Strip YAML front-matter from externally-authored Markdown files.
- * Front-matter starts at the very first line with `---` and ends with `---`.
- */
-function stripFrontMatter(md: string): string {
-    if (md.startsWith('---\n') || md.startsWith('---\r\n')) {
-        const end = md.indexOf('\n---', 3)
-        if (end !== -1) {
-            return md.slice(end + 4).replace(/^\r?\n/, '')
-        }
-    }
-    return md
-}
-
 interface UseEditorStateProps {
     activeTabId: string | null;
     tabs: any[];
@@ -126,7 +112,7 @@ export function useEditorState({
                     const warnings = detectCorruption(raw);
                     setCorruptionWarnings(warnings);
 
-                    const markdown = stripFrontMatter(raw);
+                    const markdown = raw;
 
                     if (!isMounted) return;
                     if (!editorRef.current) {
