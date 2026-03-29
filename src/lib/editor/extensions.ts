@@ -27,6 +27,7 @@ import { TypewriterMode } from '../../extensions/TypewriterMode'
 import { SlashCommand } from '../../extensions/SlashCommand'
 import { SmoothCaret } from '../../extensions/SmoothCaret'
 import { MarkdownPaste } from '../../extensions/MarkdownPaste'
+import { CodeBlockCopy } from '../../extensions/CodeBlockCopy'
 import { createWikilinkSuggestion } from '../../components/WikilinkSuggestion'
 import { createSlashCommandSuggestion } from '../../components/SlashCommandSuggestion'
 
@@ -124,5 +125,6 @@ export function getEditorExtensions(notesRef: React.MutableRefObject<Set<string>
         }),
         SmoothCaret,
         MarkdownPaste,
+        CodeBlockCopy,
     ]
 }

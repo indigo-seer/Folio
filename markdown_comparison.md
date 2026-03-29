@@ -1,159 +1,147 @@
-# Markdown Format Comparison: Folio vs. Obsidian
+# Markdown Format Comparison: Folio vs Obsidian (Current Snapshot)
 
-This document provides a thorough comparison between the current markdown editor and parser in Folio (built on Tiptap + `@tiptap/markdown`) and the comprehensive feature set of Obsidian Flavored Markdown (OFM).
+> Last updated: March 29, 2026  
+> Scope: What the app does today in `main` based on current source code (`src/lib/editor/extensions.ts`, `src/lib/markdown.ts`, `src/hooks/useEditorState.ts`, extension modules, and tests).
 
-## Overview
+## 1. Executive Summary
 
-**Folio** uses **Tiptap** as its rich-text editor environment with a dual-parsing system: formatting is edited visually (WYSIWYG) and serialized to/from standard Markdown using `@tiptap/markdown` alongside several custom extensions (like `Wikilink` and `TauriImage`). 
+Folio now supports a much broader Obsidian-style markdown surface than before, including:
 
-**Obsidian** operates primarily on plain text using a highly extended variant of GitHub Flavored Markdown (GFM), interpreted at render-time with a custom parser.
+- Wikilinks with alias/anchor variants
+- Callouts with fold behavior
+- Native tables
+- Obsidian-style codeblock copy affordance (hover copy button)
+- Highlight syntax (`==mark==`)
+- Inline + block math
+- Tag tokens (`#tag`)
+- Embed tokens (`![[Note]]`, including anchor forms)
 
----
+It uses a hybrid pipeline:
 
-## 1. Supported Features (Common Ground)
+- **Load/edit parse path**: TipTap `@tiptap/markdown` + custom tokenizers in extensions.
+- **Save path**: custom serializer in `src/lib/markdown.ts` (`tipTapToMarkdown`).
 
-These formats are supported by both Folio and Obsidian, though their implementations might subtly differ.
-
-| Feature | Folio (Tiptap) Implementation | Obsidian Implementation |
-| :--- | :--- | :--- |
-| **Basic Text Styling** | Bold (`**`), Italic (`*`), Strikethrough (`~~`) | Bold, Italic, Strikethrough |
-| **Headings** | Limited: Only H1, H2, and H3 (`#`, `##`, `###`) via `StarterKit.configure` | Full: H1 through H6 (including Setext-style `Title\n===`) |
-| **Lists (Unordered/Ordered)** | Yes, standard Markdown (`-`, `*`, `1.`) | Yes |
-| **Task Lists** | Yes (`- [ ]`), but explicitly configured with `nested: false` | Yes, full nesting support. Also supports custom status characters used by themes/plugins. |
-| **Blockquotes** | Yes (`> `) | Yes |
-| **Horizontal Rules** | Yes (`---` or `***`) | Yes |
-| **Hard Line Breaks** | Yes (via double space) | Yes (via double space or trailing backslash `\`) |
-| **Code Blocks** | Yes, with syntax highlighting via `lowlight` | Yes, with PrismJS syntax highlighting |
-| **Inline Code** | Yes (`` `code` ``) | Yes |
-| **Standard Links** | Yes (`[Text](URL)`). Note: Reference links are parsed but silently flattened to inline URLs during serialization. | Yes, including full support for Reference-style definitions. |
-| **Standard Images** | Supported (`![Alt](URL)`). Folio overrides this via `TauriImage` to resolve local `attachments/` paths. | Yes. Resolves attachments relative to vault based on settings. |
-| **Basic Wikilinks** | Supported (`[[Note Name]]`) via custom `Wikilink` extension. Parses standard brackets but ignores internal structure. | Supported natively with autocomplete. |
+That means support quality is best judged by **round-trip behavior** (load -> edit -> save), not only parse.
 
 ---
 
-## 2. Obsidian-Specific Formats (Not Currently in Folio)
+## 2. Supported and Round-Trippable
 
-Obsidian extends Markdown significantly to support building a "second brain". The current Folio setup lacks parsers/extensions for the following:
+These features are currently supported in practice and serialized back to markdown explicitly by `tipTapToMarkdown`.
 
-### Link & Embed Variations
-*   **Aliases in Wikilinks**: `[[Note Name|Alias Text]]`. Folio's regex `^\[\[([^\]]+)\]\]` treats the entire inner string as the note name.
-*   **Heading & Block Anchors**: `[[Note Name#Specific Heading]]` or `[[Note Name^block-id]]`.
-*   **Wikilink Alias + Anchor Combo**: `[[Note Name#Specific Heading|Alias Text]]`. The regex parsing implications compound here.
-*   **Same-note Anchors**: `[[#Heading]]` or `[[^block-id]]`. Used to link to a section within the current note without specifying the note's name. Folio's tokenizer regex blindly swallows `#Heading` as the literal note name.
-*   **Block Identifiers**: `^block-id` at the end of a line/paragraph.
-### Link & Embed Variations
-*   **Note Transclusions (Embeds)**: `![[Note Name]]` is partially supported. The `Embed` extension parses and renders an interactive transclusion placeholder block in the editor.
-*   **File Embeds (Audio, Video, PDF)**: `![[file.mp3]]`, `![[file.mp4]]`, `![[file.pdf]]`, and even `![[doc.pdf#page=3]]` for specific PDF pages. Folio currently lacks a mechanism to render these media types inline.
-*   **Image Resizing**: `![[image.png|100x100]]` (Obsidian syntax) or `![alt|200](https://url)` (Standard Markdown extension syntax).
-
-### Advanced Formatting & Elements
-*   **Callouts (Admonitions)**: Supported natively! Folio supports 12 of the primary Obsidian layout styles (Note, Abstract, Tip, Success, Question, Warning, Failure, Danger, Bug, Example, Quote, Todo). Includes foldable support (`> [!NOTE]-`).
-*   **Tables**: Supported natively via `@tiptap/extension-table` with strict markdown `|` text formatting alignment.
-*   **Math (LaTeX/MathJax)**: Supported natively via KaTeX for both block (`$$...$$`) and inline (`$math$`). Edited seamlessly via inline text areas.
-*   **Tags**: `#tag` natively parsed and rendered as interactive UI pills. (Note: hierarchical tag indexing `#parent/child` is parsed but relies on external application logic to filter).
-*   **Frontmatter (YAML)**: Supported natively. Parsed and rendered as an uneditable property block at the very top of the note to preserve application metadata perfectly across edits.
-*   **Reference-style Links**: `[link text][ref-id]` accompanied by `[ref-id]: https://url`. While Folio's parser can read these, `@tiptap/markdown` round-trips them by silently flattening them into inline links `[link text](https://url)`. The original reference definition block at the bottom will literally be deleted upon editing.
-*   **Highlights**: `==Highlighted text==`. (Tiptap has a `<mark>` / highlight extension, but it is not currently included in Folio).
-*   **Mermaid Diagrams**: ````mermaid ... ```` blocks render as diagrams in Obsidian. Folio renders this as a standard code block.
-*   **Footnotes**: `[^1]` inline and `[^1]: Footnote text` at the bottom.
-*   **Comments**: `%% This is a hidden comment %%`. Doesn't render in preview mode.
-*   **Inline HTML**: Obsidian natively renders raw HTML like `<u>text</u>`, `<br>`, or `<span style="color:red">`. Folio does not have defined behavior for all raw structural HTML.
-*   **Properties (formerly YAML Frontmatter)**: 
-    ```yaml
-    ---
-    title: My Note
-    tags: [a, b]
-    ---
-    ```
-    Obsidian (since v1.4) parses this into an interactive, structured UI properties panel at the top of the note instead of raw YAML. Folio treats it as a horizontal rule followed by text, which will break the YAML format during formatting/serialization.
+| Feature | Folio Status | Notes |
+|---|---|---|
+| Bold / Italic / Strike / Inline Code | Supported | Serialized via mark handlers in `inlineToMarkdown`. |
+| Headings H1-H6 | Supported | `StarterKit` configured with levels `[1..6]`. |
+| Unordered + Ordered Lists | Supported | Includes multi-line item serialization. |
+| Task Lists (nested enabled) | Supported | `TaskItem.configure({ nested: true })`; serializer has special indent handling for nested task items. |
+| Blockquotes | Supported | Block-level parse + serialization. |
+| Horizontal Rules | Supported | Serialized as `---`. |
+| Hard breaks | Supported | Serialized as `\\\n`; parser converts paragraph newlines to hard breaks. |
+| Fenced code blocks | Supported | Language retained through `codeBlock` attrs; hover copy button for full-block clipboard copy. |
+| Standard links | Supported | Markdown link marks serialize to `[text](url)`. |
+| Images | Supported | Includes attachment path normalization from Tauri asset URLs back to `attachments/...` on save. |
+| Wikilinks | Supported | `[[Note]]`, `[[Note|Alias]]`, `[[Note#Heading]]`, `[[Note^block]]`, combos, and same-note anchor variants via `parseWikilinkInner`. |
+| Callouts | Supported | Obsidian-like `> [!type]`, fold markers `+` / `-`, custom node view UX. |
+| Tables | Supported | TipTap table extension + explicit markdown table serialization in `nodeToMarkdown`. |
+| Highlights | Supported | Highlight extension + serializer emits `==text==`. |
+| Math (inline and block) | Supported | `inlineMath` and `mathBlock` nodes serialize as `$...$` and `$$...$$`. |
+| Tags | Supported | Custom `tag` node/tokenizer serializes to `#tag/path`. |
+| Embeds | Supported (token-level) | `embed` node serializes to `![[Note]]` / `![[Note#Anchor]]`. |
 
 ---
 
-## 3. What is Not Supported
+## 3. Supported but With Important Caveats
 
-Here is the definitive explicit list of Obsidian formatting features that **are currently NOT supported** by the Folio editor:
+### 3.1 Frontmatter
 
-1.  **Headings 4, 5, and 6** (`####`, `#####`, `######`) and Setext headings (`Title\n===`)
-2.  **Nested Task Lists** (`- [ ]`)
-3.  **Wikilink Aliases** (`[[Link|Alias]]`)
-4.  **Wikilink Anchor Links** (`[[Link#Heading]]` or `[[Link^block-id]]`)
-5.  **Same-note Anchors** (`[[#Heading]]` or `[[^block-id]]`)
-6.  **Combo Wikilinks** (`[[Link#Heading|Alias]]`)
-7.  **Block Identifiers** (`^block-id`)
-8.  **Media Audio/Video/PDF Embeds** (`![[file.mp3]]`, `![[doc.pdf#page=3]]`)
-9.  **Embed + Anchor Combos** (`![[Note#Heading]]`, `![[Note^block-id]]`)
-10. **Image Resizing** (`![[image.png|200]]` or standard `![alt|200](url)`)
-11. **Highlights** (`==text==`)
-12. **Nested Callouts** (Callouts inside of Callouts)
-13. **Mermaid Diagrams** (Renders as plain text/code blocks)
-14. **Footnotes** (`[^1]`)
-15. **Markdown Comments** (`%% comment %%`)
-16. **Inline HTML** (`<u>`, `<span>`, etc.)
-17. **Hard Line Breaks via Backslash** (`line\`)
-18. **Reference-style Links** (Silently flattened to inline links upon serialization)
+There is a custom `frontmatter` extension and serializer support, but the active load pipeline currently strips top-of-file frontmatter before injecting content:
 
----
+- `useEditorState.ts` runs `stripFrontMatter(...)` before `setContent(..., { contentType: 'markdown' })`.
 
-## 4. Where to Find these Features in the Codebase
+Implication:
 
-If you plan to add support for missing Obsidian features or remove existing ones, here are the key files responsible for Markdown parsing, feature configuration, and editor behavior in the Folio project:
+- Existing YAML frontmatter at file start is currently not hydrated into the editor as frontmatter content in the normal load path.
+- The extension/test infrastructure exists, but runtime behavior is constrained by load stripping.
 
-### Main Editor Configuration
-*   **`src/lib/editor/extensions.ts`**: **The most important file for adding/removing features.** This file exports the `getEditorExtensions()` function, which defines the exact array of Tiptap extensions (e.g., `StarterKit`, `@tiptap/markdown`, `Wikilink`) loaded into the editor. If you want to add Tables or Highlight support, you would import and add the extension to the array here.
-*   **`src/components/Editor.tsx`**: The core rich-text React component. It initializes the Tiptap `useEditor` hook and wires it up to the extensions from `extensions.ts`. It also contains the logic for intercepting and saving pasted images to the local filesystem.
+### 3.2 Embeds are syntax-level, not full transclusion rendering
 
-### Custom Markdown Extensions & Parsers
-*   **`src/extensions/Wikilink.ts`**: The custom Tiptap Node extension responsible for parsing `[[Note Name]]` links. Notice the `markdownTokenizer` and `renderMarkdown` methods—this is where you would update the Regex if you wanted to add support for Obsidian Aliases (`|Alias`) or Block/Heading anchors (`#` and `^`).
-*   **`src/components/WikilinkNodeView.tsx`** & **`src/components/WikilinkSuggestion.tsx`**: The React UI components that render the interactive tag/link inside the editor and handle the dropdown suggestion popup when you type `[[`.
-*   **`src/extensions/SlashCommand.ts`** & **`src/components/SlashCommandSuggestion.tsx`**: Handles the `/` menu popup for inserting blocks (which is a rich-text feature rather than pure Markdown syntax).
+Embed tokens parse/render as dedicated nodes, but full Obsidian transclusion behavior (live content projection of target note/section) is not implemented yet.
 
-### UX Extensions
-*   **`src/extensions/TypewriterMode.ts`** & **`src/extensions/SmoothCaret.ts`**: pure editor UX extensions that control caret animation and keeping the active line centered, separate from Markdown parsing.
+### 3.3 Reference-style links
+
+Reference link definitions are not preserved as reference definitions in save output; behavior still flattens into inline links in practice.
+
+### 3.4 Anchor scrolling
+
+Heading anchors are handled; block-id scrolling (`^block-id`) is not fully implemented yet in DOM navigation.
 
 ---
 
-## 5. Implementation Roadmap & Progress Status
+## 4. Not Implemented (or Not Fully Obsidian-Equivalent)
 
-### Phase 0 — Corruption Guard
-- [x] Create `CorruptionBanner.tsx` component
-- [x] Integrate corruption detection into `Editor.tsx`
+| Area | Status |
+|---|---|
+| Footnotes (`[^1]`) | Not implemented |
+| Obsidian comments (`%% ... %%`) | Not implemented |
+| Mermaid rendering | Not implemented (treated as regular fenced code) |
+| Full media embed rendering (`![[file.pdf]]`, video/audio player semantics) | Not implemented |
+| Block ID authoring + robust navigation | Partial / pending |
+| Full Obsidian Properties parity | Partial (frontmatter caveat above) |
+| Guaranteed inline HTML parity with Obsidian preview behavior | Not guaranteed |
 
-### Phase 1 — Quick Wins
-- [x] Enable H4-H6 in `extensions.ts`
-- [x] Enable nested task lists in `extensions.ts`
-- [x] Add Setext heading support
-- [x] Update `MarkdownPaste.ts` (H1-H6, Setext)
-- [x] Add H4/H5/H6 slash commands
-- [x] Add H4/H5/H6 CSS styles
+---
 
-### Phase 2 — Wikilink Overhaul
-- [x] Rewrite `Wikilink.ts` tokenizer (alias, anchor, same-note)
-- [x] Update `WikilinkNodeView.tsx` (alias display, anchor icon)
-- [x] Update `handleWikilinkClick` in `useFileOperations.ts`
-- [x] Fix cross-note alias and anchor drop on serialization (`tipTapToMarkdown`)
+## 5. UX-Driven Markdown Capabilities Added Recently
 
-### Phase 3 — New Extensions
-- [x] Install Table/Highlight packages
-- [x] Register Table in `extensions.ts`
-- [x] Create `Callout.ts` + `CalloutNodeView.tsx`
-- [x] Create `Frontmatter.ts` + `FrontmatterNodeView.tsx`
-- [x] Create `Tag.ts` + `TagNodeView.tsx`
-- [x] Create `MathBlock.ts` and `InlineMath.ts`
-- [x] Create `Embed.ts` + `EmbedNodeView.tsx`
-- [x] Update `SlashCommandSuggestion.ts` (new commands)
-- [x] Update `index.css` with new styles
-- [ ] Create `Comment.ts`
-- [ ] Create `Footnote.ts`
-- [ ] Standard image resizing (`![alt|200](url)`)
-- [ ] Update `FloatingToolbar.tsx` (highlight button)
-- [ ] Update `MarkdownPaste.ts` (new patterns)
+Recent implementation includes notable UX polish around markdown-native blocks:
 
-### Phase 4 — Edge Cases
-- [ ] Backslash line breaks
-- [ ] Inline HTML pass-through
-- [ ] Reference-style links decision
-- [ ] Create `BlockId.ts`
+- Callout type picker anchored to icon (icon-only grid), fold toggle in floating menu.
+- Empty-callout inline hint text.
+- Table UX improvements (toolbar operations, visual alignment/styling polish).
+- Codeblock UX polish with hover copy affordance and copied-state feedback.
+- Split pane editing with independent pane focus and pane-aware quick switch behavior.
 
-### Phase 5 — Heavy Rendering (Deferred)
-- [ ] Mermaid diagrams (pending user decision)
-- [ ] Note transclusion (pending user decision)
+These do not always change markdown grammar, but materially improve markdown editing ergonomics.
+
+---
+
+## 6. Source of Truth in Code
+
+Primary files for markdown behavior:
+
+- `src/lib/editor/extensions.ts`  
+  Extension registry (StarterKit, Markdown, Callout, Wikilink, Table, Highlight, Math, etc.)
+- `src/lib/markdown.ts`  
+  Save-side serializer and fallback parser utilities
+- `src/hooks/useEditorState.ts`  
+  Load pipeline, autosave, and content hydration behavior (including frontmatter stripping)
+- `src/extensions/Wikilink.ts`
+- `src/extensions/Callout.ts`
+- `src/extensions/Frontmatter.ts`
+- `src/extensions/Embed.ts`
+- `src/extensions/MathBlock.ts`
+- `src/extensions/InlineMath.ts`
+- `src/extensions/Tag.ts`
+- `src/extensions/MarkdownPaste.ts`
+- `src/extensions/CodeBlockCopy.ts`
+
+Validation tests:
+
+- `src/lib/__tests__/markdown.test.ts` (serializer behavior)
+- `src/lib/__tests__/parse.test.ts` (parser behavior and regressions)
+
+---
+
+## 7. Practical Compatibility Guidance
+
+If you are importing Obsidian vault content into Folio today:
+
+- Safe bets: headings, lists/tasks, callouts, tables, wikilinks, tags, highlight, math.
+- Use caution with: frontmatter-heavy notes, reference-style links, footnotes, comments, mermaid, and media-heavy embeds.
+
+For roadmap prioritization, the biggest compatibility gains would come from:
+
+1. Frontmatter load-path parity (stop stripping or convert to node reliably)  
+2. Footnotes/comments support  
+3. Rich media/embed rendering and block-id navigation

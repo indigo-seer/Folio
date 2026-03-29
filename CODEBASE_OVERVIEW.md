@@ -1,215 +1,315 @@
-# Folio — Codebase Overview
+# Folio — Codebase Overview (Current)
 
-> **Version:** 0.2.0 · **Stack:** Tauri v2 + React 18 + TypeScript + TipTap + Tailwind CSS 3 + Vite  
-> **Last updated:** March 8, 2026
-
----
-
-## Architecture Diagram
-
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                              App.tsx                                   │
-│  ┌────────────────┐  ┌───────────────────────────────────────────────┐ │
-│  │ Sidebar        │  │                   TabBar                      │ │
-│  │  ├ FileTree    │  ├───────────────────────────────────────────────┤ │
-│  │  └ actions     │  │              Main Editor Area                 │ │
-│  │                │  │  ┌─────────────────────────────────────────┐  │ │
-│  │ ContextMenu    │  │  │  NoteTitle (editable)                   │  │ │
-│  │ RenameModal    │  │  ├─────────────────────────────────────────┤  │ │
-│  │ QuickSwitcher  │  │  │  Editor (TipTap)                        │  │ │
-│  │ NewNoteInput   │  │  │   ├ FloatingToolbar                     │  │ │
-│  │                │  │  │   ├ WikilinkExtension                   │  │ │
-│  │                │  │  │   ├ TypewriterMode                      │  │ │
-│  │                │  │  │   ├ SmoothCaret (GPU-Composited)        │  │ │
-│  │                │  │  │   └ EditorContent                       │  │ │
-│  │                │  │  └─────────────────────────────────────────┘  │ │
-│  │                │  │  StatusBar                                    │ │
-│  └────────────────┘  │  └ FloatingBacklinks                          │ │
-│                      └───────────────────────────────────────────────┘ │
-│  VaultContext (notes, backlinkIndex, onWikilinkClick, fileSystem)      │
-│  ThemeProvider, ErrorBoundary                                          │
-└─────────────────────────────────────┬──────────────────────────────────┘
-                                      │
-  ┌───────────────────────────────────┴────────────────────────────────┐
-  │                           useFileSystem                            │
-  │     (Hybrid Abstraction layer routing to correct Environment)      │
-  │  ┌──────────────────────┐                    ┌──────────────────┐  │
-  │  │ Tauri Environment    │                    │ Web Environment  │  │
-  │  │ (Desktop)            │                    │ (Browser PWA)    │  │
-  │  │ native 'readDir()',  │                    │ File System      │  │
-  │  │ native 'open()',     │                    │ Access API       │  │
-  │  │ 'convertFileSrc'     │                    │ (Handles Cache)  │  │
-  │  └──────────┬───────────┘                    └────────┬─────────┘  │
-  └─────────────┼─────────────────────────────────────────┼────────────┘
-                │                                         │
-        lib/config.ts                               lib/markdown.ts
-(FolioConfig v1. localStorage fallback)     (MD ↔ TipTap JSON parser,
-                                             URL resolution & serialization)
-```
+> Version: 0.3.0  
+> Stack: Tauri v2 + React 18 + TypeScript + TipTap 3 + Tailwind CSS 3 + Vite  
+> Last updated: March 29, 2026
 
 ---
 
-## File Map
+## 1) High-Level Architecture
 
-### Entry & App Config (`/`)
+```text
+App
+└─ Providers
+   ├─ SettingsProvider
+   ├─ ModalProvider
+   └─ WorkspaceProvider
+      └─ Bootloader + VaultContext wiring
+         └─ MainLayout
+            ├─ Sidebar
+            ├─ TabBar (main + split strips in same top row)
+            ├─ Editor pane A (main)
+            ├─ Editor pane B (split, optional)
+            ├─ Split drag separator (shared ratio)
+            └─ StatusBar
 
-| File | Purpose |
-|------|---------|
-| `index.html` | Single-page shell, loads Google Fonts (Inter, Libre Baskerville, JetBrains Mono). |
-| `src/main.tsx` | React DOM entry point, renders `<App />`. |
-| `vite.config.ts` | Vite dev/build configuration. |
-| `tailwind.config.js` | Tailwind theme: colours, fonts, type scale, transitions, content width. |
-| `postcss.config.js` | PostCSS pipeline (Tailwind + Autoprefixer). |
-| `package.json` | Dependencies, scripts (`dev`, `build`, `tauri dev`). |
+ModalRoot (global overlays)
+├─ QuickSwitcher (commands + notes)
+├─ ContextMenu
+├─ RenameModal / MoveModal / Folder flow
+├─ SettingsModal
+└─ Toast
+```
 
-### Native Config (`src-tauri/`)
+Core idea:
 
-| File | Purpose |
-|------|---------|
-| `Cargo.toml` | Rust dependencies. Registers plugins: `fs`, `dialog`, `os`, `path` alongside `tauri` v2. |
-| `tauri.conf.json` | Core Tauri build config (identifier, window sizes). Configures `assetProtocol` in `app.security` to permit WebViews to request local disk images via the `http://asset.localhost/` scheme. |
-| `capabilities/default.json` | Security scopes for file system access (`fs:allow-read-file`, `fs:allow-write-file`, `fs:allow-read-dir`, `fs:allow-mkdir`, `core:default`, `dialog:allow-open`, and robust recursive path `$HOME/**` scopes). |
-
-### Styles (`src/`)
-
-| File | Purpose |
-|------|---------|
-| `index.css` | Global styles: Tailwind directives, base theme (light + dark), prose typography (`.prose-folio`), sidebar transitions, focus mode logic, and overscroll prevention. |
-
-### Components (`src/components/`)
-
-| File | Purpose |
-|------|---------|
-| `App.tsx` | Root application layout. Wires together sidebar, tabs, editor. Manages file loading, auto-save (1s debounce), and the `loadConfig` boot sequence. |
-| `ContextMenu.tsx` | Reusable right-click menu with boundary detection. |
-| `Editor.tsx` | Core TipTap editor wrapper. Configures all extensions, intercepts drop/paste events, and mounts a **debounced (1000ms) base64 image scanner loop** to seamlessly write ephemeral pasted images to disk natively via the filesystem adapter without choking the CPU main thread. |
-| `ErrorBoundary.tsx` | Standard React error boundary for unhandled promise rejection recovery. |
-| `FileTree.tsx` | Recursive tree component for sidebar folder/file routing. Highlights the active file, handles nested state toggles, and actively excludes the internal `attachments` directory from visibility. |
-| `FloatingBacklinks.tsx` | Popover triggered via the status bar showing referring notes. |
-| `FloatingToolbar.tsx` | TipTap `BubbleMenu` wrapper. Shows text formatting buttons. |
-| `GraphView.tsx` | Interactive canvas visualization (`react-force-graph-2d`). Styled with zoom-aware text and link highlighting. |
-| `NewNoteInput.tsx` | Inline input component for creating new notes directly inside the sidebar tree. |
-| `NoteTitle.tsx` | Editable inline title at the top of the editor. Modifying this explicitly triggers file moves via `useFileSystem`. |
-| `QuickSwitcher.tsx` | Command palette modal (`Cmd+K`) using Fuse.js for fuzzy-searching paths. |
-| `Sidebar.tsx` | Navigational left pane. Features a collapsible transition mapped for Focus Mode support. |
-| `StatusBar.tsx` | Bottom bar housing word count, reading time stats, and graph triggers. |
-| `TabBar.tsx` | Draggable multiple file tabs interface powered by `@dnd-kit/core`. |
-| `WikilinkDropdown.tsx` | Autocomplete UI selecting notes when typing `[[`. Mounted via Tippy.js. |
-
-### Contexts & Hooks (`src/hooks/`, `src/contexts/`)
-
-| File | Purpose |
-|------|---------|
-| `useFileSystem.ts` | **Hybrid** OS/Browser API integration layer. Dispatches native operations using `@tauri-apps/plugin-fs` bindings (create, read/write binaries, recursive mkdir for attachments) on Desktop, or maps to standard File System Access handles (Chrome). Maintains the global `notes` set, `backlinkIndex`, and file lifecycle. |
-| `useTabs.ts` | State machine governing multi-tab concurrency (pointers, close, rename, dragging). |
-| `VaultContext.tsx` | Injects the active `vault`, `fileSystem` adapter, and backlink graphs directly into components via context to eliminate prop drilling through layout elements. |
-| `useTheme.tsx` | Context holding light/dark color scheme state synced iteratively to DOM attributes and `FolioConfig`. |
-
-### Core Libraries (`src/lib/`)
-
-| File | Purpose |
-|------|---------|
-| `config.ts` | Manages OS AppData configurations via `FolioConfig v1`, maintaining `lastOpenedVault` history and UI bounds securely. |
-| `markdown.ts` | Bidirectional parser mapping `.md` strings ↔ TipTap JSON nodes. Features complex internal interception sequences for `tauri://localhost` asset URL extraction on save, stripping absolute asset URIs gracefully back into portable relative `attachments/name.png` paths inside the Markdown text format. |
-| `editor/extensions.ts` | Defines the TipTap plugin registry. Configures the base markdown nodes, installs the customized `link` extensions, and fundamentally alters the `image` extension to dynamically map portable relative paths (`attachments/xyz.png`) into absolute disk paths using Tauri's `convertFileSrc` native API at instantiation time for zero-config rendering. |
-
-### TipTap Extensions (`src/extensions/`)
-
-| File | Purpose |
-|------|---------|
-| `MarkdownPaste.ts` | Plugin intercepting plain-text and HTML OS paste payloads and tunneling them directly into `markdownToTipTap` JSON node transformations instead of raw text strings. |
-| `SmoothCaret.ts` | Custom physics engine mapping ProseMirror states to a highly performant GUI caret. Eliminates browser DOM layout thrashing by executing all animations via 180ms CSS `transform: translate` matrices on the GPU compositor thread. Accommodates external layout collapse routines via a precise `ResizeObserver`. |
-| `TypewriterMode.ts` | Extension locking the vertical Y-offset of the active text block to the center of the viewport, effectively creating distraction-free continuous writing environments. Safely disengages during mouse interaction. |
-| `SlashCommand.ts` | TipTap plugin tracking `/` characters to trigger quick-action block insertion popovers. |
-| `Wikilink.ts` | Node extension establishing AST bounds for `[[Text]]` entities, and linking the tippy.js suggestions controller to `WikilinkDropdown`. |
+- The app is a **single editing shell** with optional split-pane mode.
+- Both panes are first-class tabs with independent active state.
+- Markdown is parsed by TipTap markdown extensions on load, then serialized by `tipTapToMarkdown` on save.
 
 ---
 
-## Data Pipelines & Execution Flows
+## 2) Runtime Layering
 
-### 1. The Boot Sequence (Auto-Loading)
+### 2.1 UI and State
 
-```text
-App.tsx mounts
-  → loadConfig() reads active OS Application Support config.json (via Tauri fs)
-  → if config.vault.lastOpenedVault string survives validation:
-      → useFileSystem.loadVault(path) validates structural directory
-      → recursive scan loops the folder, ignoring system / attachments files
-      → fileSystem populates global contexts, mounting the UI shell silently
-```
+- `src/App.tsx`
+  - Builds provider hierarchy.
+  - Runs boot flow (`useAppBootloader`).
+  - Owns pane focus state (`main` vs `split`).
+  - Creates two editor state channels (one per pane) through `useEditorState`.
 
-### 2. Auto-Save Pipeline
-```text
-User types in Editor Content
-  → TipTap onUpdate hooks fire synchronously
-  → updateWordCount(editor) increments UI
-  → useEditorState.ts triggers delayed debounced save loop (1000ms delay)
-    → editor.getJSON() extracts active TipTap AST
-    → tipTapToMarkdown(json) executes sequence pipeline:
-       └ Regex/parsers extract native Tauri asset:// URIs and re-normalize them to relative markdown URLs.
-    → useFileSystem.writeFile(path, processedMarkdown) executes via OS File Handle.
-```
+- `src/components/MainLayout.tsx`
+  - Shell layout, focus mode visibility behavior, sidebar collapse behavior.
+  - Split-pane rendering and drag-resize ratio state.
+  - Passes split ratio into top `TabBar` so tab geometry matches content geometry.
 
-### 3. Image Persistence & Attachment Pipeline
+- `src/components/TabBar.tsx`
+  - Renders main/split tabs in the same strip.
+  - Applies pane-focused active styling.
+  - Houses theme toggle and native window control integration.
 
-```text
-User pastes image payload (Clipboard API / Drag Drop)
-  → Core browser creates an ephemeral object representation (data: URI or blob: URI)
-  → Editor.tsx debounced active scanner (running strictly on a 1000ms idle-typist delay) discovers the ephemeral 'src' inside the state descendents.
-    → fetch(src).blob() extracts OS binary ArrayBuffer.
-    → fileSystem natively validates/creates root `/attachments` folder.
-    → OS writes binary buffer directly to `{vault}/attachments/attachment-{timestamp}.png`.
-    → TipTap node receives a dispatched transaction overwriting the abstract blob URI with a `convertFileSrc()` asset scheme targeting the local hard drive.
-    → WebView native assetProtocol renders the image instantly.
-  → Markdown save pipeline later collapses this absolute URL for pure portability.
-```
+### 2.2 Domain Hooks
 
-### 4. GPU-Accelerated Smooth Caret
+- `src/hooks/useTabs.ts`
+  - Canonical tab model:
+    - `mainTabIds`, `splitTabIds`, `activeTabId`, `splitTabId`, shared `tabById`.
+  - Pane-aware open/close/select APIs:
+    - `openTab`, `openTabInSplit`, `closeTabInPane`, `setActiveTabId`, `setSplitTabId`, `closeSplitTab`.
+  - Contains lifecycle guards to avoid tab-content loss scenarios when moving between main/split contexts.
 
-```text
-User initiates continuous keystrokes
-  → ProseMirror Native Selection caret is CSS obscured.
-  → SmoothCaret.ts onKeyDown capture-phase triggers isTyping variables natively bypassing propagation blocks.
-  → ProseMirror coordsAtPos calculates exact abstract viewport (X, Y) layout boundaries.
-  → SmoothCaret injects `transform: translate(x, y)` inline styles to a hidden absolute container.
-  → CSS GPU hardware compositor thread intercepts the transformation without triggering native Browser Recalculate Styles or Layout phases, rendering physics in parallel to heavy JS AST routines.
-```
+- `src/hooks/useFileSystem.ts`
+  - Vault state authority (`rootPath`, tree, notes, backlink index).
+  - Uses adapter API from `src/lib/fs` for read/write/scan/move/rename/delete.
+  - Maintains incremental index updates and editor scroll/cursor state snapshots.
 
-### 5. Self-Healing Backlink Network
+- `src/hooks/useFileOperations.ts`
+  - UI-facing operations (new note, rename, move, delete, export PDF, open in split).
+  - Handles wikilink click routing and same-note anchor behavior.
 
-```text
-User executes a Rename Command on Title block / Sidebar
-  → useFileSystem intercepts the rename.
-  → Iterates through every file string in the global BacklinkIndex map.
-  → Programmatically runs regex text replacement modifying [[OldName]] → [[NewName]] across target documents.
-  → Commits native save sequences across the changed pool.
-  → Retriggers React Contexts to automatically redraw TabBar/Sidebar strings transparently to the user.
-```
+- `src/hooks/useEditorState.ts`
+  - Content hydration and autosave loop (debounced + tab-switch flush).
+  - Corruption detection integration.
+  - Editor lifecycle guard rails around hydration, remounting, and sync.
+
+### 2.3 Contexts
+
+- `src/contexts/VaultContext.tsx`
+  - Exposes vault notes/backlinks and wikilink-open handler to editor widgets.
+
+- `src/contexts/ModalContext.tsx`
+  - Single state machine for global modal orchestration.
+
+- `src/contexts/WorkspaceContext.tsx`
+  - Multi-vault workspace list and active-workspace routing.
 
 ---
 
-## PRD Phase Status
+## 3) Markdown + Editor Pipeline
 
-| PRD Phase | Scope | Status | Notes |
-|---|---|---|---|
-| **Phase 1** — Core Editor | TipTap editor, live markdown preview, typography | ✅ **Complete** | WYSIWYG editing, complex unified markdown parsing (`markdown.ts`) |
-| **Phase 2** — File System | Native File System Access, auto-loading, robust configs | ✅ **Complete** | **Upgraded to Tauri v2**. Config persistent auto-loads (`FolioConfig`), fully scoped capabilities profiles config. |
-| **Phase 3** — Wikilinks | `[[Note Name]]`, autocomplete, self-healing links | ✅ **Complete** | React NodeView wikilinks, dynamic backlink index. Renames modify target files automatically. |
-| **Phase 4** — Context Menus | Right-click file management (Delete, Rename, New) in tree | ✅ **Complete** | Added inline `NewNoteInput.tsx` support inside directories. |
-| **Phase 5** — Graph View | Force-directed graph with React Force Graph | ✅ **Complete** | Obsidian-style interactive map with hover highlights and zoom bounds. |
-| **Phase 6** — Writing Modes | Focus mode, typewriter mode, quick switcher (`Cmd+K`) | ✅ **Complete** | Layouts supported by custom GPU caret transitions. Fuzzy search command palette routing installed. |
-| **Phase 7** — Image Persistence | Drag/Drop local attachments and cross-OS markdown | ✅ **Complete** | `convertFileSrc` pipeline installed natively with automatic `.attachments` isolation and routing. |
+## 3.1 Extension Registry
+
+`src/lib/editor/extensions.ts` is the single most important markdown/editor registry.
+
+Current stack includes:
+
+- `StarterKit` (H1-H6 enabled)
+- `Markdown` (`@tiptap/markdown`) with `breaks: true`
+- `Typography`, `Placeholder`
+- `CodeBlockLowlight`
+- `Link`
+- Custom nodes/extensions:
+  - `Wikilink`
+  - `Callout`
+  - `Frontmatter`
+  - `Tag`
+  - `MathBlock`
+  - `InlineMath`
+  - `Embed`
+- UX/editor behavior:
+  - `TypewriterMode`
+  - `SlashCommand` (includes `/Code Block` insertion command)
+  - `SmoothCaret`
+  - `MarkdownPaste`
+  - `CodeBlockCopy` (hover copy affordance for fenced code blocks)
+- Table suite:
+  - `Table`, `TableRow`, `TableHeader`, `TableCell`
+- `Highlight`
+- `TauriImage` wrapper (maps `attachments/...` to `convertFileSrc(...)` in Tauri)
+
+## 3.2 Load Path
+
+- `useEditorState` reads markdown from file.
+- It currently strips leading YAML frontmatter via `stripFrontMatter(...)`.
+- Editor content is then set using `setContent(markdown, { contentType: 'markdown' })` so TipTap parser + custom tokenizers run.
+
+## 3.3 Save Path
+
+- `useEditorState` autosave and tab-switch flush call `tipTapToMarkdown` (`src/lib/markdown.ts`).
+- Serializer handles:
+  - headings/lists/tasks/quotes/code/hr/hardbreak
+  - callouts
+  - tables
+  - highlights
+  - math inline/block
+  - tags
+  - wikilinks and embeds
+  - frontmatter node
+  - Tauri attachment URL normalization back to portable markdown paths
 
 ---
 
-## Running the App
+## 4) Split Pane and Tab System (Current)
 
-```bash
-# General Node Dev
-npm install
-npm run dev     # Starts Vite local server (Web Fallback Hybrid mode, heavily hobbled vs Desktop)
+### 4.1 Behavior
 
-# OS Native (Tauri Desktop App)
-npx tauri dev   # Starts Rust backend and attaches Vite frontend natively (Full Local FS mode)
-```
+- Two panes: `main` and optional `split`.
+- Each pane has its own active tab pointer.
+- Command palette (`Ctrl/Cmd+K`) and close-tab (`Ctrl/Cmd+W`) actions are routed to the **focused pane**.
+- `Alt/Ctrl/Cmd + Enter` in quick switcher opens in split.
+- Context menu includes “Open in Split”.
+
+### 4.2 UI Details
+
+- Both pane tab groups are rendered in one top strip (`TabBar`).
+- Split ratio is shared between:
+  - top tab strip pane widths
+  - editor pane widths
+- Divider is draggable and clamped to a safe range (prevents pane collapse).
+
+Key files:
+
+- `src/components/MainLayout.tsx`
+- `src/components/TabBar.tsx`
+- `src/hooks/useTabs.ts`
+- `src/components/ModalRoot.tsx`
+- `src/components/QuickSwitcher.tsx`
+
+---
+
+## 5) Markdown-Focused Custom Components
+
+- `src/components/CalloutNodeView.tsx`
+  - Icon-triggered type menu (icon-only grid)
+  - fold toggle in floating menu
+  - empty-callout inline hint
+
+- `src/components/TableToolbar.tsx`
+  - Bubble controls for row/column insert/delete, merge/split, header row toggle
+
+- Codeblock copy UX (Obsidian-style hover affordance)
+  - Implemented via `CodeBlockCopy` extension using a safe overlay button that copies full block text.
+
+- `src/components/FrontmatterNodeView.tsx`
+  - Collapsible properties block UI for frontmatter nodes
+
+- `src/components/WikilinkNodeView.tsx`
+  - Rich inline wikilink rendering and interaction
+
+- `src/components/MathBlockNodeView.tsx` / `InlineMathNodeView.tsx`
+  - KaTeX-backed rendering/editing UX
+
+---
+
+## 6) Key User Flows
+
+### 6.1 Note Open / Edit / Save
+
+1. User opens note (sidebar, quick switcher, wikilink).
+2. `useEditorState` hydrates markdown into TipTap.
+3. User edits content.
+4. Debounced autosave serializes TipTap JSON via `tipTapToMarkdown` and writes file.
+5. Switching tabs flushes immediately to avoid lost writes.
+
+### 6.2 Open in Split
+
+1. Trigger via context menu or command palette.
+2. `useFileOperations.handleOpenInSplit` calls `tabs.openTabInSplit(...)`.
+3. Split pane mounts if needed.
+4. Focused pane determines where quick-switch actions target.
+
+### 6.3 Rename / Move / Delete
+
+1. Action originates in sidebar/context menu/modals.
+2. `useFileOperations` invokes filesystem adapter operations.
+3. `useTabs` remaps IDs/paths where required.
+4. Vault tree + notes + backlinks are rebuilt or incrementally updated.
+
+---
+
+## 7) Testing and Quality Signals
+
+Current markdown-focused tests:
+
+- `src/lib/__tests__/markdown.test.ts`
+  - Serializer coverage for highlight, tag, callout, frontmatter, embed, math, table.
+
+- `src/lib/__tests__/parse.test.ts`
+  - Parser coverage for callout/embed/math and frontmatter false-positive regression around hr/table/hr patterns.
+
+Note:
+
+- Test suite is targeted rather than exhaustive; many UX-level interactions are still verified manually.
+
+---
+
+## 8) Important Caveats / Technical Debt
+
+1. Frontmatter mismatch in runtime path:
+- Extension + serializer exist, but load pipeline currently strips leading YAML before editor hydration.
+
+2. Embed semantics:
+- Syntax nodes exist; full transclusion/media rendering parity with Obsidian is not complete.
+
+3. Parser duality complexity:
+- There is TipTap markdown parsing on load and custom serialization on save, so parity regressions can appear in edge formats.
+
+4. Legacy artifact:
+- `src/components/PaneTabStrip.tsx` remains in tree but is no longer used after unified top-strip implementation.
+
+5. Duplicate extension warning:
+- Runtime currently logs duplicate `link` extension names; worth cleanup to avoid extension ordering edge-cases.
+
+---
+
+## 9) Quick Reference Map
+
+### App shell and layout
+- `src/App.tsx`
+- `src/components/MainLayout.tsx`
+- `src/components/Sidebar.tsx`
+- `src/components/TabBar.tsx`
+- `src/components/StatusBar.tsx`
+
+### Modal and command surfaces
+- `src/components/ModalRoot.tsx`
+- `src/components/QuickSwitcher.tsx`
+- `src/components/ContextMenu.tsx`
+- `src/components/RenameModal.tsx`
+- `src/components/MoveModal.tsx`
+
+### Editing core
+- `src/components/Editor.tsx`
+- `src/lib/editor/extensions.ts`
+- `src/lib/markdown.ts`
+- `src/hooks/useEditorState.ts`
+
+### Filesystem and data
+- `src/hooks/useFileSystem.ts`
+- `src/hooks/useFileOperations.ts`
+- `src/hooks/useTabs.ts`
+- `src/lib/fs/*`
+
+### Markdown extension modules
+- `src/extensions/Wikilink.ts`
+- `src/extensions/Callout.ts`
+- `src/extensions/Frontmatter.ts`
+- `src/extensions/Tag.ts`
+- `src/extensions/Embed.ts`
+- `src/extensions/MathBlock.ts`
+- `src/extensions/InlineMath.ts`
+- `src/extensions/MarkdownPaste.ts`
+- `src/extensions/CodeBlockCopy.ts`
+
+---
+
+## 10) Contributor Notes
+
+If you are changing markdown behavior, update these together:
+
+1. Extension tokenizer/parsing (`src/extensions/*`)  
+2. Save serializer (`src/lib/markdown.ts`)  
+3. Parse + serializer tests (`src/lib/__tests__/parse.test.ts`, `src/lib/__tests__/markdown.test.ts`)  
+4. User-facing docs (`markdown_comparison.md`, this file)
+
+Keeping those in sync is the best defense against silent markdown drift.
