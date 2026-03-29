@@ -41,27 +41,23 @@ Obsidian extends Markdown significantly to support building a "second brain". Th
 *   **Wikilink Alias + Anchor Combo**: `[[Note Name#Specific Heading|Alias Text]]`. The regex parsing implications compound here.
 *   **Same-note Anchors**: `[[#Heading]]` or `[[^block-id]]`. Used to link to a section within the current note without specifying the note's name. Folio's tokenizer regex blindly swallows `#Heading` as the literal note name.
 *   **Block Identifiers**: `^block-id` at the end of a line/paragraph.
-*   **Note Transclusions (Embeds)**: `![[Note Name]]`.
-*   **Embed + Anchor Combinations**: `![[Note Name#Specific Heading]]` or `![[Note Name^block-id]]` to embed specific sections.
+### Link & Embed Variations
+*   **Note Transclusions (Embeds)**: `![[Note Name]]` is partially supported. The `Embed` extension parses and renders an interactive transclusion placeholder block in the editor.
 *   **File Embeds (Audio, Video, PDF)**: `![[file.mp3]]`, `![[file.mp4]]`, `![[file.pdf]]`, and even `![[doc.pdf#page=3]]` for specific PDF pages. Folio currently lacks a mechanism to render these media types inline.
 *   **Image Resizing**: `![[image.png|100x100]]` (Obsidian syntax) or `![alt|200](https://url)` (Standard Markdown extension syntax).
 
 ### Advanced Formatting & Elements
+*   **Callouts (Admonitions)**: Supported natively! Folio supports 12 of the primary Obsidian layout styles (Note, Abstract, Tip, Success, Question, Warning, Failure, Danger, Bug, Example, Quote, Todo). Includes foldable support (`> [!NOTE]-`).
+*   **Tables**: Supported natively via `@tiptap/extension-table` with strict markdown `|` text formatting alignment.
+*   **Math (LaTeX/MathJax)**: Supported natively via KaTeX for both block (`$$...$$`) and inline (`$math$`). Edited seamlessly via inline text areas.
+*   **Tags**: `#tag` natively parsed and rendered as interactive UI pills. (Note: hierarchical tag indexing `#parent/child` is parsed but relies on external application logic to filter).
+*   **Frontmatter (YAML)**: Supported natively. Parsed and rendered as an uneditable property block at the very top of the note to preserve application metadata perfectly across edits.
 *   **Reference-style Links**: `[link text][ref-id]` accompanied by `[ref-id]: https://url`. While Folio's parser can read these, `@tiptap/markdown` round-trips them by silently flattening them into inline links `[link text](https://url)`. The original reference definition block at the bottom will literally be deleted upon editing.
 *   **Highlights**: `==Highlighted text==`. (Tiptap has a `<mark>` / highlight extension, but it is not currently included in Folio).
-*   **Callouts (Admonitions)**: Folio lacks support for the widely used Obsidian Callouts. In Obsidian, these can be:
-    *   **Standard**: `> [!NOTE] Title`
-    *   **Foldable**: `> [!NOTE]-` (collapsed by default) and `> [!NOTE]+` (expanded by default)
-    *   **Nested**: Callouts placed inside the body of another callout (heavily used in complex structures).
-*   **Tables**: Standard GFM tables (`| Col | Col |`). Folio's `StarterKit` does not include the Tiptap Table extensions.
 *   **Mermaid Diagrams**: ````mermaid ... ```` blocks render as diagrams in Obsidian. Folio renders this as a standard code block.
-*   **Math (LaTeX/MathJax)**: Inline math `$E=mc^2$` and block math `$$...$$`.
 *   **Footnotes**: `[^1]` inline and `[^1]: Footnote text` at the bottom.
 *   **Comments**: `%% This is a hidden comment %%`. Doesn't render in preview mode.
 *   **Inline HTML**: Obsidian natively renders raw HTML like `<u>text</u>`, `<br>`, or `<span style="color:red">`. Folio does not have defined behavior for all raw structural HTML.
-
-### Metadata & Organization
-*   **Tags and Hierarchical Tags**: `#tag` or `#parent/child/grandchild`. Obsidian indexes these with nested structures. Folio currently treats them as plain string text without specialized handling.
 *   **Properties (formerly YAML Frontmatter)**: 
     ```yaml
     ---
@@ -84,22 +80,17 @@ Here is the definitive explicit list of Obsidian formatting features that **are 
 5.  **Same-note Anchors** (`[[#Heading]]` or `[[^block-id]]`)
 6.  **Combo Wikilinks** (`[[Link#Heading|Alias]]`)
 7.  **Block Identifiers** (`^block-id`)
-8.  **Note Transclusion/Embeds** (`![[Note]]`)
-9.  **Media Audio/Video/PDF Embeds** (`![[file.mp3]]`, `![[doc.pdf#page=3]]`)
-10. **Embed + Anchor Combos** (`![[Note#Heading]]`, `![[Note^block-id]]`)
-11. **Image Resizing** (`![[image.png|200]]` or standard `![alt|200](url)`)
-12. **Tables** (`| Column |`)
-13. **Highlights** (`==text==`)
-14. **Callouts (Admonitions)** including Foldable (`[!NOTE]-`) and Nested callouts
-15. **Math / LaTeX** (`$math$` and `$$math$$`)
-16. **Mermaid Diagrams** (Renders as plain text/code blocks)
-17. **Footnotes** (`[^1]`)
-18. **Markdown Comments** (`%% comment %%`)
-19. **Inline HTML** (`<u>`, `<span>`, etc.)
-20. **Hard Line Breaks via Backslash** (`line\`)
-21. **Interactive Tags & Hierarchical Tags** (`#parent/child`)
-22. **Document Properties (Structured YAML Panel)** (`--- \n key: value \n ---`)
-23. **Reference-style Links** (Silently flattened to inline links upon serialization)
+8.  **Media Audio/Video/PDF Embeds** (`![[file.mp3]]`, `![[doc.pdf#page=3]]`)
+9.  **Embed + Anchor Combos** (`![[Note#Heading]]`, `![[Note^block-id]]`)
+10. **Image Resizing** (`![[image.png|200]]` or standard `![alt|200](url)`)
+11. **Highlights** (`==text==`)
+12. **Nested Callouts** (Callouts inside of Callouts)
+13. **Mermaid Diagrams** (Renders as plain text/code blocks)
+14. **Footnotes** (`[^1]`)
+15. **Markdown Comments** (`%% comment %%`)
+16. **Inline HTML** (`<u>`, `<span>`, etc.)
+17. **Hard Line Breaks via Backslash** (`line\`)
+18. **Reference-style Links** (Silently flattened to inline links upon serialization)
 
 ---
 
@@ -142,19 +133,19 @@ If you plan to add support for missing Obsidian features or remove existing ones
 - [x] Fix cross-note alias and anchor drop on serialization (`tipTapToMarkdown`)
 
 ### Phase 3 — New Extensions
-- [ ] Install Table/Highlight packages
-- [ ] Register Table + Highlight in `extensions.ts`
-- [ ] Create `Callout.ts` + `CalloutNodeView.tsx`
-- [ ] Create `Frontmatter.ts` + `FrontmatterNodeView.tsx`
+- [x] Install Table/Highlight packages
+- [x] Register Table in `extensions.ts`
+- [x] Create `Callout.ts` + `CalloutNodeView.tsx`
+- [x] Create `Frontmatter.ts` + `FrontmatterNodeView.tsx`
+- [x] Create `Tag.ts` + `TagNodeView.tsx`
+- [x] Create `MathBlock.ts` and `InlineMath.ts`
+- [x] Create `Embed.ts` + `EmbedNodeView.tsx`
+- [x] Update `SlashCommandSuggestion.ts` (new commands)
+- [x] Update `index.css` with new styles
 - [ ] Create `Comment.ts`
-- [ ] Create `Tag.ts` + `TagNodeView.tsx`
-- [ ] Create `MathBlock.ts`
 - [ ] Create `Footnote.ts`
-- [ ] Create `Embed.ts` + `EmbedNodeView.tsx`
 - [ ] Standard image resizing (`![alt|200](url)`)
-- [ ] Update `index.css` with new styles
 - [ ] Update `FloatingToolbar.tsx` (highlight button)
-- [ ] Update `SlashCommandSuggestion.ts` (new commands)
 - [ ] Update `MarkdownPaste.ts` (new patterns)
 
 ### Phase 4 — Edge Cases

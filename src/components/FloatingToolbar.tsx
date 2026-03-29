@@ -9,6 +9,12 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
     return (
         <BubbleMenu
             editor={editor}
+            pluginKey="textFormattingToolbar"
+            shouldShow={({ editor: currentEditor, state }) => {
+                const { empty } = state.selection
+                if (empty) return false
+                return !currentEditor.isActive('table')
+            }}
         >
             <div className="floating-toolbar">
                 <button
@@ -43,6 +49,21 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
                         <path d="M16 4H9a3 3 0 0 0-3 3v0a3 3 0 0 0 3 3h6" />
                         <path d="M8 20h7a3 3 0 0 0 3-3v0a3 3 0 0 0-3-3H6" />
                         <line x1="4" y1="12" x2="20" y2="12" />
+                    </svg>
+                </button>
+
+                <button
+                    onClick={() => editor.chain().focus().toggleHighlight().run()}
+                    className={editor.isActive('highlight') ? 'is-active' : ''}
+                    title="Highlight"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 18H21" />
+                        <path d="m16 5.5 2.5 2.5" />
+                        <path d="m5.5 16 11-11" />
+                        <path d="m4.5 17.5 2 2" />
+                        <path d="M6 14 3.5 11.5a2.12 2.12 0 0 1 3-3L9 11" />
+                        <path d="m11 11 5 5-2.5 2.5" />
                     </svg>
                 </button>
 

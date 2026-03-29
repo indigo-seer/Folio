@@ -2,7 +2,7 @@ import { ReactRenderer } from '@tiptap/react'
 import tippy, { Instance as TippyInstance } from 'tippy.js'
 import { SuggestionOptions } from '@tiptap/suggestion'
 import { Editor, Range } from '@tiptap/core'
-import { Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, List, ListOrdered, CheckSquare, Minus } from 'lucide-react'
+import { Type, Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare, Minus, Table as TableIcon, Info, Pi, FileSymlink, AlertTriangle, Book, Lightbulb, CheckCircle, HelpCircle, XCircle, Flame, Bug, Quote } from 'lucide-react'
 import { SlashCommandList, SlashCommandListRef, SlashCommandItem } from './SlashCommandList.tsx'
 
 const COMMAND_ITEMS: SlashCommandItem[] = [
@@ -37,30 +37,7 @@ const COMMAND_ITEMS: SlashCommandItem[] = [
             editor.chain().focus().deleteRange(range).setNode('heading', { level: 3 }).run()
         },
     },
-    {
-        title: 'Heading 4',
-        shortcut: '####',
-        icon: Heading4,
-        action: (editor: Editor, range: Range) => {
-            editor.chain().focus().deleteRange(range).setNode('heading', { level: 4 }).run()
-        },
-    },
-    {
-        title: 'Heading 5',
-        shortcut: '#####',
-        icon: Heading5,
-        action: (editor: Editor, range: Range) => {
-            editor.chain().focus().deleteRange(range).setNode('heading', { level: 5 }).run()
-        },
-    },
-    {
-        title: 'Heading 6',
-        shortcut: '######',
-        icon: Heading6,
-        action: (editor: Editor, range: Range) => {
-            editor.chain().focus().deleteRange(range).setNode('heading', { level: 6 }).run()
-        },
-    },
+
     {
         title: 'Bulleted list',
         shortcut: '-',
@@ -93,6 +70,61 @@ const COMMAND_ITEMS: SlashCommandItem[] = [
             editor.chain().focus().deleteRange(range).setHorizontalRule().run()
         },
     },
+    {
+        title: 'Table',
+        shortcut: 'table',
+        icon: TableIcon,
+        action: (editor: Editor, range: Range) => {
+            editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+        },
+    },
+    ...[
+        { id: 'note', name: 'Note', icon: Info },
+        { id: 'abstract', name: 'Abstract', icon: Book },
+        { id: 'todo', name: 'Todo', icon: CheckSquare },
+        { id: 'tip', name: 'Tip', icon: Lightbulb },
+        { id: 'success', name: 'Success', icon: CheckCircle },
+        { id: 'question', name: 'Question', icon: HelpCircle },
+        { id: 'warning', name: 'Warning', icon: AlertTriangle },
+        { id: 'failure', name: 'Failure', icon: XCircle },
+        { id: 'danger', name: 'Danger', icon: Flame },
+        { id: 'bug', name: 'Bug', icon: Bug },
+        { id: 'example', name: 'Example', icon: Book },
+        { id: 'quote', name: 'Quote', icon: Quote }
+    ].map(callout => ({
+        title: `${callout.name} Callout`,
+        shortcut: `> [!${callout.id}]`,
+        icon: callout.icon,
+        action: (editor: Editor, range: Range) => {
+            editor.chain().focus().deleteRange(range).insertContent({
+                type: 'callout',
+                attrs: { type: callout.id, title: callout.name },
+                content: [{ type: 'paragraph' }]
+            }).run()
+        },
+    })),
+    {
+        title: 'Math Block',
+        shortcut: '$$',
+        icon: Pi,
+        action: (editor: Editor, range: Range) => {
+            editor.chain().focus().deleteRange(range).insertContent({
+                type: 'mathBlock',
+                attrs: { latex: '' }
+            }).run()
+        },
+    },
+    {
+        title: 'Embed Note',
+        shortcut: '![[Note]]',
+        icon: FileSymlink,
+        action: (editor: Editor, range: Range) => {
+            editor.chain().focus().deleteRange(range).insertContent({
+                type: 'embed',
+                attrs: { noteName: 'Placeholder' }
+            }).run()
+        },
+    },
 ]
 
 import { PluginKey } from '@tiptap/pm/state'
@@ -108,7 +140,7 @@ export function createSlashCommandSuggestion(): Omit<SuggestionOptions, 'editor'
             return textBefore === '' || textBefore.endsWith(' ')
         },
         items: ({ query }) => {
-            return COMMAND_ITEMS.filter(item => item.title.toLowerCase().startsWith(query.toLowerCase())).slice(0, 10)
+            return COMMAND_ITEMS.filter(item => item.title.toLowerCase().includes(query.toLowerCase())).slice(0, 20)
         },
         render: () => {
             let component: ReactRenderer<SlashCommandListRef> | null = null

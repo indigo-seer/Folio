@@ -396,6 +396,11 @@ function nodeToMarkdown(node: TipTapNode): string {
         case 'listItem':
             return nodeToMarkdownItem(node, '')
 
+        case 'mathBlock':
+            return `$$\n${node.attrs?.latex || ''}\n$$`
+        case 'inlineMath':
+            return `$${node.attrs?.math}$`
+
         case 'taskList':
             return (node.content || [])
                 .map(item => nodeToMarkdown(item))
@@ -411,10 +416,39 @@ function nodeToMarkdown(node: TipTapNode): string {
             return inner.split('\n').map(line => `> ${line}`).join('\n')
         }
 
+        case 'callout': {
+            const type = (node.attrs?.type as string) || 'note'
+            const title = (node.attrs?.title as string) || ''
+
+            let foldChar = ''
+            if (node.attrs?.foldable) {
+                foldChar = node.attrs?.defaultExpanded ? '+' : '-'
+            }
+
+            const header = `> [!${type}]${foldChar}${title ? ' ' + title : ''}`
+            const inner = arrayToMarkdown(node.content || [])
+            const body = inner.split('\n').map(line => `> ${line}`).join('\n')
+
+            return `${header}\n${body}`
+        }
+
         case 'codeBlock': {
             const lang = (node.attrs?.language as string) || ''
             const code = node.content ? node.content.map(c => c.text || '').join('') : ''
             return `\`\`\`${lang}\n${code}\n\`\`\``
+        }
+
+
+
+        case 'embed': {
+            const noteName = (node.attrs?.noteName as string) || ''
+            const anchor = (node.attrs?.anchor as string) || ''
+            return `![[${noteName}${anchor}]]\n`
+        }
+
+        case 'frontmatter': {
+            const yaml = (node.attrs?.yaml as string) || ''
+            return `---\n${yaml}\n---`
         }
 
         case 'image': {
@@ -439,11 +473,41 @@ function nodeToMarkdown(node: TipTapNode): string {
             return `![${(node.attrs?.alt as string) || ''}](${src})`
         }
 
+        case 'table': {
+            const rows = node.content || []
+            let md = ''
+            rows.forEach((row, rowIndex) => {
+                const cells = row.content || []
+                const rowMd = cells.map(cell => {
+                    let cellText = ''
+                    if (cell.content) {
+                        // Tiptap table cells contain paragraphs.
+                        // Markdown tables can't have raw newlines, so we replace them with <br>
+                        cellText = (cell.content || [])
+                            .map(c => nodeToMarkdown(c))
+                            .join('<br>')
+                            .replace(/\n\n/g, '<br>')
+                            .replace(/\n/g, ' ')
+                    }
+                    return ` ${cellText.trim()} `
+                }).join('|')
+
+                md += `|${rowMd}|\n`
+
+                // Markdown requires a divider row after the header
+                if (rowIndex === 0) {
+                    const divider = cells.map(() => ' --- ').join('|')
+                    md += `|${divider}|\n`
+                }
+            })
+            return md + '\n'
+        }
+
         case 'horizontalRule':
             return '---'
 
         case 'hardBreak':
-            return '  \n'
+            return '\\\n'
 
         default:
             return inlineToMarkdown(node.content)
@@ -453,7 +517,7 @@ function nodeToMarkdown(node: TipTapNode): string {
 function inlineToMarkdown(content?: TipTapNode[]): string {
     if (!content) return ''
     return content.map(node => {
-        if (node.type === 'hardBreak') return '  \n'
+        if (node.type === 'hardBreak') return '\\\n'
         if (node.type === 'wikilink') {
             const noteName = (node.attrs?.noteName as string) || ''
             const anchor = (node.attrs?.anchor as string) || ''
@@ -485,6 +549,10 @@ function inlineToMarkdown(content?: TipTapNode[]): string {
             return `![${(node.attrs?.alt as string) || ''}](${src})`
         }
 
+        if (node.type === 'tag') {
+            return `#${node.attrs?.text || ''}`
+        }
+
         if (!node.text) return ''
 
         let text = node.text
@@ -496,6 +564,9 @@ function inlineToMarkdown(content?: TipTapNode[]): string {
                         break
                     case 'italic':
                         text = `*${text}*`
+                        break
+                    case 'highlight':
+                        text = `==${text}==`
                         break
                     case 'code':
                         text = `\`${text}\``

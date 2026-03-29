@@ -61,6 +61,8 @@ function looksLikeMarkdown(text: string): boolean {
         /^```/m,                // code fences
         /\[\[.+?\]\]/,          // wikilinks
         /\[.+?\]\(.+?\)/,       // standard links
+        /==.+?==/,              // highlights
+        /^\|.+\|$/m,            // tables
     ]
     let matches = 0
     for (const pattern of mdPatterns) {

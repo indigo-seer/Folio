@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import { useEffect, useRef, useContext, useMemo } from 'react'
 
 import { FloatingToolbar } from './FloatingToolbar'
+import { TableToolbar } from './TableToolbar'
 import { VaultContext } from '../contexts/VaultContext'
 import { getEditorExtensions, setVaultRootPath } from '../lib/editor/extensions'
 
@@ -171,6 +172,7 @@ export function Editor({ onUpdate, onReady, isTypewriterMode = false }: EditorPr
     return (
         <>
             <FloatingToolbar editor={editor} />
+            <TableToolbar editor={editor} />
             <EditorContent editor={editor} />
         </>
     )
