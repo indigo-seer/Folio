@@ -1,3 +1,5 @@
+import { parseWikilinkInner } from '../extensions/Wikilink';
+
 /**
  * Markdown ↔ TipTap JSON conversion utilities.
  * 
@@ -270,7 +272,8 @@ function parseInline(text: string): TipTapNode[] {
             nodes.push({ type: 'text', text: match[7], marks: [{ type: 'strike' }] })
         } else if (match[8]) {
             // Wikilink
-            nodes.push({ type: 'wikilink', attrs: { noteName: match[8] } })
+            const { noteName, anchor, alias } = parseWikilinkInner(match[8])
+            nodes.push({ type: 'wikilink', attrs: { noteName, anchor, alias } })
         } else if (match[9] && match[10]) {
             // Link
             nodes.push({
@@ -351,7 +354,13 @@ function nodeToMarkdownItem(node: TipTapNode, prefix: string): string {
         const lines = inner.split('\n')
         if (lines.length > 0) {
             lines[0] = prefix + lines[0]
-            const indent = ' '.repeat(prefix.length)
+
+            // For task items, the prefix is "- [x] " which is 6 characters.
+            // Using 6 spaces for indentation causes parsers to treat nested items 
+            // as indented code blocks. We strictly enforce a 2-space indent for task lists.
+            const indentLength = node.type === 'taskItem' ? 2 : prefix.length
+            const indent = ' '.repeat(indentLength)
+
             for (let i = 1; i < lines.length; i++) {
                 if (lines[i].trim() !== '') {
                     lines[i] = indent + lines[i]
@@ -445,7 +454,16 @@ function inlineToMarkdown(content?: TipTapNode[]): string {
     if (!content) return ''
     return content.map(node => {
         if (node.type === 'hardBreak') return '  \n'
-        if (node.type === 'wikilink') return `[[${(node.attrs?.noteName as string) || ''}]]`
+        if (node.type === 'wikilink') {
+            const noteName = (node.attrs?.noteName as string) || ''
+            const anchor = (node.attrs?.anchor as string) || ''
+            const alias = (node.attrs?.alias as string) || ''
+            let inner = noteName + anchor
+            if (alias) {
+                inner += '|' + alias
+            }
+            return `[[${inner}]]`
+        }
         if (node.type === 'image') {
             let src = (node.attrs?.src as string) || ''
             if (src.startsWith('data:') || src.startsWith('blob:')) return ''

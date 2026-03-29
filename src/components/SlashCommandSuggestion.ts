@@ -2,7 +2,7 @@ import { ReactRenderer } from '@tiptap/react'
 import tippy, { Instance as TippyInstance } from 'tippy.js'
 import { SuggestionOptions } from '@tiptap/suggestion'
 import { Editor, Range } from '@tiptap/core'
-import { Type, Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare, Minus } from 'lucide-react'
+import { Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, List, ListOrdered, CheckSquare, Minus } from 'lucide-react'
 import { SlashCommandList, SlashCommandListRef, SlashCommandItem } from './SlashCommandList.tsx'
 
 const COMMAND_ITEMS: SlashCommandItem[] = [
@@ -35,6 +35,30 @@ const COMMAND_ITEMS: SlashCommandItem[] = [
         icon: Heading3,
         action: (editor: Editor, range: Range) => {
             editor.chain().focus().deleteRange(range).setNode('heading', { level: 3 }).run()
+        },
+    },
+    {
+        title: 'Heading 4',
+        shortcut: '####',
+        icon: Heading4,
+        action: (editor: Editor, range: Range) => {
+            editor.chain().focus().deleteRange(range).setNode('heading', { level: 4 }).run()
+        },
+    },
+    {
+        title: 'Heading 5',
+        shortcut: '#####',
+        icon: Heading5,
+        action: (editor: Editor, range: Range) => {
+            editor.chain().focus().deleteRange(range).setNode('heading', { level: 5 }).run()
+        },
+    },
+    {
+        title: 'Heading 6',
+        shortcut: '######',
+        icon: Heading6,
+        action: (editor: Editor, range: Range) => {
+            editor.chain().focus().deleteRange(range).setNode('heading', { level: 6 }).run()
         },
     },
     {

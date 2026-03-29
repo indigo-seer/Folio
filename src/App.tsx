@@ -6,6 +6,7 @@ import { useTabs } from './hooks/useTabs';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { OnboardingModal } from './components/OnboardingModal';
 import { Editor } from './components/Editor';
+import { CorruptionBanner } from './components/CorruptionBanner';
 
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
 import { ModalProvider, useModals } from './contexts/ModalContext';
@@ -104,6 +105,7 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
         editorScrollRef,
         isNewNote,
         setIsNewNote,
+        corruptionWarnings,
         handleEditorUpdate,
         handleEditorReady
     } = useEditorState({
@@ -177,11 +179,14 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                     >
                         <div>
                             {tabs.activeTabId && tabs.activeTabId !== 'folio-graph' && (
-                                <NoteTitle
-                                    title={tabs.tabs.find((t: any) => t.id === tabs.activeTabId)?.title || 'Folio'}
-                                    onRename={fileOperations.handleRename}
-                                    autoFocus={isNewNote}
-                                />
+                                <>
+                                    <CorruptionBanner warnings={corruptionWarnings} />
+                                    <NoteTitle
+                                        title={tabs.tabs.find((t: any) => t.id === tabs.activeTabId)?.title || 'Folio'}
+                                        onRename={fileOperations.handleRename}
+                                        autoFocus={isNewNote}
+                                    />
+                                </>
                             )}
                         </div>
                         <div>

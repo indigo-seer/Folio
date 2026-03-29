@@ -6,7 +6,7 @@ export interface VaultContextType {
     fileSystem: any // Will be properly typed from useFileSystem return type
     notes: Set<string>
     backlinkIndex: Map<string, Set<string>>
-    onWikilinkClick: (noteName: string) => void
+    onWikilinkClick: (noteName: string, anchor?: string | null) => void
 }
 
 export const VaultContext = createContext<VaultContextType>({

@@ -15,6 +15,7 @@ import { Wikilink } from '../../extensions/Wikilink'
 import { TypewriterMode } from '../../extensions/TypewriterMode'
 import { SlashCommand } from '../../extensions/SlashCommand'
 import { SmoothCaret } from '../../extensions/SmoothCaret'
+import { MarkdownPaste } from '../../extensions/MarkdownPaste'
 import { createWikilinkSuggestion } from '../../components/WikilinkSuggestion'
 import { createSlashCommandSuggestion } from '../../components/SlashCommandSuggestion'
 
@@ -54,7 +55,7 @@ export function getEditorExtensions(notesRef: React.MutableRefObject<Set<string>
         StarterKit.configure({
             codeBlock: false,
             heading: {
-                levels: [1, 2, 3],
+                levels: [1, 2, 3, 4, 5, 6],
             },
         }),
         Markdown.configure({
@@ -82,12 +83,13 @@ export function getEditorExtensions(notesRef: React.MutableRefObject<Set<string>
         TypewriterMode,
         TaskList,
         TaskItem.configure({
-            nested: false,
+            nested: true,
         }),
         TauriImage,
         SlashCommand.configure({
             suggestion: createSlashCommandSuggestion(),
         }),
         SmoothCaret,
+        MarkdownPaste,
     ]
 }

@@ -1,32 +1,9 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import type { Editor as TipTapEditor } from '@tiptap/react';
-import { marked } from 'marked';
 import { tipTapToMarkdown } from '../lib/markdown';
 import { fs } from '../lib/fs';
 import { updateWordCountGlobally } from './useWordCount';
-
-// Register Wikilink tokenizer with marked
-marked.use({
-    extensions: [{
-        name: 'wikilink',
-        level: 'inline',
-        start(src: string) { return src.indexOf('[['); },
-        tokenizer(src: string) {
-            const match = src.match(/^\[\[([^\]]+)\]\]/);
-            if (match) {
-                return {
-                    type: 'wikilink',
-                    raw: match[0],
-                    noteName: match[1],
-                };
-            }
-            return undefined;
-        },
-        renderer(token: any) {
-            return `<span data-type="wikilink" data-note-name="${token.noteName}">[[${token.noteName}]]</span>`;
-        }
-    }]
-});
+import { detectCorruption } from '../lib/corruptionDetector';
 
 /**
  * Strip YAML front-matter from externally-authored Markdown files.
@@ -62,6 +39,7 @@ export function useEditorState({
 }: UseEditorStateProps) {
     const [isNewNote, setIsNewNote] = useState(false);
     const [editorReady, setEditorReady] = useState(false);
+    const [corruptionWarnings, setCorruptionWarnings] = useState<string[]>([]);
 
     const editorRef = useRef<TipTapEditor | null>(null);
     const editorScrollRef = useRef<HTMLDivElement | null>(null);
@@ -137,6 +115,11 @@ export function useEditorState({
 
                 try {
                     const raw = await fileSystem.readFile(tab.path);
+
+                    // Phase 0: detect corruption from older parser versions
+                    const warnings = detectCorruption(raw);
+                    setCorruptionWarnings(warnings);
+
                     const markdown = stripFrontMatter(raw);
 
                     if (!isMounted) return;
@@ -145,15 +128,13 @@ export function useEditorState({
                         return;
                     }
 
-                    // @tiptap/markdown: The safest cross-version method to load Markdown is rendering
-                    // it to HTML via the embedded marked parser before giving it to Tiptap.
-                    try {
-                        const html = await marked.parse(markdown);
-                        editorRef.current.commands.setContent(html);
-                    } catch (e) {
-                        console.error("Markdown parsing error fallback", e);
-                        editorRef.current.commands.setContent(markdown);
-                    }
+                    // @tiptap/markdown overrides setContent to parse the markdown natively
+                    // if the contentType option is passed. This supports custom task list
+                    // extensions and securely runs Wikilink's own markdownTokenizer.
+                    editorRef.current.commands.setContent(markdown, {
+                        emitUpdate: false,
+                        contentType: 'markdown'
+                    } as any);
 
                     renderedTabIdRef.current = activeTabId;
                     lastFlushedTabRef.current = null; // Reset flush tracker for new tab
@@ -267,6 +248,7 @@ export function useEditorState({
         editorScrollRef,
         isNewNote,
         setIsNewNote,
+        corruptionWarnings,
         handleEditorUpdate,
         handleEditorReady,
         triggerAutoSave

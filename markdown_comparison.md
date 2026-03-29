@@ -118,3 +118,51 @@ If you plan to add support for missing Obsidian features or remove existing ones
 
 ### UX Extensions
 *   **`src/extensions/TypewriterMode.ts`** & **`src/extensions/SmoothCaret.ts`**: pure editor UX extensions that control caret animation and keeping the active line centered, separate from Markdown parsing.
+
+---
+
+## 5. Implementation Roadmap & Progress Status
+
+### Phase 0 — Corruption Guard
+- [x] Create `CorruptionBanner.tsx` component
+- [x] Integrate corruption detection into `Editor.tsx`
+
+### Phase 1 — Quick Wins
+- [x] Enable H4-H6 in `extensions.ts`
+- [x] Enable nested task lists in `extensions.ts`
+- [x] Add Setext heading support
+- [x] Update `MarkdownPaste.ts` (H1-H6, Setext)
+- [x] Add H4/H5/H6 slash commands
+- [x] Add H4/H5/H6 CSS styles
+
+### Phase 2 — Wikilink Overhaul
+- [x] Rewrite `Wikilink.ts` tokenizer (alias, anchor, same-note)
+- [x] Update `WikilinkNodeView.tsx` (alias display, anchor icon)
+- [x] Update `handleWikilinkClick` in `useFileOperations.ts`
+- [x] Fix cross-note alias and anchor drop on serialization (`tipTapToMarkdown`)
+
+### Phase 3 — New Extensions
+- [ ] Install Table/Highlight packages
+- [ ] Register Table + Highlight in `extensions.ts`
+- [ ] Create `Callout.ts` + `CalloutNodeView.tsx`
+- [ ] Create `Frontmatter.ts` + `FrontmatterNodeView.tsx`
+- [ ] Create `Comment.ts`
+- [ ] Create `Tag.ts` + `TagNodeView.tsx`
+- [ ] Create `MathBlock.ts`
+- [ ] Create `Footnote.ts`
+- [ ] Create `Embed.ts` + `EmbedNodeView.tsx`
+- [ ] Standard image resizing (`![alt|200](url)`)
+- [ ] Update `index.css` with new styles
+- [ ] Update `FloatingToolbar.tsx` (highlight button)
+- [ ] Update `SlashCommandSuggestion.ts` (new commands)
+- [ ] Update `MarkdownPaste.ts` (new patterns)
+
+### Phase 4 — Edge Cases
+- [ ] Backslash line breaks
+- [ ] Inline HTML pass-through
+- [ ] Reference-style links decision
+- [ ] Create `BlockId.ts`
+
+### Phase 5 — Heavy Rendering (Deferred)
+- [ ] Mermaid diagrams (pending user decision)
+- [ ] Note transclusion (pending user decision)

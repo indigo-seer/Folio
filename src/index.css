@@ -136,10 +136,46 @@
   margin-bottom: 0.5rem;
 }
 
+.prose-folio h4 {
+  @apply text-folio-text;
+  font-family: theme('fontFamily.serif');
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-folio h5 {
+  @apply text-folio-text;
+  font-family: theme('fontFamily.serif');
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-folio h6 {
+  @apply text-folio-text;
+  font-family: theme('fontFamily.serif');
+  font-size: 0.9rem;
+  font-style: italic;
+  font-weight: 500;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  @apply text-folio-text-secondary;
+}
+
 .dark .prose-folio h1,
 .dark .prose-folio h2,
-.dark .prose-folio h3 {
+.dark .prose-folio h3,
+.dark .prose-folio h4,
+.dark .prose-folio h5,
+.dark .prose-folio h6 {
   @apply text-folio-dark-text;
+}
+
+.dark .prose-folio h6 {
+  @apply text-folio-dark-text-secondary;
 }
 
 /* Paragraphs */
@@ -454,4 +490,54 @@ ul[data-type="taskList"] input[type="checkbox"] {
 [style*="app-region: drag"] {
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* ============================================
+   Corruption Banner
+   ============================================ */
+
+.corruption-banner {
+  @apply max-w-prose-folio mx-auto px-6 pt-4;
+}
+
+.corruption-banner-content {
+  @apply flex items-start gap-3 px-4 py-3 rounded-lg border;
+  @apply bg-amber-50 border-amber-200 text-amber-900;
+}
+
+.dark .corruption-banner-content {
+  @apply bg-amber-950/30 border-amber-800/50 text-amber-200;
+}
+
+.corruption-banner-icon {
+  @apply flex-shrink-0 mt-0.5 text-amber-500;
+}
+
+.dark .corruption-banner-icon {
+  @apply text-amber-400;
+}
+
+.corruption-banner-text {
+  @apply flex-1 text-sm leading-relaxed;
+}
+
+.corruption-banner-text strong {
+  @apply font-semibold;
+}
+
+.corruption-banner-text ul {
+  @apply list-disc pl-4 mt-1 mb-1 space-y-0.5 text-xs opacity-80;
+}
+
+.corruption-banner-hint {
+  @apply text-xs opacity-70;
+}
+
+.corruption-banner-dismiss {
+  @apply flex-shrink-0 p-1 rounded opacity-60 hover:opacity-100 transition-opacity cursor-pointer;
+  @apply text-amber-700 hover:bg-amber-100;
+}
+
+.dark .corruption-banner-dismiss {
+  @apply text-amber-300 hover:bg-amber-900/40;
 }

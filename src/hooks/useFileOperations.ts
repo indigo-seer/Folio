@@ -23,6 +23,31 @@ function findNotePath(tree: any[], noteName: string): string | null {
     return null;
 }
 
+/**
+ * Scroll to a heading or block anchor within the current editor.
+ * Anchor format: "#Heading Text" or "^block-id"
+ */
+function scrollToAnchor(anchor: string) {
+    const editorEl = document.querySelector('.ProseMirror')
+    if (!editorEl) return
+
+    if (anchor.startsWith('#')) {
+        // Heading anchor — find a heading whose text matches
+        const headingText = anchor.slice(1).toLowerCase().trim()
+        const headings = editorEl.querySelectorAll('h1, h2, h3, h4, h5, h6')
+        for (const h of headings) {
+            const text = (h.textContent || '').toLowerCase().trim()
+            if (text === headingText) {
+                h.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                return
+            }
+        }
+    }
+    // Block ID anchors (^block-id) are not yet rendered in the DOM,
+    // so we can't scroll to them yet. This will be handled in Phase 4
+    // when BlockId.ts is implemented.
+}
+
 export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabIdRef, setIsNewNote }: UseFileOperationsProps) {
     const modals = useModals();
 
@@ -58,7 +83,13 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         }
     }, [fileSystem, modals]);
 
-    const handleWikilinkClick = useCallback(async (noteName: string) => {
+    const handleWikilinkClick = useCallback(async (noteName: string, anchor?: string | null) => {
+        // Same-note anchor: scroll within the current editor
+        if (!noteName && anchor) {
+            scrollToAnchor(anchor)
+            return
+        }
+
         const path = findNotePath(fileSystem.vault.tree, noteName);
         if (path) {
             const title = path.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
@@ -68,6 +99,10 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
                 title,
                 path
             });
+            // If there's an anchor, scroll to it after a short delay to let content load
+            if (anchor) {
+                setTimeout(() => scrollToAnchor(anchor), 300)
+            }
         } else {
             try {
                 const newPath = await fileSystem.createFile(noteName);
