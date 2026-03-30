@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { tipTapToMarkdown } from '../markdown'
+import { markdownToTipTap, tipTapToMarkdown } from '../markdown'
 
 describe('tipTapToMarkdown Custom Extensions Serialization', () => {
 
@@ -102,7 +102,7 @@ describe('tipTapToMarkdown Custom Extensions Serialization', () => {
             content: [
                 {
                     type: 'mathBlock',
-                    content: [{ type: 'text', text: 'a^2 + b^2 = c^2' }]
+                    attrs: { latex: 'a^2 + b^2 = c^2' },
                 }
             ]
         }
@@ -169,6 +169,84 @@ describe('tipTapToMarkdown Custom Extensions Serialization', () => {
         }
         const md = tipTapToMarkdown(doc as any)
         expect(md.trim()).toBe('| Header A | Header B |\n| --- | --- |\n| 1 | 2 |')
+    })
+
+    it('serializes Obsidian-style image wikilinks with size', () => {
+        const doc = {
+            type: 'doc',
+            content: [
+                {
+                    type: 'paragraph',
+                    content: [
+                        {
+                            type: 'image',
+                            attrs: {
+                                src: 'attachments/image.png',
+                                obsidian: true,
+                                width: 300,
+                                height: 200,
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        const md = tipTapToMarkdown(doc as any)
+        expect(md).toBe('![[attachments/image.png|300x200]]')
+    })
+
+    it('parses Obsidian image wikilink without size', () => {
+        const doc = markdownToTipTap('![[image.png]]')
+        const firstInline = doc.content?.[0]?.content?.[0] as any
+
+        expect(firstInline?.type).toBe('image')
+        expect(firstInline?.attrs?.src).toBe('image.png')
+        expect(firstInline?.attrs?.width).toBeNull()
+        expect(firstInline?.attrs?.height).toBeNull()
+        expect(firstInline?.attrs?.obsidian).toBe(true)
+    })
+
+    it('parses Obsidian image wikilink with width', () => {
+        const doc = markdownToTipTap('![[image.png|300]]')
+        const firstInline = doc.content?.[0]?.content?.[0] as any
+
+        expect(firstInline?.type).toBe('image')
+        expect(firstInline?.attrs?.src).toBe('image.png')
+        expect(firstInline?.attrs?.width).toBe(300)
+        expect(firstInline?.attrs?.height).toBeNull()
+        expect(firstInline?.attrs?.obsidian).toBe(true)
+    })
+
+    it('parses Obsidian image wikilink with width and height', () => {
+        const doc = markdownToTipTap('![[image.png|300x200]]')
+        const firstInline = doc.content?.[0]?.content?.[0] as any
+
+        expect(firstInline?.type).toBe('image')
+        expect(firstInline?.attrs?.src).toBe('image.png')
+        expect(firstInline?.attrs?.width).toBe(300)
+        expect(firstInline?.attrs?.height).toBe(200)
+        expect(firstInline?.attrs?.obsidian).toBe(true)
+    })
+
+    it('parses standard markdown image syntax', () => {
+        const doc = markdownToTipTap('![alt text](image.png)')
+        const firstInline = doc.content?.[0]?.content?.[0] as any
+
+        expect(firstInline?.type).toBe('image')
+        expect(firstInline?.attrs?.src).toBe('image.png')
+        expect(firstInline?.attrs?.alt).toBe('alt text')
+        expect(firstInline?.attrs?.obsidian).toBeUndefined()
+    })
+
+    it('parses markdown image syntax with nested attachment path', () => {
+        const doc = markdownToTipTap('![alt text](attachments/image.png)')
+        const firstInline = doc.content?.[0]?.content?.[0] as any
+
+        expect(firstInline?.type).toBe('image')
+        expect(firstInline?.attrs?.src).toBe('attachments/image.png')
+        expect(firstInline?.attrs?.alt).toBe('alt text')
+        expect(firstInline?.attrs?.obsidian).toBeUndefined()
     })
 
 })

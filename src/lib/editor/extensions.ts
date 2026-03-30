@@ -23,6 +23,7 @@ import { Tag } from '../../extensions/Tag'
 import { MathBlock } from '../../extensions/MathBlock'
 import { Embed } from '../../extensions/Embed'
 import { InlineMath } from '../../extensions/InlineMath'
+import { ObsidianImage } from '../../extensions/ObsidianImage'
 import { TypewriterMode } from '../../extensions/TypewriterMode'
 import { SlashCommand } from '../../extensions/SlashCommand'
 import { SmoothCaret } from '../../extensions/SmoothCaret'
@@ -42,6 +43,26 @@ export function setVaultRootPath(path: string | null) {
 }
 
 const TauriImage = Image.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            width: {
+                default: null,
+                parseHTML: element => element.getAttribute('width'),
+                renderHTML: attributes => attributes.width ? { width: attributes.width } : {},
+            },
+            height: {
+                default: null,
+                parseHTML: element => element.getAttribute('height'),
+                renderHTML: attributes => attributes.height ? { height: attributes.height } : {},
+            },
+            obsidian: {
+                default: false,
+                parseHTML: element => element.getAttribute('data-obsidian') === 'true',
+                renderHTML: attributes => attributes.obsidian ? { 'data-obsidian': 'true' } : {},
+            },
+        }
+    },
     renderHTML({ HTMLAttributes }) {
         const src = HTMLAttributes.src
         let resolvedSrc = src
@@ -99,6 +120,7 @@ export function getEditorExtensions(notesRef: React.MutableRefObject<Set<string>
         Tag,
         MathBlock,
         InlineMath,
+        ObsidianImage,
         Embed,
         TypewriterMode,
         TaskList,

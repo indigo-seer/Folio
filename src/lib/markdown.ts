@@ -24,6 +24,40 @@ interface TipTapMark {
     attrs?: Record<string, unknown>
 }
 
+const IMAGE_EXTENSIONS = [
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'heic', 'heif', 'tiff', 'tif'
+]
+
+function isImagePath(src: string): boolean {
+    const clean = src.split('#')[0].split('?')[0].toLowerCase()
+    const dot = clean.lastIndexOf('.')
+    if (dot === -1) return false
+    return IMAGE_EXTENSIONS.includes(clean.slice(dot + 1))
+}
+
+function defaultAltFromPath(src: string): string {
+    const last = src.split(/[\/\\]/).pop() || src
+    return last.replace(/\.[^.]+$/, '')
+}
+
+function parseObsidianImageSize(sizePart?: string): { width: number | null; height: number | null } {
+    if (!sizePart) return { width: null, height: null }
+    const trimmed = sizePart.trim()
+    if (!trimmed) return { width: null, height: null }
+
+    const both = trimmed.match(/^(\d+)\s*x\s*(\d+)$/i)
+    if (both) {
+        return { width: Number(both[1]), height: Number(both[2]) }
+    }
+
+    const widthOnly = trimmed.match(/^(\d+)$/)
+    if (widthOnly) {
+        return { width: Number(widthOnly[1]), height: null }
+    }
+
+    return { width: null, height: null }
+}
+
 // ============================================================
 // Markdown → TipTap
 // ============================================================
@@ -243,7 +277,7 @@ function parseInline(text: string): TipTapNode[] {
     const nodes: TipTapNode[] = []
     // Order matters: images ![]() must parse before links []()
     // Bold before italic since ** contains *
-    const inlineRegex = /!\[(.*?)\]\((.+?)\)|(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|~~(.+?)~~|\[\[(.*?)\]\]|\[(.+?)\]\((.+?)\))/g
+    const inlineRegex = /!\[\[([^\]|]+?)(?:\|([^\]]+))?\]\]|!\[(.*?)\]\((.+?)\)|(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|~~(.+?)~~|\[\[(.*?)\]\]|\[(.+?)\]\((.+?)\))/g
 
     let lastIndex = 0
     let match: RegExpExecArray | null
@@ -255,31 +289,49 @@ function parseInline(text: string): TipTapNode[] {
             if (before) addTextNode(nodes, before)
         }
 
-        // Image match: group 1 = alt, group 2 = src
-        if (match[1] !== undefined && match[2] !== undefined) {
-            nodes.push({ type: 'image', attrs: { alt: match[1], src: match[2] } })
-        } else if (match[4]) {
-            // Bold
-            nodes.push({ type: 'text', text: match[4], marks: [{ type: 'bold' }] })
-        } else if (match[5]) {
-            // Italic
-            nodes.push({ type: 'text', text: match[5], marks: [{ type: 'italic' }] })
+        if (match[1] !== undefined) {
+            // Obsidian image wikilink: ![[image.png|300x200]]
+            const src = (match[1] || '').trim()
+            if (isImagePath(src)) {
+                const { width, height } = parseObsidianImageSize(match[2] || '')
+                nodes.push({
+                    type: 'image',
+                    attrs: {
+                        src,
+                        alt: defaultAltFromPath(src),
+                        width,
+                        height,
+                        obsidian: true,
+                    },
+                })
+            } else {
+                addTextNode(nodes, match[0])
+            }
+        } else if (match[3] !== undefined && match[4] !== undefined) {
+            // Standard image ![alt](src)
+            nodes.push({ type: 'image', attrs: { alt: match[3], src: match[4] } })
         } else if (match[6]) {
-            // Code
-            nodes.push({ type: 'text', text: match[6], marks: [{ type: 'code' }] })
+            // Bold
+            nodes.push({ type: 'text', text: match[6], marks: [{ type: 'bold' }] })
         } else if (match[7]) {
-            // Strike
-            nodes.push({ type: 'text', text: match[7], marks: [{ type: 'strike' }] })
+            // Italic
+            nodes.push({ type: 'text', text: match[7], marks: [{ type: 'italic' }] })
         } else if (match[8]) {
+            // Code
+            nodes.push({ type: 'text', text: match[8], marks: [{ type: 'code' }] })
+        } else if (match[9]) {
+            // Strike
+            nodes.push({ type: 'text', text: match[9], marks: [{ type: 'strike' }] })
+        } else if (match[10]) {
             // Wikilink
-            const { noteName, anchor, alias } = parseWikilinkInner(match[8])
+            const { noteName, anchor, alias } = parseWikilinkInner(match[10])
             nodes.push({ type: 'wikilink', attrs: { noteName, anchor, alias } })
-        } else if (match[9] && match[10]) {
+        } else if (match[11] && match[12]) {
             // Link
             nodes.push({
                 type: 'text',
-                text: match[9],
-                marks: [{ type: 'link', attrs: { href: match[10], target: '_blank' } }],
+                text: match[11],
+                marks: [{ type: 'link', attrs: { href: match[12], target: '_blank' } }],
             })
         }
 
@@ -372,6 +424,54 @@ function nodeToMarkdownItem(node: TipTapNode, prefix: string): string {
     return prefix + nodeToMarkdown(node)
 }
 
+function normalizeAttachmentSrc(src: string): string {
+    if (!src) return src
+    if (src.startsWith('data:') || src.startsWith('blob:')) return ''
+
+    try {
+        const decodedSrc = decodeURIComponent(src)
+        if (
+            (decodedSrc.startsWith('http://') || decodedSrc.startsWith('https://') || decodedSrc.startsWith('asset://') || decodedSrc.startsWith('tauri://')) &&
+            decodedSrc.includes('localhost') &&
+            decodedSrc.includes('/attachments/')
+        ) {
+            const parts = decodedSrc.split('/attachments/')
+            return 'attachments/' + parts[parts.length - 1]
+        }
+    } catch {
+        // Ignore decoding errors
+    }
+
+    return src
+}
+
+function normalizeDimension(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') return null
+    const asNumber = typeof value === 'number' ? value : Number(String(value))
+    if (!Number.isFinite(asNumber) || asNumber <= 0) return null
+    return Math.round(asNumber)
+}
+
+function imageNodeToMarkdown(node: TipTapNode): string {
+    const rawSrc = (node.attrs?.src as string) || ''
+    const src = normalizeAttachmentSrc(rawSrc)
+    if (!src) return ''
+
+    const width = normalizeDimension(node.attrs?.width)
+    const height = normalizeDimension(node.attrs?.height)
+    const isObsidian = Boolean(node.attrs?.obsidian)
+
+    if (isObsidian || width || height) {
+        let sizePart = ''
+        if (width && height) sizePart = `|${width}x${height}`
+        else if (width) sizePart = `|${width}`
+
+        return `![[${src}${sizePart}]]`
+    }
+
+    return `![${(node.attrs?.alt as string) || ''}](${src})`
+}
+
 function nodeToMarkdown(node: TipTapNode): string {
     switch (node.type) {
         case 'heading': {
@@ -452,25 +552,7 @@ function nodeToMarkdown(node: TipTapNode): string {
         }
 
         case 'image': {
-            let src = (node.attrs?.src as string) || ''
-            if (src.startsWith('data:') || src.startsWith('blob:')) return ''
-
-            // Revert Tauri asset display URLs back to portable relative paths
-            try {
-                const decodedSrc = decodeURIComponent(src)
-                if (
-                    (decodedSrc.startsWith('http://') || decodedSrc.startsWith('https://') || decodedSrc.startsWith('asset://') || decodedSrc.startsWith('tauri://')) &&
-                    decodedSrc.includes('localhost') &&
-                    decodedSrc.includes('/attachments/')
-                ) {
-                    const parts = decodedSrc.split('/attachments/')
-                    src = 'attachments/' + parts[parts.length - 1]
-                }
-            } catch {
-                // Ignore decoding errors
-            }
-
-            return `![${(node.attrs?.alt as string) || ''}](${src})`
+            return imageNodeToMarkdown(node)
         }
 
         case 'table': {
@@ -529,24 +611,7 @@ function inlineToMarkdown(content?: TipTapNode[]): string {
             return `[[${inner}]]`
         }
         if (node.type === 'image') {
-            let src = (node.attrs?.src as string) || ''
-            if (src.startsWith('data:') || src.startsWith('blob:')) return ''
-
-            try {
-                const decodedSrc = decodeURIComponent(src)
-                if (
-                    (decodedSrc.startsWith('http://') || decodedSrc.startsWith('https://') || decodedSrc.startsWith('asset://') || decodedSrc.startsWith('tauri://')) &&
-                    decodedSrc.includes('localhost') &&
-                    decodedSrc.includes('/attachments/')
-                ) {
-                    const parts = decodedSrc.split('/attachments/')
-                    src = 'attachments/' + parts[parts.length - 1]
-                }
-            } catch {
-                // Ignore decoding errors
-            }
-
-            return `![${(node.attrs?.alt as string) || ''}](${src})`
+            return imageNodeToMarkdown(node)
         }
 
         if (node.type === 'tag') {

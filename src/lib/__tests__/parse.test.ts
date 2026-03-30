@@ -32,6 +32,26 @@ describe('markdownToTipTap AST Parsing', () => {
         expect(json.content?.some(n => n.type === 'embed' || (n.content && n.content.some(c => c.type === 'embed')))).toBeTruthy()
     })
 
+    it('parses Obsidian image wikilinks as image nodes (not embeds)', () => {
+        const dummyRef = { current: new Set<string>() }
+        const extensions = getEditorExtensions(dummyRef)
+
+        const editor = new Editor({
+            extensions,
+            content: '![[image.png|300x200]]'
+        })
+
+        const json = editor.getJSON()
+        const firstTopLevel = json.content?.[0]
+        const firstInline = firstTopLevel?.content?.[0]
+
+        expect(firstInline?.type).toBe('image')
+        expect((firstInline as any)?.attrs?.src).toBe('image.png')
+        expect((firstInline as any)?.attrs?.width).toBe(300)
+        expect((firstInline as any)?.attrs?.height).toBe(200)
+        expect(json.content?.some(n => n.type === 'embed' || (n.content && n.content.some(c => c.type === 'embed')))).toBe(false)
+    })
+
     it('parses MathBlocks from markdown', () => {
         const dummyRef = { current: new Set<string>() }
         const extensions = getEditorExtensions(dummyRef)

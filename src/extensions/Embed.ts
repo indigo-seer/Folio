@@ -2,6 +2,17 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import EmbedNodeView from '../components/EmbedNodeView.tsx'
 
+const IMAGE_EXTENSIONS = [
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'heic', 'heif', 'tiff', 'tif'
+]
+
+function isImageLikeTarget(target: string): boolean {
+    const clean = target.split('|')[0].split('#')[0].split('?')[0].toLowerCase()
+    const dot = clean.lastIndexOf('.')
+    if (dot === -1) return false
+    return IMAGE_EXTENSIONS.includes(clean.slice(dot + 1))
+}
+
 /**
  * Parses `![[noteName#anchor]]` embeds.
  * Note transclusion (displaying actual note contents) will be handled in Phase 5.
@@ -60,6 +71,10 @@ export const Embed = Node.create({
             const match = rule.exec(src)
             if (match) {
                 const inner = match[1]
+                if (isImageLikeTarget(inner)) {
+                    // Image wikilinks are handled by ObsidianImage extension.
+                    return undefined
+                }
                 let noteName = inner
                 let anchor = ''
 
