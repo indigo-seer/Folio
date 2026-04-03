@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { loadConfig, saveConfig, hashPath, Workspace } from '../lib/config';
 import { BootState } from '../App';
+import { runVaultImageMigrationInBackground } from '../lib/vaultImageMigration';
 
 interface WorkspaceContextType {
     workspaces: Workspace[];
@@ -73,6 +74,7 @@ export function WorkspaceProvider({
 
             await saveConfig(config);
             setBootState(BootState.ReadyWithWorkspace);
+            void runVaultImageMigrationInBackground(result.path, id);
 
             if (isLeavingOnboarding) {
                 showToast('Getting Started notes are still in your Documents folder if you ever want them.');
@@ -103,6 +105,7 @@ export function WorkspaceProvider({
             setActiveWorkspaceId(targetWorkspace.id);
             await saveConfig(config);
             setBootState(BootState.ReadyWithWorkspace);
+            void runVaultImageMigrationInBackground(targetWorkspace.path, targetWorkspace.id);
         } catch (err) {
             console.error('Error switching workspace', err);
             showToast('Could not open this vault path. Check that the drive is mounted and try again.');
@@ -126,6 +129,7 @@ export function WorkspaceProvider({
                     await fileSystem.loadVault(nextWorkspace.path);
                     setActiveWorkspaceId(nextWorkspace.id);
                     setBootState(BootState.ReadyWithWorkspace);
+                    void runVaultImageMigrationInBackground(nextWorkspace.path, nextWorkspace.id);
                 } else {
                     config.activeWorkspaceId = null;
                     setActiveWorkspaceId(null);

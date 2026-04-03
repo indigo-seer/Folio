@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 
-const INVALID_CHARS = /[*"\\/<>:|?]/
+const INVALID_CHARS = /[*"\\/\<\>:|?]/
 const INVALID_CHARS_DISPLAY = '* " \\ / < > : | ?'
 
 interface NoteTitleProps {
@@ -13,15 +13,39 @@ export function NoteTitle({ title, onRename, autoFocus }: NoteTitleProps) {
     const [value, setValue] = useState(title || '')
     const [error, setError] = useState('')
     const [isEditing, setIsEditing] = useState(false)
-    const inputRef = useRef<HTMLInputElement>(null)
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
     const mountedRef = useRef(false)
+
+    // Auto-grow textarea to fit content without disturbing the scroll container
+    const autoGrow = (el: HTMLTextAreaElement | null) => {
+        if (!el) return
+        // Find the nearest scrollable ancestor and lock its scroll position so the
+        // transient `height: auto` reset doesn't cause the editor to jump.
+        let scrollParent: HTMLElement | null = el.parentElement
+        while (scrollParent && scrollParent.scrollHeight <= scrollParent.clientHeight) {
+            scrollParent = scrollParent.parentElement
+        }
+        const savedScrollTop = scrollParent ? scrollParent.scrollTop : 0
+        el.style.height = 'auto'
+        el.style.height = `${el.scrollHeight}px`
+        if (scrollParent) scrollParent.scrollTop = savedScrollTop
+    }
 
     // Sync with prop when file changes
     useEffect(() => {
         setValue(title || '')
         setError('')
         setIsEditing(false)
+        // Defer grow so the browser has finished laying out the textarea before
+        // we read scrollHeight — fixes the "doesn't wrap on first open" bug.
+        const raf = requestAnimationFrame(() => autoGrow(textareaRef.current))
+        return () => cancelAnimationFrame(raf)
     }, [title])
+
+    // Re-grow whenever the user edits (synchronous is fine here — browser is live)
+    useEffect(() => {
+        autoGrow(textareaRef.current)
+    }, [value])
 
     // Track mount state to prevent blur firing during mount
     useEffect(() => {
@@ -36,11 +60,11 @@ export function NoteTitle({ title, onRename, autoFocus }: NoteTitleProps) {
 
     // Auto-focus for new notes
     useEffect(() => {
-        if (autoFocus && inputRef.current) {
+        if (autoFocus && textareaRef.current) {
             // Delay to let React finish rendering
             const timer = setTimeout(() => {
-                inputRef.current?.focus()
-                inputRef.current?.select()
+                textareaRef.current?.focus()
+                textareaRef.current?.select()
             }, 50)
             return () => clearTimeout(timer)
         }
@@ -55,7 +79,7 @@ export function NoteTitle({ title, onRename, autoFocus }: NoteTitleProps) {
         return ''
     }
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const v = e.target.value
         setValue(v)
         if (error) setError(validate(v))
@@ -94,16 +118,16 @@ export function NoteTitle({ title, onRename, autoFocus }: NoteTitleProps) {
             setValue(title || '')
             setError('')
             setIsEditing(false)
-            inputRef.current?.blur()
+            textareaRef.current?.blur()
         }
     }
 
     return (
         <div className="max-w-prose-folio mx-auto px-6 pt-10 pb-2">
             <div className="relative">
-                <input
-                    ref={inputRef}
-                    type="text"
+                <textarea
+                    ref={textareaRef}
+                    rows={1}
                     value={value}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
@@ -116,7 +140,7 @@ export function NoteTitle({ title, onRename, autoFocus }: NoteTitleProps) {
                     }}
                     placeholder="Untitled"
                     className={`
-            w-full bg-transparent outline-none
+            w-full bg-transparent outline-none resize-none overflow-hidden
             font-serif note-title
             text-folio-text dark:text-folio-dark-text
             placeholder:text-folio-text-secondary/30 dark:placeholder:text-folio-dark-text-secondary/30

@@ -1,16 +1,55 @@
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, type Editor as TipTapEditor } from '@tiptap/react'
 import { useEffect, useRef, useContext, useMemo } from 'react'
 
 import { FloatingToolbar } from './FloatingToolbar'
 import { TableToolbar } from './TableToolbar'
 import { VaultContext } from '../contexts/VaultContext'
 import { getEditorExtensions, setVaultRootPath } from '../lib/editor/extensions'
+import {
+    decodeFileUrlToPath,
+    getFileNameFromPath,
+    ingestImageSourceToAttachments,
+    isVaultAttachmentAbsolutePath,
+    normalizeAttachmentProxySrc,
+    shouldIngestImageSource,
+    toVaultRelativeAttachmentPath,
+} from '../lib/imageIngestion'
 
 interface EditorProps {
     onUpdate?: (editor: ReturnType<typeof useEditor>) => void
     onReady?: (editor: ReturnType<typeof useEditor>) => void
     onFocus?: (editor: ReturnType<typeof useEditor>) => void
     isTypewriterMode?: boolean
+}
+
+function extractImageFilesFromClipboard(event: ClipboardEvent): File[] {
+    const items = event.clipboardData?.items
+    if (!items) return []
+    const files: File[] = []
+    for (const item of items) {
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+            const file = item.getAsFile()
+            if (file) files.push(file)
+        }
+    }
+    return files
+}
+
+function extractImageFilesFromDrop(event: DragEvent): File[] {
+    const fileList = event.dataTransfer?.files
+    if (!fileList) return []
+    return Array.from(fileList).filter(file => file.type.startsWith('image/'))
+}
+
+function insertImageNodeAtSelection(view: any, src: string, alt: string) {
+    const imageType = view.state.schema.nodes.image
+    if (!imageType) return
+    const imageNode = imageType.create({
+        src,
+        alt,
+    })
+    const tr = view.state.tr.replaceSelectionWith(imageNode).scrollIntoView()
+    view.dispatch(tr)
 }
 
 export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }: EditorProps) {
@@ -40,8 +79,9 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
         setVaultRootPath(vault.rootPath)
     }, [vault.rootPath])
 
-    // Ref to prevent concurrent base64 processing
-    const isProcessingBase64Ref = useRef(false)
+    // Ref to prevent concurrent image ingestion processing
+    const isProcessingImageIngestionRef = useRef(false)
+    const failedImageSourcesRef = useRef<Set<string>>(new Set())
     const isTauriRef = useRef(isTauriEnv)
     isTauriRef.current = isTauriEnv
     const ensureAttachmentFolderRef = useRef(ensureAttachmentFolder)
@@ -53,6 +93,99 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
         writeBinaryFileRef.current = writeBinaryFile
     }, [ensureAttachmentFolder, writeBinaryFile])
 
+    const scheduleImageIngestion = (editor: TipTapEditor) => {
+        const currentVaultRoot = vault.rootPath
+
+        if (!isTauriRef.current || !currentVaultRoot || isProcessingImageIngestionRef.current) return
+
+        if (scannerTimeoutRef.current) {
+            clearTimeout(scannerTimeoutRef.current)
+        }
+
+        scannerTimeoutRef.current = setTimeout(() => {
+            const sourceToReplacement = new Map<string, string>()
+            const sourcesToIngest = new Set<string>()
+
+            editor.state.doc.descendants((node) => {
+                if (node.type.name !== 'image') return
+
+                const rawSrc = String(node.attrs.src || '').trim()
+                if (!rawSrc) return
+
+                const normalizedProxy = normalizeAttachmentProxySrc(rawSrc)
+                if (normalizedProxy) {
+                    sourceToReplacement.set(rawSrc, normalizedProxy)
+                    return
+                }
+
+                const decodedFilePath = decodeFileUrlToPath(rawSrc)
+                if (decodedFilePath && isVaultAttachmentAbsolutePath(decodedFilePath, currentVaultRoot)) {
+                    const relativeFromAbsolute = toVaultRelativeAttachmentPath(decodedFilePath, currentVaultRoot)
+                    if (relativeFromAbsolute) {
+                        sourceToReplacement.set(rawSrc, relativeFromAbsolute)
+                    }
+                    return
+                }
+
+                if (!shouldIngestImageSource(rawSrc)) return
+                if (failedImageSourcesRef.current.has(rawSrc)) return
+                sourcesToIngest.add(rawSrc)
+            })
+
+            if (sourceToReplacement.size === 0 && sourcesToIngest.size === 0) return
+
+            isProcessingImageIngestionRef.current = true
+            const rootPath = currentVaultRoot
+
+            ; (async () => {
+                try {
+                    await ensureAttachmentFolderRef.current()
+
+                    for (const source of sourcesToIngest) {
+                        try {
+                            const relativePath = await ingestImageSourceToAttachments(
+                                source,
+                                rootPath,
+                                writeBinaryFileRef.current
+                            )
+                            sourceToReplacement.set(source, relativePath)
+                            if (source.startsWith('blob:')) {
+                                URL.revokeObjectURL(source)
+                            }
+                        } catch (err) {
+                            failedImageSourcesRef.current.add(source)
+                            console.error('[Folio Debug] Failed to ingest image source:', source, err)
+                        }
+                    }
+
+                    if (sourceToReplacement.size === 0) return
+
+                    let tr = editor.state.tr
+                    let changed = false
+
+                    editor.state.doc.descendants((node, nodePos) => {
+                        if (node.type.name !== 'image') return
+                        const currentSrc = String(node.attrs.src || '').trim()
+                        const replacementSrc = sourceToReplacement.get(currentSrc)
+                        if (!replacementSrc) return
+                        changed = true
+                        tr = tr.setNodeMarkup(nodePos, undefined, {
+                            ...node.attrs,
+                            src: replacementSrc,
+                            alt: node.attrs.alt || getFileNameFromPath(replacementSrc),
+                        })
+                    })
+
+                    if (changed) {
+                        editor.view.dispatch(tr)
+                    }
+                } finally {
+                    isProcessingImageIngestionRef.current = false
+                }
+            })()
+        }, 450)
+    }
+
     const editor = useEditor({
         extensions,
         immediatelyRender: false,
@@ -60,96 +193,47 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
             attributes: {
                 class: 'prose-folio outline-none min-h-[calc(100vh-12rem)] pb-16 px-6',
             },
-            handleDrop: () => false,
-            handlePaste: () => false
+            handleDrop: (view, event) => {
+                if (!isTauriRef.current) return false
+                const imageFiles = extractImageFilesFromDrop(event)
+                if (imageFiles.length === 0) return false
+
+                event.preventDefault()
+
+                for (const file of imageFiles) {
+                    const blobUrl = URL.createObjectURL(file)
+                    insertImageNodeAtSelection(view, blobUrl, file.name || 'pasted-image')
+                }
+
+                return true
+            },
+            handlePaste: (view, event) => {
+                if (!isTauriRef.current) return false
+                const imageFiles = extractImageFilesFromClipboard(event)
+                if (imageFiles.length === 0) return false
+
+                event.preventDefault()
+
+                for (const file of imageFiles) {
+                    const blobUrl = URL.createObjectURL(file)
+                    insertImageNodeAtSelection(view, blobUrl, file.name || 'pasted-image')
+                }
+
+                return true
+            }
         },
         content: '',
         onUpdate: ({ editor: e }) => {
             // Forward to parent callback
             if (onUpdateRef.current) onUpdateRef.current(e as ReturnType<typeof useEditor>)
-
-            // Use the live vault object directly from the component scope
-            const currentVaultRoot = vault.rootPath
-
-            // Base64 image scanner: detect pasted images and save to attachments
-            // Print primitive values so WebKit inspector doesn't collapse them into "Object"
-            console.log('[Folio Debug] Scanner guard: isTauri=', isTauriRef.current, 'vaultRoot=', !!currentVaultRoot, 'processing=', isProcessingBase64Ref.current)
-
-            if (!isTauriRef.current || !currentVaultRoot || isProcessingBase64Ref.current) return
-
-            // Use a 1000ms debounce to prevent O(N) tree traversals on every single keystroke,
-            // which was choking the main thread and causing caret animation lag and dropped frames.
-            if (scannerTimeoutRef.current) {
-                clearTimeout(scannerTimeoutRef.current)
+        },
+        onTransaction: ({ editor: e, transaction }) => {
+            if (transaction.docChanged) {
+                scheduleImageIngestion(e)
             }
-
-            scannerTimeoutRef.current = setTimeout(() => {
-                const ephemeralNodes: Array<{ pos: number; src: string }> = []
-                e.state.doc.descendants((node, pos) => {
-                    if (node.type.name === 'image') {
-                        const src = node.attrs.src || ''
-                        // Catch both data: URLs and blob: URLs — both are ephemeral
-                        if (src.startsWith('data:') || src.startsWith('blob:')) {
-                            ephemeralNodes.push({ pos, src })
-                        }
-                    }
-                })
-
-                if (ephemeralNodes.length === 0) return
-
-                isProcessingBase64Ref.current = true
-                console.log('[Folio Debug] Found', ephemeralNodes.length, 'ephemeral image(s) to save')
-
-                const rootPath = currentVaultRoot;
-
-                (async () => {
-                    try {
-                        await ensureAttachmentFolderRef.current()
-                        const { sep } = await import('@tauri-apps/api/path')
-                        const separator = await sep()
-
-                        for (const { src } of ephemeralNodes) {
-                            try {
-                                const response = await fetch(src)
-                                const blob = await response.blob()
-                                const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png'
-                                const name = `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
-                                const absolutePath = `${rootPath}${separator}attachments${separator}${name}`
-
-                                const arrayBuffer = await blob.arrayBuffer()
-                                const uint8Array = new Uint8Array(arrayBuffer)
-
-                                console.log('[Folio Debug] Saving base64 image:', name, 'size:', uint8Array.length)
-                                await writeBinaryFileRef.current(absolutePath, uint8Array)
-
-                                const { convertFileSrc } = await import('@tauri-apps/api/core')
-                                const displaySrc = isTauriRef.current ? convertFileSrc(absolutePath) : `attachments/${name}`
-
-                                // Replace the base64 src with the relative display path
-                                e.state.doc.descendants((node, nodePos) => {
-                                    if (node.type.name === 'image' && node.attrs.src === src) {
-                                        const tr = e.state.tr.setNodeMarkup(nodePos, undefined, {
-                                            ...node.attrs,
-                                            src: displaySrc,
-                                            alt: node.attrs.alt || name
-                                        })
-                                        e.view.dispatch(tr)
-                                        return false
-                                    }
-                                })
-
-                                console.log('[Folio Debug] Replaced base64 with:', displaySrc)
-                            } catch (err) {
-                                console.error('[Folio Debug] Failed to save base64 image:', err)
-                            }
-                        }
-                    } finally {
-                        isProcessingBase64Ref.current = false
-                    }
-                })()
-            }, 1000)
         },
         onFocus: ({ editor: e }) => {
+            scheduleImageIngestion(e)
             if (onFocusRef.current) onFocusRef.current(e as ReturnType<typeof useEditor>)
         },
     })
@@ -172,6 +256,15 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
             }
         }
     }, [editor, isTypewriterMode])
+
+    useEffect(() => {
+        return () => {
+            if (scannerTimeoutRef.current) {
+                clearTimeout(scannerTimeoutRef.current)
+                scannerTimeoutRef.current = null
+            }
+        }
+    }, [])
 
     if (!editor) return null
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { BootState } from '../App';
 import { loadConfig, saveConfig, hashPath, Workspace, isTauri } from '../lib/config';
 import { createStarterNote, createDefaultVault } from '../lib/onboarding';
+import { runVaultImageMigrationInBackground } from '../lib/vaultImageMigration';
 
 export function useAppBootloader(
     fileSystem: any,
@@ -38,6 +39,7 @@ export function useAppBootloader(
                             await fileSystem.loadVault(activeWorkspace.path);
                             setActiveWorkspaceId(activeWorkspace.id);
                             setBootState(BootState.ReadyWithWorkspace);
+                            void runVaultImageMigrationInBackground(activeWorkspace.path, activeWorkspace.id);
                             return;
                         } catch (e) {
                             // Keep the stored active workspace so removable/mounted
@@ -111,6 +113,7 @@ export function useAppBootloader(
             }
 
             setBootState(BootState.ReadyWithWorkspace);
+            void runVaultImageMigrationInBackground(vaultPath, id);
         } catch (err) {
             console.error('Onboarding completion failed:', err);
             const config = await loadConfig();

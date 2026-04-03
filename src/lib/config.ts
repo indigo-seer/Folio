@@ -30,6 +30,10 @@ export interface FolioConfig {
     activeWorkspaceId: string | null
     ui: UIConfig
     sync: SyncConfig
+    migrations: {
+        imageIngestionByWorkspace: Record<string, number>
+        imageIngestionPendingByWorkspace: Record<string, Record<string, string[]>>
+    }
 }
 
 const DEFAULT_CONFIG: FolioConfig = {
@@ -47,6 +51,10 @@ const DEFAULT_CONFIG: FolioConfig = {
     sync: {
         enabled: false,
         deviceId: null,
+    },
+    migrations: {
+        imageIngestionByWorkspace: {},
+        imageIngestionPendingByWorkspace: {},
     },
 }
 
@@ -96,6 +104,18 @@ async function migrateParsedConfig(parsed: any): Promise<FolioConfig> {
         activeWorkspaceId,
         ui: { ...DEFAULT_CONFIG.ui, ...parsed.ui },
         sync: { ...DEFAULT_CONFIG.sync, ...parsed.sync },
+        migrations: {
+            ...DEFAULT_CONFIG.migrations,
+            ...parsed.migrations,
+            imageIngestionByWorkspace: {
+                ...DEFAULT_CONFIG.migrations.imageIngestionByWorkspace,
+                ...(parsed.migrations?.imageIngestionByWorkspace || {}),
+            },
+            imageIngestionPendingByWorkspace: {
+                ...DEFAULT_CONFIG.migrations.imageIngestionPendingByWorkspace,
+                ...(parsed.migrations?.imageIngestionPendingByWorkspace || {}),
+            }
+        }
     }
 }
 

@@ -28,7 +28,7 @@ export const SmoothCaret = Extension.create({
                             z-index: 10;
                             border-radius: 1px;
                             will-change: transform, height, width;
-                            background: var(--caret-color, #7C6AFB);
+                            background: var(--caret-color, #52b7e6ff);
 
                             /* No transition by default — opt in explicitly when gliding */
                             transition: none;
