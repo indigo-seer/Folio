@@ -68,15 +68,15 @@ export const SlashCommandList = forwardRef<SlashCommandListRef, SlashCommandList
 
     if (!props.items.length) {
         return (
-            <div className="bg-folio-bg dark:bg-folio-dark-bg border border-folio-border dark:border-folio-dark-border rounded-lg shadow-xl py-2 px-3 min-w-[320px] text-sm text-folio-text-tertiary dark:text-folio-dark-text-tertiary">
+            <div className="bg-folium-bg dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-lg shadow-xl py-2 px-3 min-w-[320px] text-sm text-folium-text-tertiary dark:text-folium-dark-text-tertiary">
                 No matching results
             </div>
         )
     }
 
     return (
-        <div className="bg-folio-bg dark:bg-folio-dark-bg border border-folio-border dark:border-folio-dark-border rounded-lg shadow-xl py-2 min-w-[320px] max-h-[350px] overflow-y-auto">
-            <div className="px-3 py-1 mb-1 text-[11px] font-semibold text-folio-text-tertiary dark:text-folio-dark-text-tertiary">
+        <div className="bg-folium-bg dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-lg shadow-xl py-2 min-w-[320px] max-h-[350px] overflow-y-auto">
+            <div className="px-3 py-1 mb-1 text-[11px] font-semibold text-folium-text-tertiary dark:text-folium-dark-text-tertiary">
                 Basic blocks
             </div>
             {props.items.map((item, index) => {
@@ -88,21 +88,21 @@ export const SlashCommandList = forwardRef<SlashCommandListRef, SlashCommandList
                         onClick={() => selectItem(index)}
                         onMouseEnter={() => setSelectedIndex(index)}
                         className={`w-full text-left px-3 py-1.5 flex items-center justify-between transition-colors ${index === selectedIndex
-                            ? 'bg-folio-base dark:bg-folio-dark-base'
-                            : 'hover:bg-folio-base dark:hover:bg-folio-dark-base bg-transparent'
+                            ? 'bg-folium-base dark:bg-folium-dark-base'
+                            : 'hover:bg-folium-base dark:hover:bg-folium-dark-base bg-transparent'
                             }`}
                     >
                         <div className="flex items-center space-x-3">
-                            <div className={`w-[28px] h-[28px] flex items-center justify-center rounded-[4px] border text-folio-text dark:text-folio-dark-text-secondary ${index === selectedIndex
-                                ? 'bg-white dark:bg-folio-dark-bg-secondary border-folio-border dark:border-folio-dark-border shadow-sm dark:shadow-none'
-                                : 'bg-transparent border-transparent text-folio-text-tertiary dark:text-folio-dark-text-tertiary focus-visible:outline-none'
+                            <div className={`w-[28px] h-[28px] flex items-center justify-center rounded-[4px] border text-folium-text dark:text-folium-dark-text-secondary ${index === selectedIndex
+                                ? 'bg-white dark:bg-folium-dark-bg-secondary border-folium-border dark:border-folium-dark-border shadow-sm dark:shadow-none'
+                                : 'bg-transparent border-transparent text-folium-text-tertiary dark:text-folium-dark-text-tertiary focus-visible:outline-none'
                                 }`}>
                                 <Icon className="w-4 h-4" />
                             </div>
-                            <span className={`text-[14px] ${index === selectedIndex ? 'text-folio-accent dark:text-folio-dark-accent font-medium' : 'text-folio-text dark:text-folio-dark-text'}`}>{item.title}</span>
+                            <span className={`text-[14px] ${index === selectedIndex ? 'text-folium-accent dark:text-folium-dark-accent font-medium' : 'text-folium-text dark:text-folium-dark-text'}`}>{item.title}</span>
                         </div>
                         {item.shortcut && (
-                            <span className="text-[12px] text-folio-text-tertiary dark:text-folio-dark-text-tertiary font-mono">
+                            <span className="text-[12px] text-folium-text-tertiary dark:text-folium-dark-text-tertiary font-mono">
                                 {item.shortcut}
                             </span>
                         )}

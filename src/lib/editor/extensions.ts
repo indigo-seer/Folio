@@ -130,7 +130,7 @@ export function getEditorExtensions(notesRef: React.MutableRefObject<Set<string>
         Table.configure({
             resizable: true,
             HTMLAttributes: {
-                class: 'folio-table w-full'
+                class: 'folium-table w-full'
             }
         }),
         TableRow,
@@ -139,7 +139,7 @@ export function getEditorExtensions(notesRef: React.MutableRefObject<Set<string>
         Highlight.configure({
             multicolor: false,
             HTMLAttributes: {
-                class: 'folio-highlight',
+                class: 'folium-highlight',
             },
         }),
         TauriImage,

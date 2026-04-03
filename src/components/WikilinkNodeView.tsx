@@ -38,8 +38,8 @@ export default function WikilinkNodeView(props: NodeViewProps) {
         <NodeViewWrapper
             as="span"
             className={`cursor-pointer underline decoration-1 underline-offset-4 font-medium transition-colors ${isStub
-                ? 'text-folio-text-tertiary dark:text-folio-dark-text-tertiary decoration-dashed hover:text-folio-text-secondary dark:hover:text-folio-dark-text-secondary'
-                : 'text-folio-accent dark:text-folio-dark-accent hover:text-blue-600 dark:hover:text-blue-400'
+                ? 'text-folium-text-tertiary dark:text-folium-dark-text-tertiary decoration-dashed hover:text-folium-text-secondary dark:hover:text-folium-dark-text-secondary'
+                : 'text-folium-accent dark:text-folium-dark-accent hover:text-blue-600 dark:hover:text-blue-400'
                 }`}
             onClick={handleClick}
         >

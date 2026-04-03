@@ -117,9 +117,9 @@ export function GraphView() {
     }
 
     return (
-        <div ref={containerRef} className="w-full h-full relative bg-folio-bg dark:bg-folio-dark-bg">
+        <div ref={containerRef} className="w-full h-full relative bg-folium-bg dark:bg-folium-dark-bg">
             {isEmpty ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-folio-text dark:text-folio-dark-text opacity-70">
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-folium-text dark:text-folium-dark-text opacity-70">
                     <svg className="w-16 h-16 mb-4 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="18" cy="5" r="3"></circle>
                         <circle cx="6" cy="12" r="3"></circle>

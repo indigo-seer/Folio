@@ -1,5 +1,5 @@
 /**
- * Heuristics to detect notes that may have been corrupted by older Folio parser versions.
+ * Heuristics to detect notes that may have been corrupted by older Folium parser versions.
  * Returns an array of human-readable warning strings (empty = no corruption detected).
  */
 export function detectCorruption(raw: string): string[] {

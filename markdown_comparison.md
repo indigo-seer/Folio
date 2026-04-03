@@ -1,11 +1,11 @@
-# Markdown Format Comparison: Folio vs Obsidian (Current Snapshot)
+# Markdown Format Comparison: Folium vs Obsidian (Current Snapshot)
 
 > Last updated: March 29, 2026  
 > Scope: What the app does today in `main` based on current source code (`src/lib/editor/extensions.ts`, `src/lib/markdown.ts`, `src/hooks/useEditorState.ts`, extension modules, and tests).
 
 ## 1. Executive Summary
 
-Folio now supports a much broader Obsidian-style markdown surface than before, including:
+Folium now supports a much broader Obsidian-style markdown surface than before, including:
 
 - Wikilinks with alias/anchor variants
 - Callouts with fold behavior
@@ -29,7 +29,7 @@ That means support quality is best judged by **round-trip behavior** (load -> ed
 
 These features are currently supported in practice and serialized back to markdown explicitly by `tipTapToMarkdown`.
 
-| Feature | Folio Status | Notes |
+| Feature | Folium Status | Notes |
 |---|---|---|
 | Bold / Italic / Strike / Inline Code | Supported | Serialized via mark handlers in `inlineToMarkdown`. |
 | Headings H1-H6 | Supported | `StarterKit` configured with levels `[1..6]`. |
@@ -135,7 +135,7 @@ Validation tests:
 
 ## 7. Practical Compatibility Guidance
 
-If you are importing Obsidian vault content into Folio today:
+If you are importing Obsidian vault content into Folium today:
 
 - Safe bets: headings, lists/tasks, callouts, tables, wikilinks, tags, highlight, math.
 - Use caution with: frontmatter-heavy notes, reference-style links, footnotes, comments, mermaid, and media-heavy embeds.

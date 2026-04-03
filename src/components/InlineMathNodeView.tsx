@@ -29,7 +29,7 @@ export default function InlineMathNodeView(props: any) {
         return (
             <NodeViewWrapper as="span" className="inline-block mx-1" data-type="inline-math">
                 <input
-                    className="bg-folio-bg-secondary text-folio-text px-1 rounded font-mono text-sm inline min-w-[30px] border border-folio-accent"
+                    className="bg-folium-bg-secondary text-folium-text px-1 rounded font-mono text-sm inline min-w-[30px] border border-folium-accent"
                     value={node.attrs.math}
                     onChange={(e) => updateAttributes({ math: e.target.value })}
                     onBlur={() => setIsEditing(false)}
@@ -44,7 +44,7 @@ export default function InlineMathNodeView(props: any) {
         <NodeViewWrapper as="span" className="mx-1" data-type="inline-math">
             <span
                 ref={contentRef}
-                className="katex-inline-container cursor-pointer hover:bg-folio-bg-secondary/50 rounded px-1 transition-colors"
+                className="katex-inline-container cursor-pointer hover:bg-folium-bg-secondary/50 rounded px-1 transition-colors"
                 onClick={() => setIsEditing(true)}
             />
         </NodeViewWrapper>

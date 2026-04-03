@@ -23,7 +23,7 @@ export interface SyncConfig {
     deviceId: string | null
 }
 
-export interface FolioConfig {
+export interface FoliumConfig {
     version: number
     hasCompletedOnboarding: boolean
     workspaces: Workspace[]
@@ -36,7 +36,7 @@ export interface FolioConfig {
     }
 }
 
-const DEFAULT_CONFIG: FolioConfig = {
+const DEFAULT_CONFIG: FoliumConfig = {
     version: 1,
     hasCompletedOnboarding: false,
     workspaces: [],
@@ -69,7 +69,7 @@ export async function hashPath(path: string): Promise<string> {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16)
 }
 
-async function migrateParsedConfig(parsed: any): Promise<FolioConfig> {
+async function migrateParsedConfig(parsed: any): Promise<FoliumConfig> {
     if (!parsed.version) throw new Error('Invalid config format (no version)')
 
     const workspaces: Workspace[] = parsed.workspaces || []
@@ -120,7 +120,7 @@ async function migrateParsedConfig(parsed: any): Promise<FolioConfig> {
 }
 
 /**
- * Returns the resolved path to the config file (e.g. ~/.config/folio/folio.json)
+ * Returns the resolved path to the config file (e.g. ~/.config/folium/folium.json)
  */
 async function getConfigPath(): Promise<string> {
     const { appConfigDir, join } = await import('@tauri-apps/api/path')
@@ -130,18 +130,18 @@ async function getConfigPath(): Promise<string> {
     if (!(await exists(configDir))) {
         await mkdir(configDir, { recursive: true })
     }
-    return await join(configDir, 'folio.json')
+    return await join(configDir, 'folium.json')
 }
 
 /**
  * Load configuration from disk. Generates default if missing or corrupt.
  */
-export async function loadConfig(): Promise<FolioConfig> {
+export async function loadConfig(): Promise<FoliumConfig> {
     try {
         if (!isTauri()) {
-            const raw = localStorage.getItem('folio_config')
+            const raw = localStorage.getItem('folium_config')
             if (!raw) {
-                localStorage.setItem('folio_config', JSON.stringify(DEFAULT_CONFIG))
+                localStorage.setItem('folium_config', JSON.stringify(DEFAULT_CONFIG))
                 return DEFAULT_CONFIG
             }
             return await migrateParsedConfig(JSON.parse(raw))
@@ -158,10 +158,10 @@ export async function loadConfig(): Promise<FolioConfig> {
         const raw = await readTextFile(configPath)
         return await migrateParsedConfig(JSON.parse(raw))
     } catch (err) {
-        console.warn('Failed to load folio.json, falling back to default', err)
+        console.warn('Failed to load folium.json, falling back to default', err)
         try {
             if (!isTauri()) {
-                localStorage.setItem('folio_config', JSON.stringify(DEFAULT_CONFIG))
+                localStorage.setItem('folium_config', JSON.stringify(DEFAULT_CONFIG))
             } else {
                 const { writeTextFile } = await import('@tauri-apps/plugin-fs')
                 const configPath = await getConfigPath()
@@ -177,10 +177,10 @@ export async function loadConfig(): Promise<FolioConfig> {
 /**
  * Save configuration to disk.
  */
-export async function saveConfig(config: FolioConfig): Promise<void> {
+export async function saveConfig(config: FoliumConfig): Promise<void> {
     try {
         if (!isTauri()) {
-            localStorage.setItem('folio_config', JSON.stringify(config))
+            localStorage.setItem('folium_config', JSON.stringify(config))
             return
         }
         const { writeTextFile } = await import('@tauri-apps/plugin-fs')

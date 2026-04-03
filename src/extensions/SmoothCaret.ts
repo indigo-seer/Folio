@@ -204,7 +204,7 @@ export const SmoothCaret = Extension.create({
                             caret.style.height = `${lineHeight}px`
 
                             lastHead = selection.head
-                            console.log('[Folio Debug] Caret updated:', 'head:', selection.head, 'left:', left, 'isJump:', isJump, 'isTyping:', isTyping, 'headDelta:', headDelta)
+                            console.log('[Folium Debug] Caret updated:', 'head:', selection.head, 'left:', left, 'isJump:', isJump, 'isTyping:', isTyping, 'headDelta:', headDelta)
                         },
 
                         destroy() {

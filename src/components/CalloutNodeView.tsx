@@ -168,7 +168,7 @@ export default function CalloutNodeView(props: any) {
 
     return (
         <NodeViewWrapper
-            className={`folio-callout my-5 rounded-xl shadow-sm ${style.colorClass} ${style.bgClass} ${style.darkBgClass}`}
+            className={`folium-callout my-5 rounded-xl shadow-sm ${style.colorClass} ${style.bgClass} ${style.darkBgClass}`}
             data-type="callout"
             data-callout-type={node.attrs.type}
             data-callout-title={node.attrs.title}
@@ -176,32 +176,32 @@ export default function CalloutNodeView(props: any) {
             data-callout-expanded={isExpanded ? 'true' : 'false'}
         >
             <div
-                className={`folio-callout-header ${isFoldable ? 'is-foldable' : ''}`}
+                className={`folium-callout-header ${isFoldable ? 'is-foldable' : ''}`}
                 contentEditable={false}
                 onClick={(event) => {
                     const target = event.target as HTMLElement
-                    if (target.closest('.folio-callout-menu-anchor')) return
-                    if (target.closest('.folio-callout-title-input')) return
+                    if (target.closest('.folium-callout-menu-anchor')) return
+                    if (target.closest('.folium-callout-title-input')) return
                     toggleFold()
                 }}
             >
-                <div className="folio-callout-menu-anchor">
+                <div className="folium-callout-menu-anchor">
                     <button
                         ref={menuButtonRef}
                         type="button"
-                        className={`folio-callout-icon-btn ${isTypeMenuOpen ? 'is-open' : ''}`}
+                        className={`folium-callout-icon-btn ${isTypeMenuOpen ? 'is-open' : ''}`}
                         title="Change callout type"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => setTypeMenuOpen((open) => !open)}
                     >
-                        <span className={`folio-callout-icon ${style.iconBgClass}`}>
+                        <span className={`folium-callout-icon ${style.iconBgClass}`}>
                             <Icon size={16} className="opacity-90" />
                         </span>
                     </button>
 
                     {isTypeMenuOpen && (
-                        <div className="folio-callout-type-menu" ref={menuRef}>
-                            <div className="folio-callout-type-grid">
+                        <div className="folium-callout-type-menu" ref={menuRef}>
+                            <div className="folium-callout-type-grid">
                                 {typeMenuItems.map((option) => {
                                     const OptionIcon = option.icon
                                     const isActive = option.id === selectedType
@@ -210,7 +210,7 @@ export default function CalloutNodeView(props: any) {
                                         <button
                                             key={option.id}
                                             type="button"
-                                            className={`folio-callout-type-btn ${isActive ? 'is-active' : ''}`}
+                                            className={`folium-callout-type-btn ${isActive ? 'is-active' : ''}`}
                                             title={option.label}
                                             onMouseDown={(event) => event.preventDefault()}
                                             onClick={() => {
@@ -223,10 +223,10 @@ export default function CalloutNodeView(props: any) {
                                     )
                                 })}
                             </div>
-                            <div className="folio-callout-menu-divider" />
+                            <div className="folium-callout-menu-divider" />
                             <button
                                 type="button"
-                                className={`folio-callout-collapse-toggle ${isFoldable ? 'is-active' : ''}`}
+                                className={`folium-callout-collapse-toggle ${isFoldable ? 'is-active' : ''}`}
                                 title={isFoldable ? 'Disable collapse' : 'Enable collapse'}
                                 onMouseDown={(event) => event.preventDefault()}
                                 onClick={toggleFoldable}
@@ -238,7 +238,7 @@ export default function CalloutNodeView(props: any) {
                 </div>
 
                 <input
-                    className="folio-callout-title-input"
+                    className="folium-callout-title-input"
                     value={draftTitle}
                     placeholder={titleFromType(type)}
                     onMouseDown={(event) => event.stopPropagation()}
@@ -259,15 +259,15 @@ export default function CalloutNodeView(props: any) {
                     }}
                 />
                 {isFoldable && (
-                    <span className="folio-callout-fold-indicator" aria-hidden>
+                    <span className="folium-callout-fold-indicator" aria-hidden>
                         {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </span>
                 )}
             </div>
 
-            <div className={`folio-callout-content ${(!isFoldable || isExpanded) ? 'is-expanded' : 'is-collapsed'}`}>
+            <div className={`folium-callout-content ${(!isFoldable || isExpanded) ? 'is-expanded' : 'is-collapsed'}`}>
                 <NodeViewContent
-                    className={`folio-callout-node-content text-folio-text dark:text-folio-dark-text text-sm leading-relaxed [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 prose-p:my-1.5 ${isEmpty ? 'is-empty-callout' : ''}`}
+                    className={`folium-callout-node-content text-folium-text dark:text-folium-dark-text text-sm leading-relaxed [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 prose-p:my-1.5 ${isEmpty ? 'is-empty-callout' : ''}`}
                     data-empty-hint={isEmpty ? 'Tip: Click the icon to change the callout type.' : ''}
                 />
             </div>

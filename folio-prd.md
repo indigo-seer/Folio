@@ -1,4 +1,4 @@
-# Folio
+# Folium
 ### A markdown editor built for thinking, not tinkering.
 
 **Product Requirements Document · Version 1.0 · February 2026**
@@ -7,15 +7,15 @@
 
 ## 1. Vision & Purpose
 
-Folio is a cross-platform markdown editor and viewer designed around a single belief: the tool should disappear when you write. Where Obsidian is a powerful system that rewards configuration and tinkering, Folio is opinionated — beautiful by default, calm in every interaction, and fast to open.
+Folium is a cross-platform markdown editor and viewer designed around a single belief: the tool should disappear when you write. Where Obsidian is a powerful system that rewards configuration and tinkering, Folium is opinionated — beautiful by default, calm in every interaction, and fast to open.
 
-The target user is someone who thinks in text, cares about how their tools feel, and wants a local-first notes system that respects their files and their focus. Folio does not compete with Obsidian on feature count. It competes on experience.
+The target user is someone who thinks in text, cares about how their tools feel, and wants a local-first notes system that respects their files and their focus. Folium does not compete with Obsidian on feature count. It competes on experience.
 
-> **Thesis:** Most note-taking apps are built by developers for developers. Folio is built for anyone who writes and thinks — and it shows.
+> **Thesis:** Most note-taking apps are built by developers for developers. Folium is built for anyone who writes and thinks — and it shows.
 
-### 1.1 What Makes Folio Different
+### 1.1 What Makes Folium Different
 
-| Obsidian | Folio |
+| Obsidian | Folium |
 |---|---|
 | Powerful, extensible plugin system | Opinionated, no plugin system in v1 |
 | Configurable to the point of complexity | Beautiful defaults — minimal configuration |
@@ -29,7 +29,7 @@ The target user is someone who thinks in text, cares about how their tools feel,
 
 ## 2. Platform & Technical Stack
 
-Folio targets all platforms through a single web-first codebase. The technical choices are made to maximise vibe-coding productivity, minimise dependencies, and ensure long-term maintainability.
+Folium targets all platforms through a single web-first codebase. The technical choices are made to maximise vibe-coding productivity, minimise dependencies, and ensure long-term maintainability.
 
 ### 2.1 Core Stack
 
@@ -44,9 +44,9 @@ Folio targets all platforms through a single web-first codebase. The technical c
 
 ### 2.2 Storage Model
 
-Files live on disk as plain `.md` files. No proprietary database, no lock-in. A vault is simply a folder the user points Folio at. This means notes are always accessible from any other tool, and sync is just file sync — handled entirely by Syncthing outside the app.
+Files live on disk as plain `.md` files. No proprietary database, no lock-in. A vault is simply a folder the user points Folium at. This means notes are always accessible from any other tool, and sync is just file sync — handled entirely by Syncthing outside the app.
 
-> **Important:** Folio never modifies the content of `.md` files beyond what the user types. Metadata like wikilinks and frontmatter are parsed at read time, never injected silently.
+> **Important:** Folium never modifies the content of `.md` files beyond what the user types. Metadata like wikilinks and frontmatter are parsed at read time, never injected silently.
 
 ---
 
@@ -54,7 +54,7 @@ Files live on disk as plain `.md` files. No proprietary database, no lock-in. A 
 
 ### 3.1 Editor & Live Preview
 
-The editor is the heart of Folio. Built on TipTap, it renders markdown as the user types — no split pane, no separate preview mode. The formatted output is always visible. The editing experience is WYSIWYG in feel but markdown on disk.
+The editor is the heart of Folium. Built on TipTap, it renders markdown as the user types — no split pane, no separate preview mode. The formatted output is always visible. The editing experience is WYSIWYG in feel but markdown on disk.
 
 **Typography**
 
@@ -105,7 +105,7 @@ A collapsible left sidebar shows the vault's folder and file hierarchy. The desi
 
 ### 3.5 Graph View
 
-Graph view displays all notes as nodes connected by wikilinks. It gives a spatial, visual sense of how ideas connect. The goal is not the complex hairball Obsidian defaults to — Folio's graph should be legible and beautiful even for large vaults.
+Graph view displays all notes as nodes connected by wikilinks. It gives a spatial, visual sense of how ideas connect. The goal is not the complex hairball Obsidian defaults to — Folium's graph should be legible and beautiful even for large vaults.
 
 - Force-directed layout with gentle physics — nodes settle naturally
 - Node size scaled by number of connections
@@ -147,7 +147,7 @@ A minimal status line at the bottom of the editor shows word count and estimated
 
 ## 4. Sync Architecture
 
-Folio does not build a sync system from scratch. Instead, it integrates with Syncthing — an open-source, peer-to-peer file sync engine — and provides a beautiful, minimal setup experience inside the app. All the hard distributed systems work (conflict resolution, device discovery, transport) is handled by Syncthing.
+Folium does not build a sync system from scratch. Instead, it integrates with Syncthing — an open-source, peer-to-peer file sync engine — and provides a beautiful, minimal setup experience inside the app. All the hard distributed systems work (conflict resolution, device discovery, transport) is handled by Syncthing.
 
 ### 4.1 How Syncthing Covers Both Sync Scenarios
 
@@ -161,9 +161,9 @@ The Ubuntu laptop runs a Syncthing instance and acts as a relay peer. When devic
 
 ### 4.2 In-App Setup Experience
 
-Folio's sync setup screen is where the designer advantage applies. Syncthing's own interface is technical and intimidating. Folio wraps it in a simple onboarding flow:
+Folium's sync setup screen is where the designer advantage applies. Syncthing's own interface is technical and intimidating. Folium wraps it in a simple onboarding flow:
 
-1. Folio detects whether Syncthing is installed and prompts to install if not
+1. Folium detects whether Syncthing is installed and prompts to install if not
 2. User sees their Device ID as a shareable code (like an AirDrop name)
 3. User adds other devices by entering their Device ID
 4. The vault folder is automatically shared with added devices
@@ -187,7 +187,7 @@ Every transition communicates something: a sidebar sliding in signals context ch
 Dark mode and light mode are both fully designed — neither is an inversion of the other. Light mode uses warm off-whites and deep navy text. Dark mode uses deep blue-greys with warm cream text. Neither feels like an afterthought.
 
 **Defaults over settings**
-Every configuration option is a design failure. Folio should ship defaults so considered that most users never open a settings panel. Where settings are necessary, they are minimal and clearly named.
+Every configuration option is a design failure. Folium should ship defaults so considered that most users never open a settings panel. Where settings are necessary, they are minimal and clearly named.
 
 ### 5.2 Typography Scale
 
@@ -234,15 +234,15 @@ The following features are explicitly deferred to maintain v1 focus. Each is wor
 
 ## 8. Success Criteria
 
-Folio v1 is a success when all of the following are true:
+Folium v1 is a success when all of the following are true:
 
 - Opening the app to a writing-ready state takes under 1 second on a modern laptop
 - A designer who has never touched the settings panel finds the defaults genuinely beautiful
 - Focus mode transition feels smooth and intentional — not like a CSS hack
 - A vault of 200+ notes renders the graph view without visible lag
-- Any `.md` file written in Folio opens correctly in Obsidian, iA Writer, or any other markdown app
+- Any `.md` file written in Folium opens correctly in Obsidian, iA Writer, or any other markdown app
 - The sync setup screen can be completed in under 3 minutes with no technical knowledge
 
 ---
 
-*Folio PRD v1.0 · February 2026*
+*Folium PRD v1.0 · February 2026*

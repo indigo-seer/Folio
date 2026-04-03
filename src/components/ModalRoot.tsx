@@ -28,7 +28,7 @@ export function ModalRoot({
 
     const quickSwitcherCommands = useMemo<QuickSwitcherCommand[]>(() => {
         const activeTab = tabs.tabs.find((t: any) => t.id === activeTabId);
-        const hasActiveMarkdownTab = Boolean(activeTab && activeTab.path && activeTab.id !== 'folio-graph');
+        const hasActiveMarkdownTab = Boolean(activeTab && activeTab.path && activeTab.id !== 'folium-graph');
 
         const baseCommands: QuickSwitcherCommand[] = [
             { id: 'new-note', label: 'Create New Note...', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg> },

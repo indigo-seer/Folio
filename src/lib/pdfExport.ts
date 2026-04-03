@@ -68,12 +68,12 @@ export async function exportNoteAsPdf({ noteTitle, noteHtml, isDarkMode }: Expor
     exportRoot.style.width = `${Math.max(900, Math.min(1600, window.innerWidth || 1200))}px`
 
     exportRoot.innerHTML = `
-      <main class="folio-pdf-shell bg-folio-bg dark:bg-folio-dark-bg text-folio-text dark:text-folio-dark-text" style="width:100%; padding:2.5rem 0 3rem;">
+      <main class="folium-pdf-shell bg-folium-bg dark:bg-folium-dark-bg text-folium-text dark:text-folium-dark-text" style="width:100%; padding:2.5rem 0 3rem;">
         <section style="max-width:76ch; margin:0 auto; padding:0 1.5rem 0.5rem;">
           <h1 class="note-title font-serif">${escapeHtml(title)}</h1>
         </section>
         <section style="max-width:76ch; margin:0 auto; padding:0 1.5rem;">
-          <div class="prose-folio">${noteHtml}</div>
+          <div class="prose-folium">${noteHtml}</div>
         </section>
       </main>
     `

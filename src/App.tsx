@@ -16,6 +16,7 @@ import { useAppBootloader } from './hooks/useAppBootloader';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import { useEditorState } from './hooks/useEditorState';
 import { useFileOperations } from './hooks/useFileOperations';
+import { recordTypingUpdate, startPerformanceAudit } from './lib/performanceAudit';
 
 import { MainLayout } from './components/MainLayout';
 import { ModalRoot } from './components/ModalRoot';
@@ -37,6 +38,10 @@ function AppContentInner() {
     const [bootState, setBootState] = useState<BootState>(BootState.Initializing);
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [isTypewriterMode, setIsTypewriterMode] = useState(false);
+
+    useEffect(() => {
+        return startPerformanceAudit();
+    }, []);
 
     // Initial Bootloader & Workspace Mgmt
     // Notice: setWorkspaces and setActiveWorkspaceId are managed by WorkspaceProvider, 
@@ -77,8 +82,8 @@ function BootloaderWrappedContent({ bootState, setBootState, fileSystem, tabs, i
             return <OnboardingModal onComplete={handleOnboardingComplete} />;
         }
         return (
-            <div className="flex h-screen items-center justify-center bg-folio-bg dark:bg-folio-dark-bg">
-                <div className="animate-pulse w-3 h-3 rounded-full bg-folio-text-secondary/30 dark:bg-folio-dark-text-secondary/30" />
+            <div className="flex h-screen items-center justify-center bg-folium-bg dark:bg-folium-dark-bg">
+                <div className="animate-pulse w-3 h-3 rounded-full bg-folium-text-secondary/30 dark:bg-folium-dark-text-secondary/30" />
             </div>
         );
     }
@@ -130,6 +135,18 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
 
     const renderedTabIdRef = useRef<string | null>(null);
 
+    const auditedMainEditorUpdate = useCallback((editor: any) => {
+        const docSize = Number(editor?.state?.doc?.content?.size ?? 0);
+        recordTypingUpdate('main', docSize);
+        handleMainEditorUpdate(editor);
+    }, [handleMainEditorUpdate]);
+
+    const auditedSplitEditorUpdate = useCallback((editor: any) => {
+        const docSize = Number(editor?.state?.doc?.content?.size ?? 0);
+        recordTypingUpdate('split', docSize);
+        handleSplitEditorUpdate(editor);
+    }, [handleSplitEditorUpdate]);
+
     useEffect(() => {
         if (!tabs.splitTabId) {
             setFocusedPane('main');
@@ -153,7 +170,7 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                 // Give the attribute time to propagate then center by focusing
                 requestAnimationFrame(() => {
                     mainEditorRef.current?.commands.focus();
-                    window.dispatchEvent(new CustomEvent('folio:typewriter-toggled'));
+                    window.dispatchEvent(new CustomEvent('folium:typewriter-toggled'));
                 });
             }
             return next;
@@ -212,11 +229,11 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                         ref={mainEditorScrollRef}
                     >
                         <div>
-                            {tabs.activeTabId && tabs.activeTabId !== 'folio-graph' && (
+                            {tabs.activeTabId && tabs.activeTabId !== 'folium-graph' && (
                                 <>
                                     <CorruptionBanner warnings={mainCorruptionWarnings} />
                                     <NoteTitle
-                                        title={tabs.tabs.find((t: any) => t.id === tabs.activeTabId)?.title || 'Folio'}
+                                        title={tabs.tabs.find((t: any) => t.id === tabs.activeTabId)?.title || 'Folium'}
                                         onRename={fileOperations.handleRename}
                                         autoFocus={isNewNote}
                                     />
@@ -225,7 +242,7 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                         </div>
                         <div>
                             <Editor
-                                onUpdate={handleMainEditorUpdate}
+                                onUpdate={auditedMainEditorUpdate}
                                 onReady={handleMainEditorReady}
                                 onFocus={() => setFocusedPane('main')}
                                 isTypewriterMode={isTypewriterMode}
@@ -238,15 +255,15 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                         <div className={`absolute inset-0 overflow-y-auto overscroll-none ${isTypewriterMode ? 'typewriter-active-container' : ''}`} ref={splitEditorScrollRef}>
                             <div>
                                 <CorruptionBanner warnings={splitCorruptionWarnings} />
-                                <div className="max-w-prose-folio mx-auto px-6 pt-10 pb-2">
-                                    <h1 className="note-title text-folio-text dark:text-folio-dark-text font-serif font-light m-0 pb-1 border-b-2 border-transparent">
+                                <div className="max-w-prose-folium mx-auto px-6 pt-10 pb-2">
+                                    <h1 className="note-title text-folium-text dark:text-folium-dark-text font-serif font-light m-0 pb-1 border-b-2 border-transparent">
                                         {tabs.tabs.find((t: any) => t.id === tabs.splitTabId)?.title || 'Untitled'}
                                     </h1>
                                 </div>
                             </div>
                             <div>
                                 <Editor
-                                    onUpdate={handleSplitEditorUpdate}
+                                    onUpdate={auditedSplitEditorUpdate}
                                     onReady={handleSplitEditorReady}
                                     onFocus={() => setFocusedPane('split')}
                                     isTypewriterMode={isTypewriterMode}

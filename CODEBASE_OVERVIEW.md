@@ -1,4 +1,4 @@
-# Folio — Codebase Overview (Current)
+# Folium — Codebase Overview (Current)
 
 > Version: 0.3.0  
 > Stack: Tauri v2 + React 18 + TypeScript + TipTap 3 + Tailwind CSS 3 + Vite  

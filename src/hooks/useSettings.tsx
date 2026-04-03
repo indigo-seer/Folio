@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { FolioConfig, UIConfig, saveConfig, loadConfig } from '../lib/config'
+import { FoliumConfig, UIConfig, saveConfig, loadConfig } from '../lib/config'
 
 interface SettingsContextValue {
     theme: UIConfig['theme']
@@ -17,7 +17,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<UIConfig['theme']>('system')
     const [fontSize, setFontSizeState] = useState<UIConfig['fontSize']>('default')
     const [typewriterBlur, setTypewriterBlurState] = useState<boolean>(true)
-    const [configRef, setConfigRef] = useState<FolioConfig | null>(null)
+    const [configRef, setConfigRef] = useState<FoliumConfig | null>(null)
 
     // First boot fetch - loads from disk or memory based on platform
     useEffect(() => {
@@ -68,14 +68,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         // Apply dynamic font sizing
         switch (fontSize) {
             case 'compact':
-                root.style.setProperty('--folio-font-size', '15px')
+                root.style.setProperty('--folium-font-size', '15px')
                 break
             case 'relaxed':
-                root.style.setProperty('--folio-font-size', '20px')
+                root.style.setProperty('--folium-font-size', '20px')
                 break
             case 'default':
             default:
-                root.style.setProperty('--folio-font-size', '17px')
+                root.style.setProperty('--folium-font-size', '17px')
                 break
         }
     }, [theme, fontSize])

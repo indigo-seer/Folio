@@ -55,21 +55,21 @@ export const WikilinkDropdown = forwardRef<WikilinkDropdownRef, WikilinkDropdown
 
     if (!props.items.length) {
         return (
-            <div className="bg-white dark:bg-folio-dark-bg border border-folio-border dark:border-folio-dark-border rounded-lg shadow-xl overflow-hidden py-2 px-4 min-w-[200px] text-sm text-folio-text-tertiary dark:text-folio-dark-text-tertiary">
+            <div className="bg-white dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-lg shadow-xl overflow-hidden py-2 px-4 min-w-[200px] text-sm text-folium-text-tertiary dark:text-folium-dark-text-tertiary">
                 No matching notes found. Type to create new.
             </div>
         )
     }
 
     return (
-        <div className="bg-white dark:bg-folio-dark-bg border border-folio-border dark:border-folio-dark-border rounded-lg shadow-xl overflow-hidden py-1 min-w-[200px] max-h-[300px] overflow-y-auto">
+        <div className="bg-white dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-lg shadow-xl overflow-hidden py-1 min-w-[200px] max-h-[300px] overflow-y-auto">
             {props.items.map((item, index) => (
                 <button
                     key={index}
                     onClick={() => selectItem(index)}
                     className={`block w-full text-left px-4 py-2 text-sm transition-colors ${index === selectedIndex
-                            ? 'bg-folio-base dark:bg-folio-dark-base text-folio-accent dark:text-folio-dark-accent font-medium'
-                            : 'text-folio-text dark:text-folio-dark-text hover:bg-folio-base dark:hover:bg-folio-dark-base'
+                            ? 'bg-folium-base dark:bg-folium-dark-base text-folium-accent dark:text-folium-dark-accent font-medium'
+                            : 'text-folium-text dark:text-folium-dark-text hover:bg-folium-base dark:hover:bg-folium-dark-base'
                         }`}
                 >
                     {item}

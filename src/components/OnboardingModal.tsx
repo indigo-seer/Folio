@@ -22,23 +22,23 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
     return (
         <div className={`flex flex-col items-center justify-center h-full px-8 transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             {/* Logo */}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 654 654" className="w-16 h-16 text-folio-text dark:text-folio-dark-text fill-current mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 654 654" className="w-16 h-16 text-folium-text dark:text-folium-dark-text fill-current mb-6">
                 <path d="M585.24,0H68.76A68.75,68.75,0,0,0,0,68.76V585.24A68.75,68.75,0,0,0,68.76,654H585.24A68.75,68.75,0,0,0,654,585.24V68.76A68.75,68.75,0,0,0,585.24,0ZM44.46,585.24v-23.8H128.1a48.6,48.6,0,0,0,48.54-48.54V146.76A48.6,48.6,0,0,0,128.1,98.22H44.46V68.76a24.33,24.33,0,0,1,24.3-24.3H420V609.54H68.76A24.33,24.33,0,0,1,44.46,585.24Zm565.08,0a24.33,24.33,0,0,1-24.3,24.3H464.43V44.46H585.24a24.33,24.33,0,0,1,24.3,24.3Z" />
                 <path d="M537.59,98.22a10.11,10.11,0,0,0-10.11,10.11V550.52a10.11,10.11,0,1,0,20.21,0V108.33A10.11,10.11,0,0,0,537.59,98.22Z" />
             </svg>
 
-            <h1 className="font-serif text-[36px] font-bold text-folio-text dark:text-folio-dark-text mb-3">
-                Folio
+            <h1 className="font-serif text-[36px] font-bold text-folium-text dark:text-folium-dark-text mb-3">
+                Folium
             </h1>
 
-            <p className="font-sans text-[16px] text-folio-text-secondary dark:text-folio-dark-text-secondary text-center max-w-[380px] leading-relaxed mb-10">
+            <p className="font-sans text-[16px] text-folium-text-secondary dark:text-folium-dark-text-secondary text-center max-w-[380px] leading-relaxed mb-10">
                 A distraction-free markdown editor.<br />
                 Your notes stay as plain files on disk — readable by any app, yours completely.
             </p>
 
             <button
                 onClick={onNext}
-                className="px-8 py-3 rounded-lg font-sans text-[15px] font-medium text-white bg-folio-accent dark:bg-folio-dark-accent hover:bg-folio-accent-hover dark:hover:bg-folio-dark-accent-hover transition-colors duration-200 shadow-sm"
+                className="px-8 py-3 rounded-lg font-sans text-[15px] font-medium text-white bg-folium-accent dark:bg-folium-dark-accent hover:bg-folium-accent-hover dark:hover:bg-folium-dark-accent-hover transition-colors duration-200 shadow-sm"
             >
                 Get Started →
             </button>
@@ -90,10 +90,10 @@ function StepTheme({ onNext }: { onNext: () => void }) {
 
     return (
         <div className={`flex flex-col items-center justify-center h-full px-8 transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <h2 className="font-serif text-[28px] font-bold text-folio-text dark:text-folio-dark-text mb-2">
+            <h2 className="font-serif text-[28px] font-bold text-folium-text dark:text-folium-dark-text mb-2">
                 Choose your look
             </h2>
-            <p className="font-sans text-[15px] text-folio-text-secondary dark:text-folio-dark-text-secondary mb-8">
+            <p className="font-sans text-[15px] text-folium-text-secondary dark:text-folium-dark-text-secondary mb-8">
                 You can change this anytime in Settings.
             </p>
 
@@ -103,15 +103,15 @@ function StepTheme({ onNext }: { onNext: () => void }) {
                         key={t.key}
                         onClick={() => setTheme(t.key)}
                         className={`flex flex-col items-center p-5 rounded-xl border-2 transition-all duration-200 w-[130px] ${theme === t.key
-                            ? 'border-folio-accent dark:border-folio-dark-accent bg-folio-accent/5 dark:bg-folio-dark-accent/10 shadow-md'
-                            : 'border-folio-border dark:border-folio-dark-border bg-white dark:bg-folio-dark-bg-secondary hover:border-folio-text-secondary/30 dark:hover:border-folio-dark-text-secondary/30'
+                            ? 'border-folium-accent dark:border-folium-dark-accent bg-folium-accent/5 dark:bg-folium-dark-accent/10 shadow-md'
+                            : 'border-folium-border dark:border-folium-dark-border bg-white dark:bg-folium-dark-bg-secondary hover:border-folium-text-secondary/30 dark:hover:border-folium-dark-text-secondary/30'
                             }`}
                     >
                         <div className="mb-3">{t.icon}</div>
-                        <span className="font-sans text-[14px] font-semibold text-folio-text dark:text-folio-dark-text mb-0.5">
+                        <span className="font-sans text-[14px] font-semibold text-folium-text dark:text-folium-dark-text mb-0.5">
                             {t.label}
                         </span>
-                        <span className="font-sans text-[12px] text-folio-text-secondary dark:text-folio-dark-text-secondary">
+                        <span className="font-sans text-[12px] text-folium-text-secondary dark:text-folium-dark-text-secondary">
                             {t.desc}
                         </span>
                     </button>
@@ -120,7 +120,7 @@ function StepTheme({ onNext }: { onNext: () => void }) {
 
             <button
                 onClick={onNext}
-                className="px-8 py-3 rounded-lg font-sans text-[15px] font-medium text-white bg-folio-accent dark:bg-folio-dark-accent hover:bg-folio-accent-hover dark:hover:bg-folio-dark-accent-hover transition-colors duration-200 shadow-sm"
+                className="px-8 py-3 rounded-lg font-sans text-[15px] font-medium text-white bg-folium-accent dark:bg-folium-dark-accent hover:bg-folium-accent-hover dark:hover:bg-folium-dark-accent-hover transition-colors duration-200 shadow-sm"
             >
                 Continue →
             </button>
@@ -155,33 +155,33 @@ function StepWritingModes({ onNext }: { onNext: () => void }) {
 
     return (
         <div className={`flex flex-col items-center justify-center h-full px-8 transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <h2 className="font-serif text-[28px] font-bold text-folio-text dark:text-folio-dark-text mb-2">
+            <h2 className="font-serif text-[28px] font-bold text-folium-text dark:text-folium-dark-text mb-2">
                 Writing modes
             </h2>
-            <p className="font-sans text-[15px] text-folio-text-secondary dark:text-folio-dark-text-secondary mb-6">
+            <p className="font-sans text-[15px] text-folium-text-secondary dark:text-folium-dark-text-secondary mb-6">
                 Toggle the switches and watch the preview change.
             </p>
 
             {/* Mini Editor Mockup */}
-            <div className="w-full max-w-[480px] rounded-xl border border-folio-border dark:border-folio-dark-border bg-folio-bg dark:bg-folio-dark-bg shadow-lg overflow-hidden mb-6 relative">
+            <div className="w-full max-w-[480px] rounded-xl border border-folium-border dark:border-folium-dark-border bg-folium-bg dark:bg-folium-dark-bg shadow-lg overflow-hidden mb-6 relative">
                 {/* Fake Tab Bar */}
-                <div className={`flex items-center gap-2 px-3 py-2 border-b border-folio-border dark:border-folio-dark-border bg-folio-bg-secondary dark:bg-folio-dark-bg-secondary transition-all duration-700 ${focusMode ? 'opacity-0 max-h-0 py-0 border-b-0 overflow-hidden' : 'opacity-100 max-h-12'}`}>
-                    <div className="px-3 py-1 rounded text-[11px] font-sans font-medium text-folio-text dark:text-folio-dark-text bg-folio-bg dark:bg-folio-dark-bg border border-folio-border/50 dark:border-folio-dark-border">
+                <div className={`flex items-center gap-2 px-3 py-2 border-b border-folium-border dark:border-folium-dark-border bg-folium-bg-secondary dark:bg-folium-dark-bg-secondary transition-all duration-700 ${focusMode ? 'opacity-0 max-h-0 py-0 border-b-0 overflow-hidden' : 'opacity-100 max-h-12'}`}>
+                    <div className="px-3 py-1 rounded text-[11px] font-sans font-medium text-folium-text dark:text-folium-dark-text bg-folium-bg dark:bg-folium-dark-bg border border-folium-border/50 dark:border-folium-dark-border">
                         Draft.md
                     </div>
-                    <div className="px-3 py-1 rounded text-[11px] font-sans text-folio-text-secondary dark:text-folio-dark-text-secondary">
+                    <div className="px-3 py-1 rounded text-[11px] font-sans text-folium-text-secondary dark:text-folium-dark-text-secondary">
                         Notes.md
                     </div>
                 </div>
 
                 <div className="flex">
                     {/* Fake Sidebar */}
-                    <div className={`flex flex-col gap-1.5 p-2 border-r border-folio-border dark:border-folio-dark-border bg-folio-bg-secondary dark:bg-folio-dark-bg-secondary transition-all duration-700 ${focusMode ? 'opacity-0 max-w-0 p-0 border-r-0 overflow-hidden' : 'opacity-100 max-w-[100px] min-w-[80px]'}`}>
-                        <div className="h-2 w-12 rounded bg-folio-text-secondary/15 dark:bg-folio-dark-text-secondary/20" />
-                        <div className="h-2 w-16 rounded bg-folio-accent/20 dark:bg-folio-dark-accent/20" />
-                        <div className="h-2 w-10 rounded bg-folio-text-secondary/15 dark:bg-folio-dark-text-secondary/20" />
-                        <div className="h-2 w-14 rounded bg-folio-text-secondary/15 dark:bg-folio-dark-text-secondary/20" />
-                        <div className="h-2 w-9 rounded bg-folio-text-secondary/15 dark:bg-folio-dark-text-secondary/20" />
+                    <div className={`flex flex-col gap-1.5 p-2 border-r border-folium-border dark:border-folium-dark-border bg-folium-bg-secondary dark:bg-folium-dark-bg-secondary transition-all duration-700 ${focusMode ? 'opacity-0 max-w-0 p-0 border-r-0 overflow-hidden' : 'opacity-100 max-w-[100px] min-w-[80px]'}`}>
+                        <div className="h-2 w-12 rounded bg-folium-text-secondary/15 dark:bg-folium-dark-text-secondary/20" />
+                        <div className="h-2 w-16 rounded bg-folium-accent/20 dark:bg-folium-dark-accent/20" />
+                        <div className="h-2 w-10 rounded bg-folium-text-secondary/15 dark:bg-folium-dark-text-secondary/20" />
+                        <div className="h-2 w-14 rounded bg-folium-text-secondary/15 dark:bg-folium-dark-text-secondary/20" />
+                        <div className="h-2 w-9 rounded bg-folium-text-secondary/15 dark:bg-folium-dark-text-secondary/20" />
                     </div>
 
                     {/* Editor Content */}
@@ -192,15 +192,15 @@ function StepWritingModes({ onNext }: { onNext: () => void }) {
                                     key={i}
                                     className={`font-sans text-[13px] leading-relaxed transition-all duration-700 ${line.text === '' ? 'h-4' : ''
                                         } ${line.active
-                                            ? 'text-folio-text dark:text-folio-dark-text font-medium'
+                                            ? 'text-folium-text dark:text-folium-dark-text font-medium'
                                             : typewriterMode
-                                                ? 'text-folio-text-secondary/30 dark:text-folio-dark-text-secondary/25 blur-[1.5px]'
-                                                : 'text-folio-text/80 dark:text-folio-dark-text/80'
+                                                ? 'text-folium-text-secondary/30 dark:text-folium-dark-text-secondary/25 blur-[1.5px]'
+                                                : 'text-folium-text/80 dark:text-folium-dark-text/80'
                                         }`}
                                 >
                                     {line.text}
                                     {line.active && (
-                                        <span className="inline-block w-[2px] h-[14px] bg-folio-accent dark:bg-folio-dark-accent ml-0.5 animate-pulse align-middle" />
+                                        <span className="inline-block w-[2px] h-[14px] bg-folium-accent dark:bg-folium-dark-accent ml-0.5 animate-pulse align-middle" />
                                     )}
                                 </div>
                             ))}
@@ -209,7 +209,7 @@ function StepWritingModes({ onNext }: { onNext: () => void }) {
                 </div>
 
                 {/* Fake Status Bar */}
-                <div className={`flex items-center justify-between px-3 py-1.5 border-t border-folio-border dark:border-folio-dark-border text-[10px] font-sans text-folio-text-secondary dark:text-folio-dark-text-secondary transition-all duration-700 ${focusMode ? 'opacity-0 max-h-0 py-0 border-t-0 overflow-hidden' : 'opacity-100 max-h-10'}`}>
+                <div className={`flex items-center justify-between px-3 py-1.5 border-t border-folium-border dark:border-folium-dark-border text-[10px] font-sans text-folium-text-secondary dark:text-folium-dark-text-secondary transition-all duration-700 ${focusMode ? 'opacity-0 max-h-0 py-0 border-t-0 overflow-hidden' : 'opacity-100 max-h-10'}`}>
                     <span>52 words · 1 min read</span>
                     <span>Typewriter</span>
                 </div>
@@ -224,7 +224,7 @@ function StepWritingModes({ onNext }: { onNext: () => void }) {
                             setFocusMode(next)
                             if (next) setTriedFocus(true)
                         }}
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-[3px] border-transparent transition-colors duration-200 ease-in-out ${focusMode ? 'bg-folio-accent dark:bg-folio-dark-accent' : 'bg-[#E5E7EB] dark:bg-folio-dark-border'}`}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-[3px] border-transparent transition-colors duration-200 ease-in-out ${focusMode ? 'bg-folium-accent dark:bg-folium-dark-accent' : 'bg-[#E5E7EB] dark:bg-folium-dark-border'}`}
                         role="switch"
                         aria-checked={focusMode}
                     >
@@ -232,7 +232,7 @@ function StepWritingModes({ onNext }: { onNext: () => void }) {
                             className={`pointer-events-none inline-block h-4 w-4 mt-[1px] transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${focusMode ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
                         />
                     </button>
-                    <span className="font-sans text-[14px] font-medium text-folio-text dark:text-folio-dark-text">
+                    <span className="font-sans text-[14px] font-medium text-folium-text dark:text-folium-dark-text">
                         Focus Mode
                     </span>
                 </label>
@@ -244,7 +244,7 @@ function StepWritingModes({ onNext }: { onNext: () => void }) {
                             setTypewriterMode(next)
                             if (next) setTriedTypewriter(true)
                         }}
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-[3px] border-transparent transition-colors duration-200 ease-in-out ${typewriterMode ? 'bg-folio-accent dark:bg-folio-dark-accent' : 'bg-[#E5E7EB] dark:bg-folio-dark-border'}`}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-[3px] border-transparent transition-colors duration-200 ease-in-out ${typewriterMode ? 'bg-folium-accent dark:bg-folium-dark-accent' : 'bg-[#E5E7EB] dark:bg-folium-dark-border'}`}
                         role="switch"
                         aria-checked={typewriterMode}
                     >
@@ -252,7 +252,7 @@ function StepWritingModes({ onNext }: { onNext: () => void }) {
                             className={`pointer-events-none inline-block h-4 w-4 mt-[1px] transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${typewriterMode ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
                         />
                     </button>
-                    <span className="font-sans text-[14px] font-medium text-folio-text dark:text-folio-dark-text">
+                    <span className="font-sans text-[14px] font-medium text-folium-text dark:text-folium-dark-text">
                         Typewriter Mode
                     </span>
                 </label>
@@ -261,7 +261,7 @@ function StepWritingModes({ onNext }: { onNext: () => void }) {
             <div className={`transition-all duration-500 ${bothTried ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
                 <button
                     onClick={onNext}
-                    className="px-8 py-3 rounded-lg font-sans text-[15px] font-medium text-white bg-folio-accent dark:bg-folio-dark-accent hover:bg-folio-accent-hover dark:hover:bg-folio-dark-accent-hover transition-colors duration-200 shadow-sm"
+                    className="px-8 py-3 rounded-lg font-sans text-[15px] font-medium text-white bg-folium-accent dark:bg-folium-dark-accent hover:bg-folium-accent-hover dark:hover:bg-folium-dark-accent-hover transition-colors duration-200 shadow-sm"
                 >
                     Continue →
                 </button>
@@ -279,26 +279,26 @@ function StepWorkspace({ onComplete }: { onComplete: (mode: 'pick' | 'create') =
 
     return (
         <div className={`flex flex-col items-center justify-center h-full px-8 transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <h2 className="font-serif text-[28px] font-bold text-folio-text dark:text-folio-dark-text mb-2">
+            <h2 className="font-serif text-[28px] font-bold text-folium-text dark:text-folium-dark-text mb-2">
                 Open your workspace
             </h2>
-            <p className="font-sans text-[15px] text-folio-text-secondary dark:text-folio-dark-text-secondary text-center max-w-[380px] leading-relaxed mb-8">
+            <p className="font-sans text-[15px] text-folium-text-secondary dark:text-folium-dark-text-secondary text-center max-w-[380px] leading-relaxed mb-8">
                 A workspace is any folder on your computer. Pick one with existing notes or start with a fresh folder.
             </p>
 
             <div className="flex flex-col gap-3 w-full max-w-[360px]">
                 <button
                     onClick={() => onComplete('pick')}
-                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-folio-border dark:border-folio-dark-border bg-white dark:bg-folio-dark-bg-secondary hover:border-folio-accent dark:hover:border-folio-dark-accent transition-all duration-200 group"
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-folium-border dark:border-folium-dark-border bg-white dark:bg-folium-dark-bg-secondary hover:border-folium-accent dark:hover:border-folium-dark-accent transition-all duration-200 group"
                 >
-                    <div className="w-11 h-11 rounded-lg bg-folio-accent/10 dark:bg-folio-dark-accent/10 flex items-center justify-center text-folio-accent dark:text-folio-dark-accent group-hover:bg-folio-accent/20 dark:group-hover:bg-folio-dark-accent/20 transition-colors">
+                    <div className="w-11 h-11 rounded-lg bg-folium-accent/10 dark:bg-folium-dark-accent/10 flex items-center justify-center text-folium-accent dark:text-folium-dark-accent group-hover:bg-folium-accent/20 dark:group-hover:bg-folium-dark-accent/20 transition-colors">
                         <Folder className="w-5 h-5" />
                     </div>
                     <div className="text-left">
-                        <div className="font-sans text-[15px] font-semibold text-folio-text dark:text-folio-dark-text">
+                        <div className="font-sans text-[15px] font-semibold text-folium-text dark:text-folium-dark-text">
                             Choose a folder
                         </div>
-                        <div className="font-sans text-[13px] text-folio-text-secondary dark:text-folio-dark-text-secondary">
+                        <div className="font-sans text-[13px] text-folium-text-secondary dark:text-folium-dark-text-secondary">
                             Open an existing folder with your notes
                         </div>
                     </div>
@@ -306,16 +306,16 @@ function StepWorkspace({ onComplete }: { onComplete: (mode: 'pick' | 'create') =
 
                 <button
                     onClick={() => onComplete('create')}
-                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-folio-border dark:border-folio-dark-border bg-white dark:bg-folio-dark-bg-secondary hover:border-folio-accent dark:hover:border-folio-dark-accent transition-all duration-200 group"
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-folium-border dark:border-folium-dark-border bg-white dark:bg-folium-dark-bg-secondary hover:border-folium-accent dark:hover:border-folium-dark-accent transition-all duration-200 group"
                 >
-                    <div className="w-11 h-11 rounded-lg bg-folio-accent/10 dark:bg-folio-dark-accent/10 flex items-center justify-center text-folio-accent dark:text-folio-dark-accent group-hover:bg-folio-accent/20 dark:group-hover:bg-folio-dark-accent/20 transition-colors">
+                    <div className="w-11 h-11 rounded-lg bg-folium-accent/10 dark:bg-folium-dark-accent/10 flex items-center justify-center text-folium-accent dark:text-folium-dark-accent group-hover:bg-folium-accent/20 dark:group-hover:bg-folium-dark-accent/20 transition-colors">
                         <FolderPlus className="w-5 h-5" />
                     </div>
                     <div className="text-left">
-                        <div className="font-sans text-[15px] font-semibold text-folio-text dark:text-folio-dark-text">
+                        <div className="font-sans text-[15px] font-semibold text-folium-text dark:text-folium-dark-text">
                             Start fresh
                         </div>
-                        <div className="font-sans text-[13px] text-folio-text-secondary dark:text-folio-dark-text-secondary">
+                        <div className="font-sans text-[13px] text-folium-text-secondary dark:text-folium-dark-text-secondary">
                             Create a new folder in Documents
                         </div>
                     </div>
@@ -344,7 +344,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
     const totalSteps = 4
 
     return createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-folio-bg dark:bg-folio-dark-bg transition-colors duration-200">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-folium-bg dark:bg-folium-dark-bg transition-colors duration-200">
             {/* Content Card */}
             <div className="w-full max-w-[600px] h-[620px] flex flex-col">
                 {/* Step Content */}
@@ -361,10 +361,10 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
                         <div
                             key={i}
                             className={`rounded-full transition-all duration-300 ${i === step
-                                ? 'w-6 h-2 bg-folio-accent dark:bg-folio-dark-accent'
+                                ? 'w-6 h-2 bg-folium-accent dark:bg-folium-dark-accent'
                                 : i < step
-                                    ? 'w-2 h-2 bg-folio-accent/40 dark:bg-folio-dark-accent/40'
-                                    : 'w-2 h-2 bg-folio-border dark:bg-folio-dark-border'
+                                    ? 'w-2 h-2 bg-folium-accent/40 dark:bg-folium-dark-accent/40'
+                                    : 'w-2 h-2 bg-folium-border dark:bg-folium-dark-border'
                                 }`}
                         />
                     ))}

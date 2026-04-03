@@ -123,7 +123,7 @@ export function NoteTitle({ title, onRename, autoFocus }: NoteTitleProps) {
     }
 
     return (
-        <div className="max-w-prose-folio mx-auto px-6 pt-10 pb-2">
+        <div className="max-w-prose-folium mx-auto px-6 pt-10 pb-2">
             <div className="relative">
                 <textarea
                     ref={textareaRef}
@@ -142,13 +142,13 @@ export function NoteTitle({ title, onRename, autoFocus }: NoteTitleProps) {
                     className={`
             w-full bg-transparent outline-none resize-none overflow-hidden
             font-serif note-title
-            text-folio-text dark:text-folio-dark-text
-            placeholder:text-folio-text-secondary/30 dark:placeholder:text-folio-dark-text-secondary/30
-            border-b-2 transition-colors duration-folio pb-1
+            text-folium-text dark:text-folium-dark-text
+            placeholder:text-folium-text-secondary/30 dark:placeholder:text-folium-dark-text-secondary/30
+            border-b-2 transition-colors duration-folium pb-1
             ${error
                             ? 'border-red-400 dark:border-red-500'
                             : isEditing
-                                ? 'border-folio-accent/30 dark:border-folio-dark-accent/30'
+                                ? 'border-folium-accent/30 dark:border-folium-dark-accent/30'
                                 : 'border-transparent'
                         }
           `}

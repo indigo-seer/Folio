@@ -71,14 +71,14 @@ export default function EmbedNodeView(props: any) {
 
     return (
         <NodeViewWrapper
-            className="my-4 border border-folio-border dark:border-folio-dark-border rounded-lg bg-folio-bg-secondary/30 overflow-hidden"
+            className="my-4 border border-folium-border dark:border-folium-dark-border rounded-lg bg-folium-bg-secondary/30 overflow-hidden"
             data-type="embed"
             data-note-name={noteName}
             data-anchor={anchor}
         >
             <button
                 type="button"
-                className="w-full text-left flex items-center gap-2 px-3 py-2 bg-folio-bg-secondary/50 border-b border-folio-border dark:border-folio-dark-border hover:bg-folio-bg-secondary/70 dark:hover:bg-folio-dark-bg-secondary/60 transition-colors"
+                className="w-full text-left flex items-center gap-2 px-3 py-2 bg-folium-bg-secondary/50 border-b border-folium-border dark:border-folium-dark-border hover:bg-folium-bg-secondary/70 dark:hover:bg-folium-dark-bg-secondary/60 transition-colors"
                 contentEditable={false}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
@@ -86,7 +86,7 @@ export default function EmbedNodeView(props: any) {
                 }}
                 title={noteName ? `Open ${noteName}${anchor}` : 'Open note'}
             >
-                <FileSymlink size={16} className="text-folio-accent dark:text-folio-dark-accent" />
+                <FileSymlink size={16} className="text-folium-accent dark:text-folium-dark-accent" />
                 <span className="font-semibold text-sm opacity-80">{noteName}{anchor}</span>
                 <span className="text-xs opacity-50 ml-auto uppercase tracking-wider">Embed</span>
             </button>

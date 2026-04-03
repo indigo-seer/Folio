@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Folio",
+  "productName": "Folium",
   "version": "0.3.0",
-  "identifier": "com.folio.desktop",
+  "identifier": "com.folium.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Folio",
+        "title": "Folium",
         "width": 1280,
         "height": 800,
         "resizable": true,

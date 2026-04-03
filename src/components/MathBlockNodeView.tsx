@@ -31,11 +31,11 @@ export default function MathBlockNodeView(props: any) {
     return (
         <NodeViewWrapper className="my-4 relative group" data-type="math-block">
             {isEditing ? (
-                <div key="editor" className="border border-folio-accent dark:border-folio-dark-accent rounded-md p-0 bg-folio-bg dark:bg-folio-dark-bg font-mono text-sm relative flex flex-col">
-                    <div className="w-full flex justify-between items-center bg-folio-bg-secondary px-3 py-1 rounded-t-md border-b border-folio-border dark:border-folio-dark-border">
+                <div key="editor" className="border border-folium-accent dark:border-folium-dark-accent rounded-md p-0 bg-folium-bg dark:bg-folium-dark-bg font-mono text-sm relative flex flex-col">
+                    <div className="w-full flex justify-between items-center bg-folium-bg-secondary px-3 py-1 rounded-t-md border-b border-folium-border dark:border-folium-dark-border">
                         <span className="text-xs opacity-60">LaTeX Formula</span>
                         <button
-                            className="bg-folio-accent text-white text-xs px-3 py-1 rounded hover:opacity-90"
+                            className="bg-folium-accent text-white text-xs px-3 py-1 rounded hover:opacity-90"
                             onClick={() => setIsEditing(false)}
                             contentEditable={false}
                         >
@@ -53,7 +53,7 @@ export default function MathBlockNodeView(props: any) {
             ) : (
                 <div
                     key="viewer"
-                    className="p-4 border border-transparent group-hover:border-folio-border dark:group-hover:border-folio-dark-border rounded-md cursor-pointer text-center overflow-x-auto min-h-[3rem] bg-folio-bg-secondary/20 transition-all"
+                    className="p-4 border border-transparent group-hover:border-folium-border dark:group-hover:border-folium-dark-border rounded-md cursor-pointer text-center overflow-x-auto min-h-[3rem] bg-folium-bg-secondary/20 transition-all"
                     onClick={() => setIsEditing(true)}
                     contentEditable={false}
                 >

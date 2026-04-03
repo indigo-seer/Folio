@@ -245,7 +245,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
 
     const handleExportNoteAsPdf = useCallback(async () => {
         const activeTab = tabs.tabs.find((t: any) => t.id === activeTabId);
-        if (!activeTab || !activeTab.path || activeTab.id === 'folio-graph') {
+        if (!activeTab || !activeTab.path || activeTab.id === 'folium-graph') {
             modals.showToast('Open a note first to export it as PDF.');
             return;
         }

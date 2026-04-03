@@ -43,8 +43,8 @@ export function FloatingBacklinks({ activeFileName }: FloatingBacklinksProps) {
                 ref={buttonRef}
                 onClick={() => setIsOpen(!isOpen)}
                 className={`p-1 rounded-md transition-colors ${isOpen
-                    ? 'bg-folio-border dark:bg-folio-dark-border text-folio-text dark:text-folio-dark-text'
-                    : 'text-folio-text-tertiary dark:text-folio-dark-text-tertiary hover:bg-folio-border/50 dark:hover:bg-folio-dark-border/50 hover:text-folio-text dark:hover:text-folio-dark-text'
+                    ? 'bg-folium-border dark:bg-folium-dark-border text-folium-text dark:text-folium-dark-text'
+                    : 'text-folium-text-tertiary dark:text-folium-dark-text-tertiary hover:bg-folium-border/50 dark:hover:bg-folium-dark-border/50 hover:text-folium-text dark:hover:text-folium-dark-text'
                     }`}
                 title={backlinkCount === 0 ? 'No backlinks' : `${backlinkCount} backlink${backlinkCount === 1 ? '' : 's'}`}
             >
@@ -57,9 +57,9 @@ export function FloatingBacklinks({ activeFileName }: FloatingBacklinksProps) {
                 <div
                     ref={popoverRef}
                     // Positioned above the status bar icon, aligned to the right-ish
-                    className="absolute bottom-full right-0 mb-2 w-64 bg-white dark:bg-folio-dark-bg border border-folio-border dark:border-folio-dark-border rounded-lg shadow-xl overflow-hidden z-50 flex flex-col"
+                    className="absolute bottom-full right-0 mb-2 w-64 bg-white dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-lg shadow-xl overflow-hidden z-50 flex flex-col"
                 >
-                    <div className="px-4 py-3 border-b border-folio-border/50 dark:border-folio-dark-border/50 text-base font-serif font-medium text-folio-text dark:text-folio-dark-text bg-folio-bg dark:bg-folio-dark-bg">
+                    <div className="px-4 py-3 border-b border-folium-border/50 dark:border-folium-dark-border/50 text-base font-serif font-medium text-folium-text dark:text-folium-dark-text bg-folium-bg dark:bg-folium-dark-bg">
                         {backlinkCount === 0 ? 'No backlinks to this note' : `${backlinkCount} backlink${backlinkCount === 1 ? '' : 's'} to this note`}
                     </div>
                     {backlinkCount > 0 ? (
@@ -71,14 +71,14 @@ export function FloatingBacklinks({ activeFileName }: FloatingBacklinksProps) {
                                         onWikilinkClick(noteName)
                                         setIsOpen(false)
                                     }}
-                                    className="text-left py-2 px-3 rounded text-sm font-sans font-medium text-folio-accent dark:text-folio-dark-accent underline decoration-1 underline-offset-4 hover:text-folio-accent-hover dark:hover:text-folio-dark-accent-hover hover:bg-folio-bg-secondary dark:hover:bg-folio-dark-bg-secondary transition-colors truncate"
+                                    className="text-left py-2 px-3 rounded text-sm font-sans font-medium text-folium-accent dark:text-folium-dark-accent underline decoration-1 underline-offset-4 hover:text-folium-accent-hover dark:hover:text-folium-dark-accent-hover hover:bg-folium-bg-secondary dark:hover:bg-folium-dark-bg-secondary transition-colors truncate"
                                 >
                                     {noteName}
                                 </button>
                             ))}
                         </div>
                     ) : (
-                        <div className="p-4 text-center text-sm font-sans text-folio-text dark:text-folio-dark-text">
+                        <div className="p-4 text-center text-sm font-sans text-folium-text dark:text-folium-dark-text">
                             Links to this note will appear here
                         </div>
                     )}

@@ -14,7 +14,7 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setTheme] = useState<Theme>(() => {
-        const stored = localStorage.getItem('folio-theme') as Theme | null
+        const stored = localStorage.getItem('folium-theme') as Theme | null
         if (stored) return stored
         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     })
@@ -26,7 +26,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         } else {
             root.classList.remove('dark')
         }
-        localStorage.setItem('folio-theme', theme)
+        localStorage.setItem('folium-theme', theme)
     }, [theme])
 
     const toggleTheme = useCallback(() => {

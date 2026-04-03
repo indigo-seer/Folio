@@ -31,7 +31,7 @@ export function StatusBar({ activeFileName, isTypewriterMode, onToggleTypewriter
                     <button
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={onToggleTypewriter}
-                        className={`hover:text-folio-accent transition-colors flex items-center gap-1 ${isTypewriterMode ? 'text-folio-accent opacity-100' : ''}`}
+                        className={`hover:text-folium-accent transition-colors flex items-center gap-1 ${isTypewriterMode ? 'text-folium-accent opacity-100' : ''}`}
                         title="Toggle Typewriter Mode"
                     >
                         <i className={`ri-focus-3-line ${isTypewriterMode ? 'font-bold' : ''}`}></i>
@@ -44,7 +44,7 @@ export function StatusBar({ activeFileName, isTypewriterMode, onToggleTypewriter
                         <button
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={onToggleFocusMode}
-                            className={`hover:text-folio-accent transition-colors flex items-center gap-1 ${isFocusMode ? 'text-folio-accent opacity-100' : ''}`}
+                            className={`hover:text-folium-accent transition-colors flex items-center gap-1 ${isFocusMode ? 'text-folium-accent opacity-100' : ''}`}
                             title="Toggle Focus Mode"
                         >
                             <i className={`ri-fullscreen-line ${isFocusMode ? 'font-bold' : ''}`}></i>

@@ -1,7 +1,7 @@
 # Resolution: Nested Notes Failing to Load
 
 ## The Symptoms
-When using Folio to open a Markdown vault containing nested folders, selecting a note located at the root level worked fine. However, clicking on a note inside a subfolder (e.g., `Vault/Novel/Compass.md`) resulted in the application failing to open the note. The interface's note title would update correctly to reflect the selected file, but the editor canvas would either completely blank out or remain stuck displaying the contents of the previously opened note. 
+When using Folium to open a Markdown vault containing nested folders, selecting a note located at the root level worked fine. However, clicking on a note inside a subfolder (e.g., `Vault/Novel/Compass.md`) resulted in the application failing to open the note. The interface's note title would update correctly to reflect the selected file, but the editor canvas would either completely blank out or remain stuck displaying the contents of the previously opened note. 
 
 ## The Root Causes
 The investigation revealed two massive but interconnected issues:
@@ -29,7 +29,7 @@ To ensure future filesystem blocks never masquerade as mysterious UI freezes, `u
 ### Expanding Tauri Sandbox Capabilities
 We expanded the global permission parameters inside `src-tauri/capabilities/default.json`.
 - Appended `**` and `**/*` directly to the `fs:scope` allowlist.
-- Because Folio already guarantees security by requiring the user to explicitly select the vault root folder via the native OS Dialog (which automatically grants OS-level handle access), configuring the capability system to permit deep absolute recursive reads effectively neutralizes the artificial boundary.
+- Because Folium already guarantees security by requiring the user to explicitly select the vault root folder via the native OS Dialog (which automatically grants OS-level handle access), configuring the capability system to permit deep absolute recursive reads effectively neutralizes the artificial boundary.
 
 ## Conclusion
 The combination of adding strict React memoization, implementing direct inline error UI, and natively expanding the Tauri `fs:scope` capabilities resolves the bug universally on Linux, Windows, and macOS, regardless of where the vault is mounted or synced.

@@ -105,22 +105,22 @@ export function MoveModal({ tree, sourcePath, sourceKind, onClose, onMove, onCre
     return (
         <div id="move-modal-overlay" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 animate-in fade-in duration-200">
             <div
-                className="bg-folio-bg dark:bg-folio-dark-bg border border-folio-border dark:border-folio-dark-border rounded-xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+                className="bg-folium-bg dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Input Header */}
-                <div className="p-4 border-b border-folio-border dark:border-folio-dark-border flex items-center bg-folio-bg-secondary/50 dark:bg-folio-dark-bg-secondary/50">
+                <div className="p-4 border-b border-folium-border dark:border-folium-dark-border flex items-center bg-folium-bg-secondary/50 dark:bg-folium-dark-bg-secondary/50">
                     <input
                         type="text"
                         autoFocus
                         placeholder="Type a folder"
-                        className="w-full bg-transparent outline-none text-folio-text dark:text-folio-dark-text placeholder:text-folio-text-secondary/50 font-sans"
+                        className="w-full bg-transparent outline-none text-folium-text dark:text-folium-dark-text placeholder:text-folium-text-secondary/50 font-sans"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                     />
                     <button
                         onClick={onClose}
-                        className="ml-2 p-1 text-folio-text-secondary hover:text-folio-text hover:bg-folio-bg-secondary dark:hover:bg-folio-dark-bg-secondary rounded-full transition-colors flex-shrink-0"
+                        className="ml-2 p-1 text-folium-text-secondary hover:text-folium-text hover:bg-folium-bg-secondary dark:hover:bg-folium-dark-bg-secondary rounded-full transition-colors flex-shrink-0"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
@@ -138,29 +138,29 @@ export function MoveModal({ tree, sourcePath, sourceKind, onClose, onMove, onCre
                                 onClick={() => onMove(folder.path)}
                                 className={`
                                     px-4 py-2 cursor-pointer flex items-center font-sans
-                                    ${isSelected ? 'bg-folio-bg-secondary dark:bg-folio-dark-bg-secondary' : ''}
+                                    ${isSelected ? 'bg-folium-bg-secondary dark:bg-folium-dark-bg-secondary' : ''}
                                 `}
                             >
-                                <span className={isSelected ? 'text-folio-text dark:text-folio-dark-text font-medium' : 'text-folio-text-secondary dark:text-folio-dark-text-secondary'}>
+                                <span className={isSelected ? 'text-folium-text dark:text-folium-dark-text font-medium' : 'text-folium-text-secondary dark:text-folium-dark-text-secondary'}>
                                     {folder.displayName}
                                 </span>
                             </div>
                         )
                     })}
                     {filteredFolders.length === 0 && (
-                        <div className="px-4 py-6 flex flex-col items-center justify-center text-center text-folio-text-secondary dark:text-folio-dark-text-secondary font-sans opacity-70">
+                        <div className="px-4 py-6 flex flex-col items-center justify-center text-center text-folium-text-secondary dark:text-folium-dark-text-secondary font-sans opacity-70">
                             <span className="mb-2">No matching folders found</span>
-                            <span className="text-sm">Press <kbd className="bg-folio-bg dark:bg-folio-dark-bg px-1 rounded shadow-sm">Shift</kbd> + <kbd className="bg-folio-bg dark:bg-folio-dark-bg px-1 rounded shadow-sm">Enter</kbd> to create "{inputValue}"</span>
+                            <span className="text-sm">Press <kbd className="bg-folium-bg dark:bg-folium-dark-bg px-1 rounded shadow-sm">Shift</kbd> + <kbd className="bg-folium-bg dark:bg-folium-dark-bg px-1 rounded shadow-sm">Enter</kbd> to create "{inputValue}"</span>
                         </div>
                     )}
                 </div>
 
                 {/* Footer hints */}
-                <div className="px-4 py-3 border-t border-folio-border dark:border-folio-dark-border bg-folio-bg-secondary dark:bg-folio-dark-bg-secondary flex justify-center gap-6 text-xs text-folio-text-secondary dark:text-folio-dark-text-secondary font-sans tracking-wide">
-                    <span><span className="font-semibold text-folio-text dark:text-folio-dark-text opacity-70">↑↓</span> to navigate</span>
-                    <span><span className="font-semibold text-folio-text dark:text-folio-dark-text opacity-70">↲</span> to move</span>
-                    <span><span className="font-semibold text-folio-text dark:text-folio-dark-text opacity-70">shift ↲</span> to create</span>
-                    <span><span className="font-semibold text-folio-text dark:text-folio-dark-text opacity-70">esc</span> to dismiss</span>
+                <div className="px-4 py-3 border-t border-folium-border dark:border-folium-dark-border bg-folium-bg-secondary dark:bg-folium-dark-bg-secondary flex justify-center gap-6 text-xs text-folium-text-secondary dark:text-folium-dark-text-secondary font-sans tracking-wide">
+                    <span><span className="font-semibold text-folium-text dark:text-folium-dark-text opacity-70">↑↓</span> to navigate</span>
+                    <span><span className="font-semibold text-folium-text dark:text-folium-dark-text opacity-70">↲</span> to move</span>
+                    <span><span className="font-semibold text-folium-text dark:text-folium-dark-text opacity-70">shift ↲</span> to create</span>
+                    <span><span className="font-semibold text-folium-text dark:text-folium-dark-text opacity-70">esc</span> to dismiss</span>
                 </div>
             </div>
         </div>

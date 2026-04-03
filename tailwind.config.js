@@ -8,7 +8,7 @@ export default {
     theme: {
         extend: {
             colors: {
-                folio: {
+                folium: {
                     // Light theme
                     'bg': '#FAF9F6',
                     'bg-secondary': '#F0EDE8',
@@ -33,7 +33,7 @@ export default {
                 mono: ['"JetBrains Mono"', 'Consolas', 'monospace'],
             },
             fontSize: {
-                'body': ['var(--folio-font-size, 17px)', { lineHeight: '1.7' }],
+                'body': ['var(--folium-font-size, 17px)', { lineHeight: '1.7' }],
                 'code': ['15px', { lineHeight: '1.6' }],
                 'ui': ['13px', { lineHeight: '1.4' }],
                 'graph': ['11px', { lineHeight: '1.3' }],
@@ -42,10 +42,10 @@ export default {
                 'h3': ['24px', { lineHeight: '1.3', fontWeight: '600' }],
             },
             maxWidth: {
-                'prose-folio': '76ch',
+                'prose-folium': '76ch',
             },
             transitionDuration: {
-                'folio': '200ms',
+                'folium': '200ms',
             },
         },
     },

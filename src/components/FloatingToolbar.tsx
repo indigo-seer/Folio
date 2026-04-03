@@ -67,7 +67,7 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
                     </svg>
                 </button>
 
-                <div className="w-px h-5 bg-folio-border dark:bg-folio-dark-border mx-0.5" />
+                <div className="w-px h-5 bg-folium-border dark:bg-folium-dark-border mx-0.5" />
 
                 <button
                     onClick={() => editor.chain().focus().toggleCode().run()}

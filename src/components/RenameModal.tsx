@@ -48,10 +48,10 @@ export function RenameModal({ initialName, isFolder = false, title = 'Rename not
             onMouseDown={onClose}
         >
             <div
-                className="bg-folio-bg dark:bg-folio-dark-bg border border-folio-border dark:border-folio-dark-border rounded-xl shadow-2xl p-6 w-full max-w-sm pointer-events-auto animate-in zoom-in-95 duration-200"
+                className="bg-folium-bg dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-xl shadow-2xl p-6 w-full max-w-sm pointer-events-auto animate-in zoom-in-95 duration-200"
                 onMouseDown={(e) => e.stopPropagation()} // Prevent clicks from bleeding through
             >
-                <h3 className="font-serif text-lg text-folio-text dark:text-folio-dark-text font-medium mb-4">{title}</h3>
+                <h3 className="font-serif text-lg text-folium-text dark:text-folium-dark-text font-medium mb-4">{title}</h3>
 
                 <form onSubmit={handleSubmit}>
                     <input
@@ -59,7 +59,7 @@ export function RenameModal({ initialName, isFolder = false, title = 'Rename not
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-folio-dark-bg-secondary border border-folio-border dark:border-folio-dark-border rounded-lg text-folio-text dark:text-folio-dark-text font-sans text-sm focus:outline-none focus:ring-2 focus:ring-folio-accent dark:focus:ring-folio-dark-accent mb-6"
+                        className="w-full px-3 py-2 bg-white dark:bg-folium-dark-bg-secondary border border-folium-border dark:border-folium-dark-border rounded-lg text-folium-text dark:text-folium-dark-text font-sans text-sm focus:outline-none focus:ring-2 focus:ring-folium-accent dark:focus:ring-folium-dark-accent mb-6"
                         placeholder={placeholder}
                     />
 
@@ -67,14 +67,14 @@ export function RenameModal({ initialName, isFolder = false, title = 'Rename not
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 font-sans text-sm font-medium text-folio-text-secondary dark:text-folio-dark-text-secondary hover:bg-folio-border/50 dark:hover:bg-folio-dark-border/50 rounded-lg transition-colors"
+                            className="px-4 py-2 font-sans text-sm font-medium text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-folium-border/50 dark:hover:bg-folium-dark-border/50 rounded-lg transition-colors"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={!name.trim()}
-                            className="px-4 py-2 font-sans text-sm font-medium bg-folio-accent text-white dark:bg-folio-dark-accent hover:bg-folio-accent-hover dark:hover:bg-folio-dark-accent-hover rounded-lg transition-colors disabled:opacity-50"
+                            className="px-4 py-2 font-sans text-sm font-medium bg-folium-accent text-white dark:bg-folium-dark-accent hover:bg-folium-accent-hover dark:hover:bg-folium-dark-accent-hover rounded-lg transition-colors disabled:opacity-50"
                         >
                             {actionLabel}
                         </button>

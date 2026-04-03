@@ -20,7 +20,7 @@ export function CorruptionBanner({ warnings }: CorruptionBannerProps) {
                     </svg>
                 </div>
                 <div className="corruption-banner-text">
-                    <strong>This note may contain formatting altered by an older version of Folio.</strong>
+                    <strong>This note may contain formatting altered by an older version of Folium.</strong>
                     <ul>
                         {warnings.map((w, i) => (
                             <li key={i}>{w}</li>

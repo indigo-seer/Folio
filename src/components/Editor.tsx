@@ -154,7 +154,7 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
                             }
                         } catch (err) {
                             failedImageSourcesRef.current.add(source)
-                            console.error('[Folio Debug] Failed to ingest image source:', source, err)
+                            console.error('[Folium Debug] Failed to ingest image source:', source, err)
                         }
                     }
 
@@ -191,7 +191,7 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
         immediatelyRender: false,
         editorProps: {
             attributes: {
-                class: 'prose-folio outline-none min-h-[calc(100vh-12rem)] pb-16 px-6',
+                class: 'prose-folium outline-none min-h-[calc(100vh-12rem)] pb-16 px-6',
             },
             handleDrop: (view, event) => {
                 if (!isTauriRef.current) return false

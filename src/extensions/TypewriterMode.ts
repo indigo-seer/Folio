@@ -18,7 +18,7 @@ export const TypewriterMode = Extension.create({
                     const setManualScroll = (active: boolean) => {
                         if (manualScrollActive !== active) {
                             manualScrollActive = active
-                            window.dispatchEvent(new CustomEvent('folio:typewriter-manual-scroll', { detail: active }))
+                            window.dispatchEvent(new CustomEvent('folium:typewriter-manual-scroll', { detail: active }))
                         }
                     }
                     // Custom easing variables
@@ -74,7 +74,7 @@ export const TypewriterMode = Extension.create({
                             })
                         }
                     }
-                    window.addEventListener('folio:typewriter-toggled', onTypewriterToggle)
+                    window.addEventListener('folium:typewriter-toggled', onTypewriterToggle)
 
                     const animateTo = (absoluteTargetY: number, isSmooth: boolean) => {
                         if (animationFrame) cancelAnimationFrame(animationFrame)
@@ -207,7 +207,7 @@ export const TypewriterMode = Extension.create({
                             scrollTarget.removeEventListener('scroll', disableTemporarily)
                             document.removeEventListener('mousedown', onMouseDown)
                             document.removeEventListener('mouseup', onMouseUp)
-                            window.removeEventListener('folio:typewriter-toggled', onTypewriterToggle)
+                            window.removeEventListener('folium:typewriter-toggled', onTypewriterToggle)
                         }
                     }
                 }

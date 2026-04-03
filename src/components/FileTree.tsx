@@ -95,13 +95,13 @@ function FileTreeItem({ node, activeFilePath, onFileSelect, onFileContextMenu, d
                     }}
                     className={`
                         w-full flex items-center gap-1.5 py-[5px] pr-2 mb-1 rounded-md
-                        font-sans text-ui transition-colors duration-folio
-                        text-folio-text-secondary hover:text-folio-text
-                        dark:text-folio-dark-text-secondary dark:hover:text-folio-dark-text
+                        font-sans text-ui transition-colors duration-folium
+                        text-folium-text-secondary hover:text-folium-text
+                        dark:text-folium-dark-text-secondary dark:hover:text-folium-dark-text
                         ${depth === 0 ? 'font-semibold' : 'font-medium'}
                         ${expanded
                             ? 'bg-black/[0.03] dark:bg-white/[0.04] hover:bg-black/[0.05] dark:hover:bg-white/[0.06]'
-                            : 'hover:bg-folio-bg/60 dark:hover:bg-folio-dark-bg/60'
+                            : 'hover:bg-folium-bg/60 dark:hover:bg-folium-dark-bg/60'
                         }
                     `}
                     style={{ paddingLeft: `${paddingLeft}px` }}
@@ -163,10 +163,10 @@ function FileTreeItem({ node, activeFilePath, onFileSelect, onFileContextMenu, d
             }}
             className={`
                 w-full flex items-center gap-1.5 py-[5px] pr-2 rounded-md
-                font-sans text-ui transition-colors duration-folio truncate
+                font-sans text-ui transition-colors duration-folium truncate
                 ${isActive
-                    ? 'text-folio-accent bg-folio-accent/8 dark:text-folio-dark-accent dark:bg-folio-dark-accent/8'
-                    : 'text-folio-text-secondary hover:text-folio-text hover:bg-folio-bg/50 dark:text-folio-dark-text-secondary dark:hover:text-folio-dark-text dark:hover:bg-folio-dark-bg/50'
+                    ? 'text-folium-accent bg-folium-accent/8 dark:text-folium-dark-accent dark:bg-folium-dark-accent/8'
+                    : 'text-folium-text-secondary hover:text-folium-text hover:bg-folium-bg/50 dark:text-folium-dark-text-secondary dark:hover:text-folium-dark-text dark:hover:bg-folium-dark-bg/50'
                 }
             `}
             style={{ paddingLeft: `${filePaddingLeft}px`, opacity: isActive ? 1 : fileOpacity }}

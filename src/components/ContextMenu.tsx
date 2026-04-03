@@ -68,7 +68,7 @@ export function ContextMenu({ x, y, onClose, actions }: ContextMenuProps) {
     return createPortal(
         <div
             ref={menuRef}
-            className="fixed z-[100] min-w-[160px] bg-white dark:bg-folio-dark-bg-secondary border border-folio-border dark:border-folio-dark-border rounded-lg shadow-xl py-1 overflow-hidden font-sans text-sm animate-in fade-in zoom-in-95 duration-150"
+            className="fixed z-[100] min-w-[160px] bg-white dark:bg-folium-dark-bg-secondary border border-folium-border dark:border-folium-dark-border rounded-lg shadow-xl py-1 overflow-hidden font-sans text-sm animate-in fade-in zoom-in-95 duration-150"
             style={{
                 top: `${position.top}px`,
                 left: `${position.left}px`
@@ -87,8 +87,8 @@ export function ContextMenu({ x, y, onClose, actions }: ContextMenuProps) {
                     disabled={action.disabled}
                     className={`
                         w-full text-left px-4 py-2 transition-colors flex items-center justify-between
-                        ${action.danger ? 'text-red-600 dark:text-red-400' : 'text-folio-text dark:text-folio-dark-text'}
-                        ${action.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-folio-bg-secondary dark:hover:bg-folio-dark-bg'}
+                        ${action.danger ? 'text-red-600 dark:text-red-400' : 'text-folium-text dark:text-folium-dark-text'}
+                        ${action.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-folium-bg-secondary dark:hover:bg-folium-dark-bg'}
                     `}
                 >
                     {action.label}

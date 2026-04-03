@@ -63,11 +63,11 @@ export function useEditorState({
                             try {
                                 const json = editorRef.current.getJSON();
                                 const md = tipTapToMarkdown(json);
-                                console.log('[Folio Debug] Tab-switch flush:', prevTab.path, 'length:', md.length);
+                                console.log('[Folium Debug] Tab-switch flush:', prevTab.path, 'length:', md.length);
                                 await fs.writeFile(prevTab.path, md);
                                 lastFlushedTabRef.current = renderedTabIdRef.current;
                             } catch (err) {
-                                console.error('[Folio Debug] Tab-switch flush FAILED:', err);
+                                console.error('[Folium Debug] Tab-switch flush FAILED:', err);
                             }
                         }
                     }
@@ -206,11 +206,11 @@ export function useEditorState({
             try {
                 const json = editorRef.current.getJSON();
                 const md = tipTapToMarkdown(json);
-                console.log('[Folio Debug] Autosave: markdown length:', md.length, 'preview:', md.substring(0, 100));
+                console.log('[Folium Debug] Autosave: markdown length:', md.length, 'preview:', md.substring(0, 100));
                 await fileSystem.writeFile(tab.path, md);
-                console.log('[Folio Debug] Autosave: Write complete');
+                console.log('[Folium Debug] Autosave: Write complete');
             } catch (err) {
-                console.error('[Folio Debug] Autosave FAILED:', err);
+                console.error('[Folium Debug] Autosave FAILED:', err);
             }
         }, 1000);
     }, [activeTabId, tabs, fileSystem, isMoveModalOpen]);

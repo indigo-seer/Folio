@@ -59,8 +59,8 @@ export function Sidebar({
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [isVaultSwitcherOpen])
 
-    const FolioLogo = () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 654 654" className="w-[20px] h-[20px] text-folio-text-secondary/60 dark:text-folio-dark-text-secondary/60 fill-current">
+    const FoliumLogo = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 654 654" className="w-[20px] h-[20px] text-folium-text-secondary/60 dark:text-folium-dark-text-secondary/60 fill-current">
             <path d="M585.24,0H68.76A68.75,68.75,0,0,0,0,68.76V585.24A68.75,68.75,0,0,0,68.76,654H585.24A68.75,68.75,0,0,0,654,585.24V68.76A68.75,68.75,0,0,0,585.24,0ZM44.46,585.24v-23.8H128.1a48.6,48.6,0,0,0,48.54-48.54V146.76A48.6,48.6,0,0,0,128.1,98.22H44.46V68.76a24.33,24.33,0,0,1,24.3-24.3H420V609.54H68.76A24.33,24.33,0,0,1,44.46,585.24Zm565.08,0a24.33,24.33,0,0,1-24.3,24.3H464.43V44.46H585.24a24.33,24.33,0,0,1,24.3,24.3Z" />
             <path d="M537.59,98.22a10.11,10.11,0,0,0-10.11,10.11V550.52a10.11,10.11,0,1,0,20.21,0V108.33A10.11,10.11,0,0,0,537.59,98.22Z" />
         </svg>
@@ -76,15 +76,15 @@ export function Sidebar({
             {/* Header */}
             <div className="flex items-center justify-between px-4 h-[48px] min-w-[260px] flex-shrink-0">
                 <div className="flex items-center gap-[8px] pl-1">
-                    <FolioLogo />
-                    <span className="font-sans font-bold text-folio-text-secondary/70 dark:text-folio-dark-text-secondary/70 text-[19px] tracking-tight mt-[1px]">Folio</span>
+                    <FoliumLogo />
+                    <span className="font-sans font-bold text-folium-text-secondary/70 dark:text-folium-dark-text-secondary/70 text-[19px] tracking-tight mt-[1px]">Folium</span>
                 </div>
                 <div className="flex items-center gap-0.5">
                     {hasVault && (
                         <>
                             <button
                                 onClick={onOpenGraph}
-                                className="w-6 h-6 flex items-center justify-center rounded opacity-40 hover:opacity-100 transition-opacity duration-folio"
+                                className="w-6 h-6 flex items-center justify-center rounded opacity-40 hover:opacity-100 transition-opacity duration-folium"
                                 title="Open graph view"
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -97,7 +97,7 @@ export function Sidebar({
                             </button>
                             <button
                                 onClick={onNewNote}
-                                className="w-6 h-6 flex items-center justify-center rounded opacity-40 hover:opacity-100 transition-opacity duration-folio"
+                                className="w-6 h-6 flex items-center justify-center rounded opacity-40 hover:opacity-100 transition-opacity duration-folium"
                                 title="New note"
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -109,7 +109,7 @@ export function Sidebar({
                     )}
                     <button
                         onClick={onToggle}
-                        className="w-6 h-6 flex items-center justify-center rounded opacity-40 hover:opacity-100 transition-opacity duration-folio"
+                        className="w-6 h-6 flex items-center justify-center rounded opacity-40 hover:opacity-100 transition-opacity duration-folium"
                         title="Collapse sidebar"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -120,7 +120,7 @@ export function Sidebar({
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col min-w-[260px] border-r border-folio-border dark:border-folio-dark-border overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-[260px] border-r border-folium-border dark:border-folium-dark-border overflow-hidden">
                 {/* Content */}
                 <div
                     className="flex-1 overflow-y-auto px-2 py-1"
@@ -132,7 +132,7 @@ export function Sidebar({
                     }}
                 >
                     {hasVault && (
-                        <div className="px-2 pt-2 pb-1 mb-1 flex items-center gap-1.5 text-[12px] font-medium text-folio-text-secondary dark:text-folio-dark-text-secondary uppercase tracking-wider select-none">
+                        <div className="px-2 pt-2 pb-1 mb-1 flex items-center gap-1.5 text-[12px] font-medium text-folium-text-secondary dark:text-folium-dark-text-secondary uppercase tracking-wider select-none">
                             <Library className="w-[12px] h-[12px] opacity-60" strokeWidth={2.5} />
                             <span className="opacity-60">{vaultName || ''}</span>
                         </div>
@@ -148,7 +148,7 @@ export function Sidebar({
                         <div className="flex flex-col items-center justify-center h-full">
                             <button
                                 onClick={onOpenVault}
-                                className="flex flex-col items-center gap-3 opacity-40 hover:opacity-70 transition-opacity duration-folio group cursor-pointer"
+                                className="flex flex-col items-center gap-3 opacity-40 hover:opacity-70 transition-opacity duration-folium group cursor-pointer"
                             >
                                 <svg
                                     width="40"
@@ -159,7 +159,7 @@ export function Sidebar({
                                     strokeWidth="1.5"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    className="group-hover:scale-105 transition-transform duration-folio"
+                                    className="group-hover:scale-105 transition-transform duration-folium"
                                 >
                                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                                 </svg>
@@ -173,16 +173,16 @@ export function Sidebar({
 
                 {/* Open Vault button at bottom */}
                 {hasVault && (
-                    <div className="px-3 h-[41px] flex-shrink-0 flex items-center justify-between gap-2 border-t border-folio-border dark:border-folio-dark-border">
+                    <div className="px-3 h-[41px] flex-shrink-0 flex items-center justify-between gap-2 border-t border-folium-border dark:border-folium-dark-border">
                         <div className="relative flex-1 flex" ref={switcherRef}>
                             {/* Vault Switcher Popup */}
                             {isVaultSwitcherOpen && (
-                                <div className="absolute bottom-full left-0 mb-2 w-full flex flex-col bg-folio-bg dark:bg-folio-dark-bg border border-folio-border/50 dark:border-folio-dark-border/50 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                <div className="absolute bottom-full left-0 mb-2 w-full flex flex-col bg-folium-bg dark:bg-folium-dark-bg border border-folium-border/50 dark:border-folium-dark-border/50 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
                                     <div className="max-h-[300px] overflow-y-auto py-1">
                                         {workspaces.map((workspace) => (
                                             <div
                                                 key={workspace.id}
-                                                className="group flex items-center justify-between px-3 py-2 hover:bg-folio-bg-secondary dark:hover:bg-folio-dark-bg-secondary transition-colors cursor-default"
+                                                className="group flex items-center justify-between px-3 py-2 hover:bg-folium-bg-secondary dark:hover:bg-folium-dark-bg-secondary transition-colors cursor-default"
                                             >
                                                 <button
                                                     onClick={(e) => {
@@ -194,14 +194,14 @@ export function Sidebar({
                                                     title={workspace.path}
                                                 >
                                                     <FolderIcon className="w-4 h-4 flex-shrink-0 opacity-70" strokeWidth={2} />
-                                                    <span className="font-sans text-[13px] font-medium text-folio-text dark:text-folio-dark-text truncate">
+                                                    <span className="font-sans text-[13px] font-medium text-folium-text dark:text-folium-dark-text truncate">
                                                         {workspace.displayName}
                                                     </span>
                                                 </button>
 
                                                 {workspace.id !== activeWorkspaceId && (
                                                     <button
-                                                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-folio-text-secondary/50 hover:text-red-500 hover:bg-red-500/10 transition-all focus:outline-none"
+                                                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-folium-text-secondary/50 hover:text-red-500 hover:bg-red-500/10 transition-all focus:outline-none"
                                                         title="Remove from recents"
                                                         onClick={(e) => {
                                                             e.stopPropagation()
@@ -214,18 +214,18 @@ export function Sidebar({
                                             </div>
                                         ))}
                                         {workspaces.length === 0 && (
-                                            <div className="px-4 py-3 text-center text-[12px] text-folio-text-secondary/50 dark:text-folio-dark-text-secondary/50">
+                                            <div className="px-4 py-3 text-center text-[12px] text-folium-text-secondary/50 dark:text-folium-dark-text-secondary/50">
                                                 No workspaces found
                                             </div>
                                         )}
                                     </div>
-                                    <div className="border-t border-folio-border/30 dark:border-folio-dark-border/30 p-1">
+                                    <div className="border-t border-folium-border/30 dark:border-folium-dark-border/30 p-1">
                                         <button
                                             onClick={() => {
                                                 setIsVaultSwitcherOpen(false)
                                                 onOpenVault()
                                             }}
-                                            className="w-full flex items-center justify-start gap-2 px-3 py-2 rounded-md font-sans text-[13px] font-medium text-folio-text dark:text-folio-dark-text hover:bg-folio-bg-secondary dark:hover:bg-folio-dark-bg-secondary transition-colors"
+                                            className="w-full flex items-center justify-start gap-2 px-3 py-2 rounded-md font-sans text-[13px] font-medium text-folium-text dark:text-folium-dark-text hover:bg-folium-bg-secondary dark:hover:bg-folium-dark-bg-secondary transition-colors"
                                         >
                                             <Plus className="w-4 h-4 opacity-70" strokeWidth={2.5} />
                                             <span>Add Workspace</span>
@@ -236,7 +236,7 @@ export function Sidebar({
 
                             <button
                                 onClick={() => setIsVaultSwitcherOpen(!isVaultSwitcherOpen)}
-                                className="flex-1 flex w-full items-center justify-between px-2 py-1.5 rounded-md font-sans text-[13px] font-medium text-folio-text-secondary hover:text-folio-text hover:bg-folio-bg/50 hover:shadow-sm dark:text-folio-dark-text-secondary dark:hover:text-folio-dark-text dark:hover:bg-folio-dark-bg/50 transition-all duration-200"
+                                className="flex-1 flex w-full items-center justify-between px-2 py-1.5 rounded-md font-sans text-[13px] font-medium text-folium-text-secondary hover:text-folium-text hover:bg-folium-bg/50 hover:shadow-sm dark:text-folium-dark-text-secondary dark:hover:text-folium-dark-text dark:hover:bg-folium-dark-bg/50 transition-all duration-200"
                                 title="Switch vault"
                             >
                                 <div className="flex items-center gap-2 overflow-hidden">
@@ -255,7 +255,7 @@ export function Sidebar({
 
                         <button
                             onClick={onOpenSettings}
-                            className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-folio-text-secondary hover:text-folio-text hover:bg-folio-bg/50 dark:text-folio-dark-text-secondary dark:hover:text-folio-dark-text dark:hover:bg-folio-dark-bg/50 transition-colors duration-folio"
+                            className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-folium-text-secondary hover:text-folium-text hover:bg-folium-bg/50 dark:text-folium-dark-text-secondary dark:hover:text-folium-dark-text dark:hover:bg-folium-dark-bg/50 transition-colors duration-folium"
                             title="Settings"
                         >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -110,7 +110,7 @@ export function QuickSwitcher({ isOpen, commands = [], onClose, onSelect, onSele
     return (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
             <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-full max-w-xl bg-folio-bg dark:bg-folio-dark-bg rounded-xl shadow-2xl border border-black/10 dark:border-white/10 overflow-hidden flex flex-col max-h-[60vh]">
+            <div className="relative w-full max-w-xl bg-folium-bg dark:bg-folium-dark-bg rounded-xl shadow-2xl border border-black/10 dark:border-white/10 overflow-hidden flex flex-col max-h-[60vh]">
                 <div className="p-3 border-b border-black/5 dark:border-white/5 flex items-center gap-2">
                     <svg className="w-4 h-4 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
@@ -119,7 +119,7 @@ export function QuickSwitcher({ isOpen, commands = [], onClose, onSelect, onSele
                     <input
                         ref={inputRef}
                         type="text"
-                        className="flex-1 bg-transparent border-none outline-none text-base text-folio-text dark:text-folio-dark-text placeholder:opacity-40"
+                        className="flex-1 bg-transparent border-none outline-none text-base text-folium-text dark:text-folium-dark-text placeholder:opacity-40"
                         placeholder="Search notes..."
                         value={query}
                         onChange={e => {
@@ -144,18 +144,18 @@ export function QuickSwitcher({ isOpen, commands = [], onClose, onSelect, onSele
                             return (
                                 <React.Fragment key={`${item.type}-${isCommand ? item.id : item.name}`}>
                                     {showActionHeader && (
-                                        <div className="px-3 pt-3 pb-1 text-[10px] font-bold tracking-wider text-folio-text-secondary/50 dark:text-folio-dark-text-secondary/50 uppercase">
+                                        <div className="px-3 pt-3 pb-1 text-[10px] font-bold tracking-wider text-folium-text-secondary/50 dark:text-folium-dark-text-secondary/50 uppercase">
                                             Actions
                                         </div>
                                     )}
                                     {showNoteHeader && (
-                                        <div className="px-3 pt-3 pb-1 text-[10px] font-bold tracking-wider text-folio-text-secondary/50 dark:text-folio-dark-text-secondary/50 uppercase">
+                                        <div className="px-3 pt-3 pb-1 text-[10px] font-bold tracking-wider text-folium-text-secondary/50 dark:text-folium-dark-text-secondary/50 uppercase">
                                             {query.trim() ? 'Notes' : 'Recent Notes'}
                                         </div>
                                     )}
                                     <li
                                         data-index={i}
-                                        className={`px-3 py-2 rounded-lg cursor-pointer flex items-center gap-3 transition-colors ${i === selectedIndex ? 'bg-folio-accent/10 text-folio-accent' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                        className={`px-3 py-2 rounded-lg cursor-pointer flex items-center gap-3 transition-colors ${i === selectedIndex ? 'bg-folium-accent/10 text-folium-accent' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
                                         onClick={() => onSelect(item)}
                                         onMouseEnter={() => setSelectedIndex(i)}
                                     >
@@ -180,7 +180,7 @@ export function QuickSwitcher({ isOpen, commands = [], onClose, onSelect, onSele
                         No notes found
                     </div>
                 )}
-                <div className="px-3 py-2 border-t border-black/5 dark:border-white/5 text-[11px] text-folio-text-secondary/70 dark:text-folio-dark-text-secondary/70">
+                <div className="px-3 py-2 border-t border-black/5 dark:border-white/5 text-[11px] text-folium-text-secondary/70 dark:text-folium-dark-text-secondary/70">
                     <span className="font-medium">Enter</span> to open in focused pane · <span className="font-medium">Alt/Ctrl/Cmd + Enter</span> to open in split
                 </div>
             </div>

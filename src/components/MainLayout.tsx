@@ -6,6 +6,7 @@ import { TabBar } from './TabBar';
 import { StatusBar } from './StatusBar';
 import { GraphView } from './GraphView';
 import { useModals } from '../contexts/ModalContext';
+import { startAnimationAudit } from '../lib/performanceAudit';
 
 interface MainLayoutProps {
     fileSystem: any;
@@ -135,8 +136,8 @@ export function MainLayout({
             const customEvent = e as CustomEvent<boolean>;
             setIsTypewriterSuspended(customEvent.detail);
         };
-        window.addEventListener('folio:typewriter-manual-scroll', handleTypewriterSuspend);
-        return () => window.removeEventListener('folio:typewriter-manual-scroll', handleTypewriterSuspend);
+        window.addEventListener('folium:typewriter-manual-scroll', handleTypewriterSuspend);
+        return () => window.removeEventListener('folium:typewriter-manual-scroll', handleTypewriterSuspend);
     }, []);
 
     useEffect(() => {
@@ -172,11 +173,17 @@ export function MainLayout({
         }
     }, [hasSplitPane, isResizingSplit]);
 
+    useEffect(() => {
+        if (!isFocusMode) return;
+        const label = isUIVisible ? 'focus-mode-ui-reveal' : 'focus-mode-ui-collapse';
+        return startAnimationAudit(label, 950);
+    }, [isFocusMode, isUIVisible]);
+
     const activeTab = tabs.tabs.find((t: any) => t.id === activeTabId);
-    const activeFileName = activeTab?.title || 'Folio';
+    const activeFileName = activeTab?.title || 'Folium';
 
     return (
-        <div className={`flex h-screen overflow-hidden ${isFocusMode ? 'bg-folio-bg dark:bg-folio-dark-bg' : ''}`}>
+        <div className={`flex h-screen overflow-hidden ${isFocusMode ? 'bg-folium-bg dark:bg-folium-dark-bg' : ''}`}>
             {/* Sidebar */}
             <div
                 className={`transition-all duration-700 ease-in-out flex-shrink-0 relative overflow-hidden ${isFocusMode && !isUIVisible ? 'opacity-0' : 'opacity-100'}`}
@@ -202,13 +209,13 @@ export function MainLayout({
                     onSelectVault={handleSelectWorkspace}
                     onRemoveVault={handleRemoveWorkspace}
                     onNewNote={() => fileOperations.handleNewNote()}
-                    onOpenGraph={() => tabs.openTab({ id: 'folio-graph', type: 'graph', title: 'Graph View' })}
+                    onOpenGraph={() => tabs.openTab({ id: 'folium-graph', type: 'graph', title: 'Graph View' })}
                     onOpenSettings={modals.openSettings}
                 />
             </div>
 
             {/* Main Area */}
-            <div className="flex-1 flex flex-col min-w-0 bg-folio-bg dark:bg-folio-dark-bg transition-colors duration-folio relative">
+            <div className="flex-1 flex flex-col min-w-0 bg-folium-bg dark:bg-folium-dark-bg transition-colors duration-folium relative">
                 {/* Tab Bar Container */}
                 <div
                     className={`transition-all duration-700 ease-in-out flex-shrink-0 overflow-hidden ${isFocusMode && !isUIVisible ? 'opacity-0' : 'opacity-100'}`}
@@ -244,7 +251,7 @@ export function MainLayout({
 
                 {/* Empty State when no tabs open */}
                 {!activeTabId && (
-                    <div className="flex-1 flex flex-col items-center justify-center text-folio-text-secondary dark:text-folio-dark-text-secondary">
+                    <div className="flex-1 flex flex-col items-center justify-center text-folium-text-secondary dark:text-folium-dark-text-secondary">
                         <svg className="w-16 h-16 mb-4 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                         </svg>
@@ -254,16 +261,16 @@ export function MainLayout({
                 )}
 
                 {/* Graph View */}
-                {activeTabId === 'folio-graph' && (
+                {activeTabId === 'folium-graph' && (
                     <div className="flex-1 overflow-hidden h-full">
                         <GraphView />
                     </div>
                 )}
 
                 {/* Editor Area */}
-                <div className={`flex-1 relative ${activeTabId && activeTabId !== 'folio-graph' ? 'block' : 'hidden'}`}>
+                <div className={`flex-1 relative ${activeTabId && activeTabId !== 'folium-graph' ? 'block' : 'hidden'}`}>
                     <div
-                        className="absolute inset-0 flex bg-folio-bg dark:bg-folio-dark-bg"
+                        className="absolute inset-0 flex bg-folium-bg dark:bg-folium-dark-bg"
                         ref={splitHostRef}
                     >
                         <div
@@ -291,12 +298,12 @@ export function MainLayout({
                                     className="absolute left-0 top-0 bottom-0 -translate-x-1/2 z-30 w-3 cursor-col-resize"
                                     title="Drag to resize panes"
                                 >
-                                    <div className={`absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px transition-colors ${isResizingSplit ? 'bg-folio-accent/80 dark:bg-folio-dark-accent/80' : 'bg-folio-border/70 dark:bg-folio-dark-border/80'}`} />
+                                    <div className={`absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-px transition-colors ${isResizingSplit ? 'bg-folium-accent/80 dark:bg-folium-dark-accent/80' : 'bg-folium-border/70 dark:bg-folium-dark-border/80'}`} />
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => onCloseSplit?.()}
-                                    className="absolute top-3 left-2 z-20 w-6 h-6 rounded-md border border-folio-border/60 dark:border-folio-dark-border/70 bg-folio-bg/90 dark:bg-folio-dark-bg/90 text-folio-text-secondary dark:text-folio-dark-text-secondary hover:text-folio-text dark:hover:text-folio-dark-text hover:bg-folio-bg dark:hover:bg-folio-dark-bg transition-all opacity-0 pointer-events-none group-hover/split-pane:opacity-100 group-hover/split-pane:pointer-events-auto focus:opacity-100 focus:pointer-events-auto"
+                                    className="absolute top-3 left-2 z-20 w-6 h-6 rounded-md border border-folium-border/60 dark:border-folium-dark-border/70 bg-folium-bg/90 dark:bg-folium-dark-bg/90 text-folium-text-secondary dark:text-folium-dark-text-secondary hover:text-folium-text dark:hover:text-folium-dark-text hover:bg-folium-bg dark:hover:bg-folium-dark-bg transition-all opacity-0 pointer-events-none group-hover/split-pane:opacity-100 group-hover/split-pane:pointer-events-auto focus:opacity-100 focus:pointer-events-auto"
                                     title="Close split pane"
                                 >
                                     <svg className="w-3.5 h-3.5 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

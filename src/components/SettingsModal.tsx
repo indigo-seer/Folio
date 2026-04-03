@@ -53,7 +53,7 @@ function WorkspaceRow({
     }
 
     return (
-        <div className="flex items-center justify-between p-4 rounded-xl border border-folio-border/50 dark:border-folio-dark-border/50 bg-white dark:bg-folio-dark-bg-secondary w-full group transition-all duration-200 hover:border-folio-border dark:hover:border-folio-dark-border">
+        <div className="flex items-center justify-between p-4 rounded-xl border border-folium-border/50 dark:border-folium-dark-border/50 bg-white dark:bg-folium-dark-bg-secondary w-full group transition-all duration-200 hover:border-folium-border dark:hover:border-folium-dark-border">
             <div className="flex flex-col gap-[3px] min-w-0 pr-4 flex-1">
                 <div className="flex items-center gap-2">
                     {isEditing ? (
@@ -63,11 +63,11 @@ function WorkspaceRow({
                             onChange={(e) => setTempName(e.target.value)}
                             onBlur={handleSave}
                             onKeyDown={handleKeyDown}
-                            className="font-sans text-[15px] font-medium text-[#344054] dark:text-folio-dark-text bg-transparent border-none outline-none ring-1 ring-[#3b5b8c]/30 dark:ring-folio-dark-accent/30 rounded px-1.5 py-0.5 -ml-1.5 w-[200px]"
+                            className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text bg-transparent border-none outline-none ring-1 ring-[#3b5b8c]/30 dark:ring-folium-dark-accent/30 rounded px-1.5 py-0.5 -ml-1.5 w-[200px]"
                         />
                     ) : (
                         <div
-                            className="font-sans text-[15px] font-medium text-[#344054] dark:text-folio-dark-text truncate cursor-pointer hover:underline decoration-folio-border/50 dark:decoration-folio-dark-border underline-offset-4"
+                            className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text truncate cursor-pointer hover:underline decoration-folium-border/50 dark:decoration-folium-dark-border underline-offset-4"
                             onClick={() => setIsEditing(true)}
                             title="Click to rename"
                         >
@@ -75,12 +75,12 @@ function WorkspaceRow({
                         </div>
                     )}
                     {isActive && !isEditing && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#EAE8E2] dark:bg-white/10 text-[#828896] dark:text-folio-dark-text-secondary text-[11px] font-medium tracking-wide">
+                        <span className="px-2 py-0.5 rounded-full bg-[#EAE8E2] dark:bg-white/10 text-[#828896] dark:text-folium-dark-text-secondary text-[11px] font-medium tracking-wide">
                             Current
                         </span>
                     )}
                 </div>
-                <span className="font-mono text-[11px] text-[#A2A4B2] dark:text-folio-dark-text-secondary/70 truncate" title={workspace.path}>
+                <span className="font-mono text-[11px] text-[#A2A4B2] dark:text-folium-dark-text-secondary/70 truncate" title={workspace.path}>
                     {workspace.path}
                 </span>
             </div>
@@ -137,8 +137,8 @@ export function SettingsModal({
         }
     }
 
-    const FolioLogo = () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 654 654" className="w-[22px] h-[22px] text-folio-text-secondary/60 dark:text-folio-dark-text-secondary/60 fill-current">
+    const FoliumLogo = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 654 654" className="w-[22px] h-[22px] text-folium-text-secondary/60 dark:text-folium-dark-text-secondary/60 fill-current">
             <path d="M585.24,0H68.76A68.75,68.75,0,0,0,0,68.76V585.24A68.75,68.75,0,0,0,68.76,654H585.24A68.75,68.75,0,0,0,654,585.24V68.76A68.75,68.75,0,0,0,585.24,0ZM44.46,585.24v-23.8H128.1a48.6,48.6,0,0,0,48.54-48.54V146.76A48.6,48.6,0,0,0,128.1,98.22H44.46V68.76a24.33,24.33,0,0,1,24.3-24.3H420V609.54H68.76A24.33,24.33,0,0,1,44.46,585.24Zm565.08,0a24.33,24.33,0,0,1-24.3,24.3H464.43V44.46H585.24a24.33,24.33,0,0,1,24.3,24.3Z" />
             <path d="M537.59,98.22a10.11,10.11,0,0,0-10.11,10.11V550.52a10.11,10.11,0,1,0,20.21,0V108.33A10.11,10.11,0,0,0,537.59,98.22Z" />
         </svg>
@@ -150,16 +150,16 @@ export function SettingsModal({
             onMouseDown={onClose}
         >
             <div
-                className="bg-[#FCFBFA] dark:bg-folio-dark-bg border border-folio-border dark:border-folio-dark-border rounded-xl shadow-2xl w-full max-w-[840px] h-[640px] max-h-[90vh] pointer-events-auto animate-in zoom-in-[0.98] duration-200 flex overflow-hidden"
+                className="bg-[#FCFBFA] dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-xl shadow-2xl w-full max-w-[840px] h-[640px] max-h-[90vh] pointer-events-auto animate-in zoom-in-[0.98] duration-200 flex overflow-hidden"
                 onMouseDown={(e) => e.stopPropagation()}
             >
                 {/* Left Sidebar */}
-                <div className="w-[200px] sm:w-[240px] flex-shrink-0 border-r border-folio-border dark:border-folio-dark-border bg-[#FDFCFB] dark:bg-folio-dark-bg-secondary flex flex-col pt-8">
+                <div className="w-[200px] sm:w-[240px] flex-shrink-0 border-r border-folium-border dark:border-folium-dark-border bg-[#FDFCFB] dark:bg-folium-dark-bg-secondary flex flex-col pt-8">
                     {/* Brand */}
                     <div className="px-4 mb-6">
                         <div className="flex items-center gap-[10px] px-4">
-                            <FolioLogo />
-                            <span className="font-sans font-bold text-[#A2A4B2] dark:text-[#7A7C8A] text-[21px] tracking-tight mt-[1px]">Folio</span>
+                            <FoliumLogo />
+                            <span className="font-sans font-bold text-[#A2A4B2] dark:text-[#7A7C8A] text-[21px] tracking-tight mt-[1px]">Folium</span>
                         </div>
                     </div>
 
@@ -168,8 +168,8 @@ export function SettingsModal({
                         <button
                             onClick={() => scrollToSection('appearance')}
                             className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${activeSection === 'appearance'
-                                ? 'bg-black/5 dark:bg-white/10 text-folio-text dark:text-folio-dark-text font-medium'
-                                : 'text-folio-text-secondary dark:text-folio-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
+                                ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
+                                : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
                                 }`}
                         >
                             <Palette className="w-[18px] h-[18px]" strokeWidth={2} />
@@ -178,8 +178,8 @@ export function SettingsModal({
                         <button
                             onClick={() => scrollToSection('typography')}
                             className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${activeSection === 'typography'
-                                ? 'bg-black/5 dark:bg-white/10 text-folio-text dark:text-folio-dark-text font-medium'
-                                : 'text-folio-text-secondary dark:text-folio-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
+                                ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
+                                : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
                                 }`}
                         >
                             <Type className="w-[18px] h-[18px]" strokeWidth={2} />
@@ -188,8 +188,8 @@ export function SettingsModal({
                         <button
                             onClick={() => scrollToSection('writing-modes')}
                             className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${activeSection === 'writing-modes'
-                                ? 'bg-black/5 dark:bg-white/10 text-folio-text dark:text-folio-dark-text font-medium'
-                                : 'text-folio-text-secondary dark:text-folio-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
+                                ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
+                                : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
                                 }`}
                         >
                             <Keyboard className="w-[18px] h-[18px]" strokeWidth={2} />
@@ -198,8 +198,8 @@ export function SettingsModal({
                         <button
                             onClick={() => scrollToSection('workspaces')}
                             className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${activeSection === 'workspaces'
-                                ? 'bg-black/5 dark:bg-white/10 text-folio-text dark:text-folio-dark-text font-medium'
-                                : 'text-folio-text-secondary dark:text-folio-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
+                                ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
+                                : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
                                 }`}
                         >
                             <Folder className="w-[18px] h-[18px]" strokeWidth={2} />
@@ -209,13 +209,13 @@ export function SettingsModal({
                 </div>
 
                 {/* Right Content */}
-                <div className="flex-1 flex flex-col min-w-0 bg-[#FDFCFB] dark:bg-folio-dark-bg">
+                <div className="flex-1 flex flex-col min-w-0 bg-[#FDFCFB] dark:bg-folium-dark-bg">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-10 pt-8 pb-4 border-b border-folio-border dark:border-folio-dark-border/50">
-                        <h3 className="font-serif text-[22px] text-[#344054] dark:text-folio-dark-text font-normal">Settings</h3>
+                    <div className="flex items-center justify-between px-10 pt-8 pb-4 border-b border-folium-border dark:border-folium-dark-border/50">
+                        <h3 className="font-serif text-[22px] text-[#344054] dark:text-folium-dark-text font-normal">Settings</h3>
                         <button
                             onClick={onClose}
-                            className="p-1.5 text-folio-text-secondary hover:text-folio-text dark:text-folio-dark-text-secondary dark:hover:text-folio-dark-text rounded-md transition-colors -mr-2"
+                            className="p-1.5 text-folium-text-secondary hover:text-folium-text dark:text-folium-dark-text-secondary dark:hover:text-folium-dark-text rounded-md transition-colors -mr-2"
                             title="Close settings"
                         >
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70 hover:opacity-100">
@@ -238,16 +238,16 @@ export function SettingsModal({
                                     <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Appearance</h4>
                                 </div>
 
-                                <div className="flex items-center justify-between border-b border-folio-border/50 dark:border-folio-dark-border/50 pb-5">
-                                    <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folio-dark-text">Theme</span>
-                                    <div className="flex bg-[#EAE8E2] dark:bg-folio-dark-bg-secondary p-1 rounded-[10px] shadow-sm">
+                                <div className="flex items-center justify-between border-b border-folium-border/50 dark:border-folium-dark-border/50 pb-5">
+                                    <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Theme</span>
+                                    <div className="flex bg-[#EAE8E2] dark:bg-folium-dark-bg-secondary p-1 rounded-[10px] shadow-sm">
                                         {(['light', 'dark', 'system'] as const).map((t) => (
                                             <button
                                                 key={t}
                                                 onClick={() => setTheme(t)}
                                                 className={`px-4 py-1.5 font-sans text-[13px] capitalize rounded-md transition-all duration-200 ${theme === t
-                                                    ? 'bg-white dark:bg-folio-dark-bg text-[#344054] dark:text-folio-dark-text shadow-[0_1px_3px_rgba(0,0,0,0.1)] font-medium'
-                                                    : 'text-[#828896] dark:text-folio-dark-text-secondary hover:text-[#344054] dark:hover:text-folio-dark-text font-medium'
+                                                    ? 'bg-white dark:bg-folium-dark-bg text-[#344054] dark:text-folium-dark-text shadow-[0_1px_3px_rgba(0,0,0,0.1)] font-medium'
+                                                    : 'text-[#828896] dark:text-folium-dark-text-secondary hover:text-[#344054] dark:hover:text-folium-dark-text font-medium'
                                                     }`}
                                             >
                                                 {t}
@@ -263,8 +263,8 @@ export function SettingsModal({
                                     <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Typography</h4>
                                 </div>
 
-                                <div className="flex flex-col gap-4 border-b border-folio-border/50 dark:border-folio-dark-border/50 pb-6">
-                                    <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folio-dark-text">Base Font Size</span>
+                                <div className="flex flex-col gap-4 border-b border-folium-border/50 dark:border-folium-dark-border/50 pb-6">
+                                    <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Base Font Size</span>
 
                                     <div className="grid grid-cols-3 gap-3">
                                         {(['compact', 'default', 'relaxed'] as const).map((size) => (
@@ -272,8 +272,8 @@ export function SettingsModal({
                                                 key={size}
                                                 onClick={() => setFontSize(size)}
                                                 className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all duration-200 ${fontSize === size
-                                                    ? 'bg-[#F2F6FA] border-[#A8C7FA] text-[#295DAC] shadow-[0_0_0_1px_#A8C7FA] dark:bg-folio-dark-accent/10 dark:border-folio-dark-accent dark:text-folio-dark-accent dark:shadow-[0_0_0_1px_rgba(123,158,217,0.5)]'
-                                                    : 'bg-white border-[#E8E6DF] text-[#7A869A] shadow-sm hover:border-[#D1CECB] dark:bg-folio-dark-bg-secondary dark:border-folio-dark-border dark:text-folio-dark-text-secondary dark:hover:border-folio-dark-text/30'
+                                                    ? 'bg-[#F2F6FA] border-[#A8C7FA] text-[#295DAC] shadow-[0_0_0_1px_#A8C7FA] dark:bg-folium-dark-accent/10 dark:border-folium-dark-accent dark:text-folium-dark-accent dark:shadow-[0_0_0_1px_rgba(123,158,217,0.5)]'
+                                                    : 'bg-white border-[#E8E6DF] text-[#7A869A] shadow-sm hover:border-[#D1CECB] dark:bg-folium-dark-bg-secondary dark:border-folium-dark-border dark:text-folium-dark-text-secondary dark:hover:border-folium-dark-text/30'
                                                     }`}
                                             >
                                                 <span className="font-sans text-[14px] capitalize font-semibold mb-1">{size}</span>
@@ -293,14 +293,14 @@ export function SettingsModal({
                                     <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Writing Modes</h4>
                                 </div>
 
-                                <div className="flex items-center justify-between pb-5 border-b border-folio-border/50 dark:border-folio-dark-border/50">
+                                <div className="flex items-center justify-between pb-5 border-b border-folium-border/50 dark:border-folium-dark-border/50">
                                     <div className="flex flex-col">
-                                        <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folio-dark-text">Blur for Typewriter</span>
-                                        <span className="font-sans text-[13px] text-[#8692A6] dark:text-folio-dark-text-secondary mt-0.5">Masks surrounding text when typewriter mode is active</span>
+                                        <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Blur for Typewriter</span>
+                                        <span className="font-sans text-[13px] text-[#8692A6] dark:text-folium-dark-text-secondary mt-0.5">Masks surrounding text when typewriter mode is active</span>
                                     </div>
                                     <button
                                         onClick={() => setTypewriterBlur(!typewriterBlur)}
-                                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-[3px] border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${typewriterBlur ? 'bg-[#3b5b8c] dark:bg-folio-dark-accent' : 'bg-[#E5E7EB] dark:bg-folio-dark-border'
+                                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-[3px] border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${typewriterBlur ? 'bg-[#3b5b8c] dark:bg-folium-dark-accent' : 'bg-[#E5E7EB] dark:bg-folium-dark-border'
                                             }`}
                                         role="switch"
                                         aria-checked={typewriterBlur}
@@ -330,7 +330,7 @@ export function SettingsModal({
                                         />
                                     ))}
                                     {workspaces.length === 0 && (
-                                        <div className="px-4 py-8 text-center text-[13px] text-folio-text-secondary dark:text-folio-dark-text-secondary/70 border border-dashed border-folio-border dark:border-folio-dark-border/50 rounded-xl">
+                                        <div className="px-4 py-8 text-center text-[13px] text-folium-text-secondary dark:text-folium-dark-text-secondary/70 border border-dashed border-folium-border dark:border-folium-dark-border/50 rounded-xl">
                                             No workspaces connected
                                         </div>
                                     )}

@@ -1,4 +1,4 @@
-name: Build and Release Folio
+name: Build and Release Folium
 
 on:
   push:
@@ -55,7 +55,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "Folio ${{ github.ref_name }}"
-          releaseBody: "Official release of Folio ${{ github.ref_name }}"
+          releaseName: "Folium ${{ github.ref_name }}"
+          releaseBody: "Official release of Folium ${{ github.ref_name }}"
           releaseDraft: true
           prerelease: false

@@ -1,15 +1,15 @@
-# Folio — Custom Titlebar
+# Folium — Custom Titlebar
 ### Feature PRD & Implementation Guide · v1.0 · February 2026
 
 ---
 
 ## 1. Overview
 
-Replace the default OS window chrome with a fully custom titlebar that integrates Folio's existing TabBar, making the app feel native and intentional rather than a web app inside a generic window frame.
+Replace the default OS window chrome with a fully custom titlebar that integrates Folium's existing TabBar, making the app feel native and intentional rather than a web app inside a generic window frame.
 
-**Current state:** Folio uses the default OS-provided titlebar — a plain bar with the app name and native window controls. It is visually disconnected from the rest of the UI and wastes vertical space that should belong to the tab system.
+**Current state:** Folium uses the default OS-provided titlebar — a plain bar with the app name and native window controls. It is visually disconnected from the rest of the UI and wastes vertical space that should belong to the tab system.
 
-**Target state:** The TabBar becomes the titlebar. Window controls are drawn by Folio. The entire top bar is cohesive, draggable, and platform-aware. On macOS, native traffic lights are preserved. On Windows and Linux, custom controls match Folio's design language.
+**Target state:** The TabBar becomes the titlebar. Window controls are drawn by Folium. The entire top bar is cohesive, draggable, and platform-aware. On macOS, native traffic lights are preserved. On Windows and Linux, custom controls match Folium's design language.
 
 ---
 
@@ -136,7 +136,7 @@ Open `src-tauri/tauri.conf.json` and set `decorations: false` on the window:
   "app": {
     "windows": [
       {
-        "title": "Folio",
+        "title": "Folium",
         "width": 1280,
         "height": 800,
         "resizable": true,
@@ -530,4 +530,4 @@ And removing the `set_title_bar_style` call in `lib.rs`. Everything else is addi
 
 ---
 
-*Folio Custom Titlebar PRD · v1.0 · February 2026*
+*Folium Custom Titlebar PRD · v1.0 · February 2026*

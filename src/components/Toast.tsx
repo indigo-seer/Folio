@@ -26,8 +26,8 @@ export function Toast({ message, duration = 5000, onDismiss }: ToastProps) {
             className={`
                 fixed bottom-8 left-1/2 -translate-x-1/2 z-50
                 px-5 py-3 rounded-lg shadow-lg
-                bg-folio-text dark:bg-folio-dark-text
-                text-folio-bg dark:text-folio-dark-bg
+                bg-folium-text dark:bg-folium-dark-text
+                text-folium-bg dark:text-folium-dark-bg
                 text-sm font-sans
                 transition-all duration-400 ease-out
                 ${isVisible

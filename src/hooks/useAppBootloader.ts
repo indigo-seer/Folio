@@ -79,7 +79,7 @@ export function useAppBootloader(
             } else {
                 vaultPath = await createDefaultVault();
                 await fileSystem.loadVault(vaultPath);
-                vaultName = 'Folio Notes';
+                vaultName = 'Folium Notes';
             }
 
             const config = await loadConfig();
@@ -108,7 +108,7 @@ export function useAppBootloader(
             }
 
             if (starterPath) {
-                const title = 'Getting Started with Folio';
+                const title = 'Getting Started with Folium';
                 tabs.openTab({ id: starterPath, type: 'markdown', title, path: starterPath });
             }
 

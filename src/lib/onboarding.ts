@@ -4,7 +4,7 @@ import { isTauri } from './config'
 // Starter Note — seeded into empty vaults after onboarding
 // ============================================================
 
-const STARTER_NOTE = `# Getting Started with Folio
+const STARTER_NOTE = `# Getting Started with Folium
 
 Welcome — you're all set. Here are the essentials.
 
@@ -21,7 +21,7 @@ Welcome — you're all set. Here are the essentials.
 
 ## Linking notes
 
-Type \`[[\` to link to another note. Folio autocompletes from your vault. Linked notes appear in the graph view and backlinks panel.
+Type \`[[\` to link to another note. Folium autocompletes from your vault. Linked notes appear in the graph view and backlinks panel.
 
 ## Your files
 
@@ -55,7 +55,7 @@ export async function createStarterNote(vaultPath: string): Promise<string | nul
     }
 
     const { writeTextFile, exists } = await import('@tauri-apps/plugin-fs')
-    const notePath = await join(vaultPath, 'Getting Started with Folio.md')
+    const notePath = await join(vaultPath, 'Getting Started with Folium.md')
 
     if (!await exists(notePath)) {
         await writeTextFile(notePath, STARTER_NOTE)
@@ -78,7 +78,7 @@ export async function createDefaultVault(): Promise<string> {
     const { mkdir, exists } = await import('@tauri-apps/plugin-fs')
 
     const docsPath = await documentDir()
-    const vaultPath = await join(docsPath, 'Folio Notes')
+    const vaultPath = await join(docsPath, 'Folium Notes')
 
     if (!await exists(vaultPath)) {
         await mkdir(vaultPath, { recursive: true })

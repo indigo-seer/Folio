@@ -7,7 +7,7 @@ export default function TagNodeView(props: any) {
     return (
         <NodeViewWrapper
             as="span"
-            className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-folio-accent/10 text-folio-accent dark:bg-folio-dark-accent/20 dark:text-folio-dark-accent decoration-transparent"
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-folium-accent/10 text-folium-accent dark:bg-folium-dark-accent/20 dark:text-folium-dark-accent decoration-transparent"
             data-type="tag"
             data-tag={text}
         >

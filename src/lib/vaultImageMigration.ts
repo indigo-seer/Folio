@@ -221,7 +221,7 @@ async function migrateVaultImages(vaultPath: string): Promise<{ pending: Pending
                 pending: false,
             }))
             .catch((err): ResolveResult => {
-                console.warn('[Folio Migration] Failed to ingest image source:', source, err)
+                console.warn('[Folium Migration] Failed to ingest image source:', source, err)
                 return {
                     replacement: null,
                     pending: true,
@@ -250,12 +250,12 @@ async function migrateVaultImages(vaultPath: string): Promise<{ pending: Pending
             await fs.writeFile(markdownPath, output)
             migratedCount += 1
         } catch (err) {
-            console.warn('[Folio Migration] Failed to migrate note:', markdownPath, err)
+            console.warn('[Folium Migration] Failed to migrate note:', markdownPath, err)
         }
     }
 
     if (migratedCount > 0) {
-        console.info(`[Folio Migration] Image source migration complete. Updated ${migratedCount} note(s).`)
+        console.info(`[Folium Migration] Image source migration complete. Updated ${migratedCount} note(s).`)
     }
 
     return {
@@ -299,7 +299,7 @@ async function retryPendingSources(vaultPath: string, pendingBySource: PendingBy
             const replacement = await ingestImageSourceToAttachments(source, vaultPath, fs.writeBinaryFile!)
             resolvedSources.set(source, replacement)
         } catch (err) {
-            console.warn('[Folio Migration] Retry still failing for source:', source, err)
+            console.warn('[Folium Migration] Retry still failing for source:', source, err)
             stillPending[source] = Array.from(new Set(notePaths))
         }
     }
@@ -333,7 +333,7 @@ async function retryPendingSources(vaultPath: string, pendingBySource: PendingBy
                 await fs.writeFile(notePath, output)
             }
         } catch (err) {
-            console.warn('[Folio Migration] Failed to update note during retry:', notePath, err)
+            console.warn('[Folium Migration] Failed to update note during retry:', notePath, err)
             for (const [source] of resolvedSources.entries()) {
                 if ((normalizedPending[source] || []).includes(notePath)) {
                     const current = new Set(stillPending[source] || [])
@@ -377,7 +377,7 @@ export async function runVaultImageMigrationInBackground(vaultPath: string, work
         latestConfig.migrations.imageIngestionPendingByWorkspace[resolvedWorkspaceId] = updatedPending
         await saveConfig(latestConfig)
     } catch (err) {
-        console.warn('[Folio Migration] Startup image migration failed:', err)
+        console.warn('[Folium Migration] Startup image migration failed:', err)
     } finally {
         activeMigrationRuns.delete(resolvedWorkspaceId)
     }

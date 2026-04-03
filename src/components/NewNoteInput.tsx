@@ -61,12 +61,12 @@ export function NewNoteInput({ onSubmit, onCancel }: NewNoteInputProps) {
                 placeholder="Note name…"
                 className={`
           w-full px-2 py-1 rounded-md font-sans text-ui
-          outline-none border transition-colors duration-folio
-          bg-folio-bg text-folio-text placeholder:text-folio-text-secondary/50
-          dark:bg-folio-dark-bg dark:text-folio-dark-text dark:placeholder:text-folio-dark-text-secondary/50
+          outline-none border transition-colors duration-folium
+          bg-folium-bg text-folium-text placeholder:text-folium-text-secondary/50
+          dark:bg-folium-dark-bg dark:text-folium-dark-text dark:placeholder:text-folium-dark-text-secondary/50
           ${error
                         ? 'border-red-400 dark:border-red-500'
-                        : 'border-folio-accent/40 dark:border-folio-dark-accent/40'
+                        : 'border-folium-accent/40 dark:border-folium-dark-accent/40'
                     }
         `}
             />

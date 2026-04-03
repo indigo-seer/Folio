@@ -15,13 +15,13 @@ export default function FrontmatterNodeView(props: any) {
 
     return (
         <NodeViewWrapper
-            className="my-4 font-mono text-sm border-l-2 border-folio-accent dark:border-folio-dark-accent bg-folio-bg-secondary dark:bg-folio-dark-bg-secondary rounded-r-md overflow-hidden"
+            className="my-4 font-mono text-sm border-l-2 border-folium-accent dark:border-folium-dark-accent bg-folium-bg-secondary dark:bg-folium-dark-bg-secondary rounded-r-md overflow-hidden"
             data-type="frontmatter"
             data-yaml={yaml}
             data-expanded={isExpanded ? '' : undefined}
         >
             <div
-                className="flex items-center gap-2 px-4 py-2 text-folio-text dark:text-folio-dark-text opacity-70 hover:opacity-100 cursor-pointer select-none border-b border-transparent data-[expanded=true]:border-folio-border dark:data-[expanded=true]:border-folio-dark-border"
+                className="flex items-center gap-2 px-4 py-2 text-folium-text dark:text-folium-dark-text opacity-70 hover:opacity-100 cursor-pointer select-none border-b border-transparent data-[expanded=true]:border-folium-border dark:data-[expanded=true]:border-folium-dark-border"
                 data-expanded={isExpanded}
                 onClick={toggleExpand}
                 contentEditable={false}

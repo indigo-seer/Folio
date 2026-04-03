@@ -20,7 +20,7 @@ export function updateWordCountGlobally(editor: Editor) {
         const minutes = Math.max(1, Math.ceil(words / 200))
         const readingTime = words === 0 ? '0 min' : `${minutes} min read`
 
-        window.dispatchEvent(new CustomEvent('folio:word-count', {
+        window.dispatchEvent(new CustomEvent('folium:word-count', {
             detail: { words, characters, readingTime }
         }))
     }, 300)
@@ -39,8 +39,8 @@ export function useWordCount() {
             setStats(detail)
         }
 
-        window.addEventListener('folio:word-count', handler)
-        return () => window.removeEventListener('folio:word-count', handler)
+        window.addEventListener('folium:word-count', handler)
+        return () => window.removeEventListener('folium:word-count', handler)
     }, [])
 
     return stats

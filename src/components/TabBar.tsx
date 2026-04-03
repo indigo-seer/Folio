@@ -51,11 +51,11 @@ function PaneTabs({
             onMouseDown={() => onPaneFocus?.(pane)}
         >
             {pane === 'main' && sidebarCollapsed && (
-                <div className="flex items-center h-[38px] px-2 border-r border-folio-border dark:border-folio-dark-border mr-2 mb-[1px]">
+                <div className="flex items-center h-[38px] px-2 border-r border-folium-border dark:border-folium-dark-border mr-2 mb-[1px]">
                     <button
                         onClick={onToggleSidebar}
                         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-                        className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-folio-text-secondary hover:text-folio-text dark:text-folio-dark-text-secondary dark:hover:text-folio-dark-text transition-colors duration-folio"
+                        className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-folium-text-secondary hover:text-folium-text dark:text-folium-dark-text-secondary dark:hover:text-folium-dark-text transition-colors duration-folium"
                         title="Open sidebar"
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -78,13 +78,13 @@ function PaneTabs({
                             onTabSelect(tab.id)
                         }}
                         className={`group relative flex justify-between items-center min-w-[92px] sm:min-w-[120px] max-w-[180px] lg:max-w-[220px] h-[38px] px-3 cursor-pointer transition-colors -mb-[1px] ${isActive
-                            ? `bg-folio-bg dark:bg-folio-dark-bg text-folio-text dark:text-folio-dark-text border-t border-x rounded-t-lg z-10 ${isFocused ? 'border-folio-accent/70 dark:border-folio-dark-accent/70' : 'border-folio-border dark:border-folio-dark-border'}`
-                            : 'bg-transparent text-folio-text-secondary dark:text-folio-dark-text-secondary hover:bg-folio-bg/50 dark:hover:bg-folio-dark-bg/50 border-t border-x border-transparent'
+                            ? `bg-folium-bg dark:bg-folium-dark-bg text-folium-text dark:text-folium-dark-text border-t border-x rounded-t-lg z-10 ${isFocused ? 'border-folium-accent/70 dark:border-folium-dark-accent/70' : 'border-folium-border dark:border-folium-dark-border'}`
+                            : 'bg-transparent text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-folium-bg/50 dark:hover:bg-folium-dark-bg/50 border-t border-x border-transparent'
                             }`}
                         title={tab.path || tab.title}
                     >
                         {isActive && (
-                            <span className={`absolute bottom-0 left-2 right-2 rounded-full ${isFocused ? 'h-[2px] bg-folio-accent dark:bg-folio-dark-accent' : 'h-px bg-folio-text-secondary/40 dark:bg-folio-dark-text-secondary/50'}`} />
+                            <span className={`absolute bottom-0 left-2 right-2 rounded-full ${isFocused ? 'h-[2px] bg-folium-accent dark:bg-folium-dark-accent' : 'h-px bg-folium-text-secondary/40 dark:bg-folium-dark-text-secondary/50'}`} />
                         )}
                         <span className="truncate text-[13px] font-sans mr-2">
                             {tab.title}
@@ -94,7 +94,7 @@ function PaneTabs({
                                 e.stopPropagation()
                                 onTabClose(tab.id)
                             }}
-                            className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md hover:bg-folio-border dark:hover:bg-folio-dark-border opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                            className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md hover:bg-folium-border dark:hover:bg-folium-dark-border opacity-0 group-hover:opacity-100 transition-opacity z-20"
                             title="Close tab"
                         >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -135,7 +135,7 @@ export function TabBar({
 
     return (
         <div
-            className="relative flex items-end bg-folio-bg-secondary dark:bg-folio-dark-bg-secondary select-none h-[45px] border-b border-folio-border dark:border-folio-dark-border w-full"
+            className="relative flex items-end bg-folium-bg-secondary dark:bg-folium-dark-bg-secondary select-none h-[45px] border-b border-folium-border dark:border-folium-dark-border w-full"
             style={{
                 WebkitAppRegion: 'drag',
                 paddingLeft: isTauri() && isMacOS() ? '80px' : undefined,
@@ -168,7 +168,7 @@ export function TabBar({
 
                 {hasSplitTabs && (
                     <>
-                        <div className="h-full w-px bg-folio-border/70 dark:bg-folio-dark-border/80 flex-shrink-0" />
+                        <div className="h-full w-px bg-folium-border/70 dark:bg-folium-dark-border/80 flex-shrink-0" />
                         <div
                             className="min-w-0 h-full pl-0"
                             style={{ width: splitWidth, flexBasis: splitWidth }}
@@ -193,7 +193,7 @@ export function TabBar({
                     <button
                         onClick={onToggleTheme}
                         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-folio-text-secondary hover:text-folio-text hover:bg-folio-bg/80 dark:text-folio-dark-text-secondary dark:hover:text-folio-dark-text dark:hover:bg-folio-dark-bg/80 transition-all duration-folio"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-folium-text-secondary hover:text-folium-text hover:bg-folium-bg/80 dark:text-folium-dark-text-secondary dark:hover:text-folium-dark-text dark:hover:bg-folium-dark-bg/80 transition-all duration-folium"
                         title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
                     >
                         {theme === 'light' ? (
