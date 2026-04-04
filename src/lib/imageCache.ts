@@ -8,7 +8,7 @@ const ATTACHMENT_IMAGE_EXTENSIONS = new Set([
 const RASTER_CACHE_EXTENSIONS = new Set([
     'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif', 'tif', 'tiff', 'ico', 'heic', 'heif'
 ])
-const MAX_CONCURRENT_CACHE_JOBS = 2
+const MAX_CONCURRENT_CACHE_JOBS = 1
 
 let vaultRootPath: string | null = null
 let activeVaultUid: string | null = null

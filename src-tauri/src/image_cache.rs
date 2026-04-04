@@ -5,6 +5,7 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Instant;
 use std::time::UNIX_EPOCH;
 use tauri::{AppHandle, Manager};
 
@@ -74,6 +75,15 @@ fn allow_asset_file(app: &AppHandle, file_path: &Path) -> Result<(), String> {
         .map_err(|e| format!("Failed to allow file in asset scope {}: {e}", file_path.display()))
 }
 
+fn log_cache_event(action: &str, source_path: &Path, relative_path: &str, cache_path: &Path) {
+    println!(
+        "[Folium Image Cache] {action} | source={} | relative={} | cache={}",
+        source_path.display(),
+        relative_path,
+        cache_path.display()
+    );
+}
+
 fn cache_meta_path(cache_dir: &Path, cache_key: &str) -> PathBuf {
     cache_dir.join(format!("{cache_key}.json"))
 }
@@ -99,9 +109,20 @@ pub fn get_cached_image(
 ) -> Result<Option<String>, String> {
     let source = PathBuf::from(source_path);
     if !source.exists() {
+        println!(
+            "[Folium Image Cache] MISS_SOURCE_NOT_FOUND | source={} | relative={}",
+            source.display(),
+            relative_path
+        );
         return Ok(None);
     }
     if vault_uid.trim().is_empty() || relative_path.trim().is_empty() {
+        println!(
+            "[Folium Image Cache] MISS_INVALID_KEY_INPUT | source={} | relative={} | vault_uid_present={}",
+            source.display(),
+            relative_path,
+            !vault_uid.trim().is_empty()
+        );
         return Ok(None);
     }
 
@@ -113,9 +134,16 @@ pub fn get_cached_image(
     if webp_path.exists() {
         allow_asset_file(&app, &webp_path)?;
         let _ = write_cache_metadata(&cache_dir, &cache_key, &source);
+        log_cache_event("HIT", &source, &relative_path, &webp_path);
         return Ok(Some(webp_path.to_string_lossy().to_string()));
     }
 
+    println!(
+        "[Folium Image Cache] MISS_NOT_CACHED | source={} | relative={} | expected_cache={}",
+        source.display(),
+        relative_path,
+        webp_path.display()
+    );
     Ok(None)
 }
 
@@ -126,6 +154,7 @@ pub fn generate_cached_image(
     vault_uid: String,
     relative_path: String,
 ) -> Result<String, String> {
+    let generation_started_at = Instant::now();
     let source = PathBuf::from(source_path);
     if !source.exists() {
         return Err(format!("Source image does not exist: {}", source.display()));
@@ -142,6 +171,14 @@ pub fn generate_cached_image(
     if webp_path.exists() {
         allow_asset_file(&app, &webp_path)?;
         let _ = write_cache_metadata(&cache_dir, &cache_key, &source);
+        let elapsed_ms = generation_started_at.elapsed().as_millis();
+        println!(
+            "[Folium Image Cache] ALREADY_CACHED | source={} | relative={} | cache={} | elapsed_ms={}",
+            source.display(),
+            relative_path,
+            webp_path.display(),
+            elapsed_ms
+        );
         return Ok(webp_path.to_string_lossy().to_string());
     }
 
@@ -154,7 +191,7 @@ pub fn generate_cached_image(
         let scale = MAX_LONGEST_EDGE as f32 / longest_edge as f32;
         let resized_width = ((width as f32 * scale).round() as u32).max(1);
         let resized_height = ((height as f32 * scale).round() as u32).max(1);
-        image.resize(resized_width, resized_height, FilterType::Lanczos3)
+        image.resize(resized_width, resized_height, FilterType::Triangle)
     } else {
         image
     };
@@ -168,6 +205,18 @@ pub fn generate_cached_image(
     allow_asset_file(&app, &webp_path)?;
 
     write_cache_metadata(&cache_dir, &cache_key, &source)?;
+    let elapsed_ms = generation_started_at.elapsed().as_millis();
+    println!(
+        "[Folium Image Cache] GENERATED | source={} | relative={} | cache={} | in_px={}x{} | out_px={}x{} | elapsed_ms={}",
+        source.display(),
+        relative_path,
+        webp_path.display(),
+        width,
+        height,
+        output_width,
+        output_height,
+        elapsed_ms
+    );
     Ok(webp_path.to_string_lossy().to_string())
 }
 

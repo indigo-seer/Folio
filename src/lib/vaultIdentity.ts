@@ -47,10 +47,21 @@ async function getIdentityPaths(vaultPath: string): Promise<{ foliumDirPath: str
     return { foliumDirPath, vaultUidFilePath }
 }
 
+async function ensureVaultScope(vaultPath: string): Promise<void> {
+    if (!isTauri()) return
+    try {
+        const { invoke } = await import('@tauri-apps/api/core')
+        await invoke('grant_vault_scope', { path: vaultPath })
+    } catch (err) {
+        console.warn('[Folium Vault Identity] Failed to grant vault scope for UID access:', vaultPath, err)
+    }
+}
+
 export async function readVaultUid(vaultPath: string): Promise<string | null> {
     if (!isTauri()) return null
 
     try {
+        await ensureVaultScope(vaultPath)
         const { exists, readTextFile } = await import('@tauri-apps/plugin-fs')
         const { vaultUidFilePath } = await getIdentityPaths(vaultPath)
         if (!(await exists(vaultUidFilePath))) return null
@@ -71,12 +82,20 @@ export async function getOrCreateVaultUid(vaultPath: string): Promise<string> {
     const existing = await readVaultUid(vaultPath)
     if (existing) return existing
 
-    const { mkdir, writeTextFile } = await import('@tauri-apps/plugin-fs')
-    const { foliumDirPath, vaultUidFilePath } = await getIdentityPaths(vaultPath)
-    const newVaultUid = generateVaultUid()
-    await mkdir(foliumDirPath, { recursive: true })
-    await writeTextFile(vaultUidFilePath, `${newVaultUid}\n`)
-    return newVaultUid
+    const fallbackUid = `fallback-${await hashPath(vaultPath)}`
+
+    try {
+        await ensureVaultScope(vaultPath)
+        const { mkdir, writeTextFile } = await import('@tauri-apps/plugin-fs')
+        const { foliumDirPath, vaultUidFilePath } = await getIdentityPaths(vaultPath)
+        const newVaultUid = generateVaultUid()
+        await mkdir(foliumDirPath, { recursive: true })
+        await writeTextFile(vaultUidFilePath, `${newVaultUid}\n`)
+        return newVaultUid
+    } catch (err) {
+        console.warn('[Folium Vault Identity] Falling back to path-based UID because .folium/vault.uid is not writable:', vaultPath, err)
+        return fallbackUid
+    }
 }
 
 export async function resolveWorkspaceIdentity(
