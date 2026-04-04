@@ -1,5 +1,6 @@
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from 'prosemirror-state'
+import { EditorView } from 'prosemirror-view'
 
 export const SmoothCaret = Extension.create({
     name: 'smoothCaret',
@@ -9,7 +10,7 @@ export const SmoothCaret = Extension.create({
             new Plugin({
                 key: new PluginKey('smoothCaret'),
 
-                view(editorView) {
+                view(editorView: EditorView) {
                     // ─── Inject styles ────────────────────────────────────────
                     const styleEl = document.createElement('style')
                     styleEl.id = 'smooth-caret-styles'
@@ -152,7 +153,7 @@ export const SmoothCaret = Extension.create({
 
                     // ─── Main update: position the caret ─────────────────────
                     return {
-                        update(view) {
+                        update(view: EditorView) {
                             const { state } = view
                             const { selection } = state
 

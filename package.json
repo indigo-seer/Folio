@@ -1,7 +1,7 @@
 {
   "name": "folium",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.5",
   "type": "module",
   "scripts": {
     "dev": "npx vite",
@@ -44,6 +44,8 @@
     "katex": "^0.16.44",
     "lowlight": "^3.2.0",
     "lucide-react": "^0.575.0",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-view": "^1.41.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-force-graph-2d": "^1.29.1",

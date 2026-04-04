@@ -1,5 +1,6 @@
 import { Extension } from '@tiptap/core'
-import { Plugin, PluginKey } from 'prosemirror-state'
+import { EditorState, Plugin, PluginKey } from 'prosemirror-state'
+import { EditorView } from 'prosemirror-view'
 
 export const TypewriterMode = Extension.create({
     name: 'typewriterMode',
@@ -13,7 +14,7 @@ export const TypewriterMode = Extension.create({
                     handleScrollToSelection: () => true
                 },
 
-                view: (view) => {
+                view: (view: EditorView) => {
                     let manualScrollActive = false
                     const setManualScroll = (active: boolean) => {
                         if (manualScrollActive !== active) {
@@ -31,7 +32,7 @@ export const TypewriterMode = Extension.create({
 
                     let isProgrammaticScroll = false
 
-                    const scrollParent: Element | null =
+                    const scrollParent: Element =
                         view.dom.closest('.overflow-y-auto') ||
                         document.documentElement
 
@@ -179,10 +180,12 @@ export const TypewriterMode = Extension.create({
                         }
                     }
 
-                    scrollTarget.addEventListener('scroll', disableTemporarily, { passive: true })
+                    if (scrollTarget) {
+                        scrollTarget.addEventListener('scroll', disableTemporarily, { passive: true })
+                    }
 
                     return {
-                        update: (view, prevState) => {
+                        update: (view: EditorView, prevState: EditorState) => {
                             if (view.dom.getAttribute('data-typewriter-mode') !== 'true') return
 
                             if (isDragging) return
@@ -204,7 +207,9 @@ export const TypewriterMode = Extension.create({
                         },
 
                         destroy() {
-                            scrollTarget.removeEventListener('scroll', disableTemporarily)
+                            if (scrollTarget) {
+                                scrollTarget.removeEventListener('scroll', disableTemporarily)
+                            }
                             document.removeEventListener('mousedown', onMouseDown)
                             document.removeEventListener('mouseup', onMouseUp)
                             window.removeEventListener('folium:typewriter-toggled', onTypewriterToggle)
