@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react'
 import { isTauri } from '../lib/config'
 import { fs, sortTree, buildVaultIndex, extractWikilinks, VaultState } from '../lib/fs'
+import { invalidateCacheEntry, isAttachmentImagePath, warmCacheForNote } from '../lib/imageCache'
 
 export function useFileSystem() {
     const [vault, setVault] = useState<VaultState>({
@@ -95,6 +96,11 @@ export function useFileSystem() {
     const writeBinaryFile = useCallback(async (path: string, content: Uint8Array): Promise<void> => {
         if (!fs.writeBinaryFile) throw new Error('Binary write not supported')
         await fs.writeBinaryFile(path, content)
+
+        if (isAttachmentImagePath(path)) {
+            invalidateCacheEntry(path)
+            void warmCacheForNote([path])
+        }
     }, [])
 
     const ensureAttachmentFolder = useCallback(async (): Promise<string> => {
@@ -157,6 +163,12 @@ export function useFileSystem() {
         const newNoteName = isFile && newName.endsWith('.md') ? newName.replace(/\.md$/, '') : newName
 
         const newPath = await fs.renameFile(oldPath, newName)
+        if (isAttachmentImagePath(oldPath)) {
+            invalidateCacheEntry(oldPath)
+        }
+        if (isAttachmentImagePath(newPath)) {
+            void warmCacheForNote([newPath])
+        }
 
         // Update backlinks in other files
         const sourcesToUpdate = vault.backlinkIndex.get(oldNoteName) || new Set<string>()
@@ -204,6 +216,12 @@ export function useFileSystem() {
         if (!vault.rootPath) throw new Error('No vault open')
 
         const newPath = await fs.moveFile(vault.rootPath, oldPath, parentPath)
+        if (isAttachmentImagePath(oldPath)) {
+            invalidateCacheEntry(oldPath)
+        }
+        if (isAttachmentImagePath(newPath)) {
+            void warmCacheForNote([newPath])
+        }
         const tree = await fs.scanDirectory(vault.rootPath)
         const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
 
@@ -215,6 +233,9 @@ export function useFileSystem() {
         if (!vault.rootPath) throw new Error('No vault open')
 
         await fs.deleteFile(path)
+        if (isAttachmentImagePath(path)) {
+            invalidateCacheEntry(path)
+        }
         const tree = await fs.scanDirectory(vault.rootPath)
         const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
 

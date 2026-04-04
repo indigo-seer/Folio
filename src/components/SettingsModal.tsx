@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSettings } from '../hooks/useSettings'
-import { Palette, Type, Keyboard, Folder } from 'lucide-react'
+import { Palette, Type, Keyboard, Folder, HardDrive } from 'lucide-react'
 import { Workspace } from '../lib/config'
+import { useCacheSize } from '../hooks/useCacheSize'
 
 interface SettingsModalProps {
     onClose: () => void
@@ -116,6 +117,15 @@ export function SettingsModal({
         fontSize, setFontSize,
         typewriterBlur, setTypewriterBlur
     } = useSettings()
+    const {
+        cacheSizeBytes,
+        cacheSizeMB,
+        isLoading: isCacheLoading,
+        isOpeningFolder,
+        isLarge: isCacheLarge,
+        clearCache,
+        openCacheFolder,
+    } = useCacheSize()
 
     const [activeSection, setActiveSection] = useState('appearance')
     const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -136,6 +146,11 @@ export function SettingsModal({
             el.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
     }
+
+    const cacheUsageLabel = cacheSizeMB > 0 ? `${cacheSizeMB} MB` : '0 MB'
+    const largeCacheLabel = cacheSizeBytes >= 1024 * 1024 * 1024
+        ? `${(cacheSizeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+        : `${cacheSizeMB} MB`
 
     const FoliumLogo = () => (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 654 654" className="w-[22px] h-[22px] text-folium-text-secondary/60 dark:text-folium-dark-text-secondary/60 fill-current">
@@ -194,6 +209,16 @@ export function SettingsModal({
                         >
                             <Keyboard className="w-[18px] h-[18px]" strokeWidth={2} />
                             Writing Modes
+                        </button>
+                        <button
+                            onClick={() => scrollToSection('image-cache')}
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${activeSection === 'image-cache'
+                                ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
+                                : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
+                                }`}
+                        >
+                            <HardDrive className="w-[18px] h-[18px]" strokeWidth={2} />
+                            Image Cache
                         </button>
                         <button
                             onClick={() => scrollToSection('workspaces')}
@@ -311,6 +336,46 @@ export function SettingsModal({
                                                 }`}
                                         />
                                     </button>
+                                </div>
+                            </div>
+
+                            {/* IMAGE CACHE ANCHOR */}
+                            <div id="settings-image-cache" className="flex flex-col gap-5 scroll-mt-6">
+                                <div className="flex justify-between items-start pt-2">
+                                    <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Image Cache</h4>
+                                </div>
+
+                                <div className="flex flex-col gap-2 pb-5 border-b border-folium-border/50 dark:border-folium-dark-border/50">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Image Cache</span>
+                                            <span className="font-sans text-[13px] text-[#8692A6] dark:text-folium-dark-text-secondary mt-0.5">Stores optimized copies of large images for faster rendering.</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => void openCacheFolder()}
+                                                disabled={isOpeningFolder}
+                                                className="px-3 py-1.5 rounded-md text-[12px] font-medium text-[#717F9A] hover:bg-black/5 dark:text-[#8895AD] dark:hover:bg-white/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                            >
+                                                {isOpeningFolder ? 'Opening...' : 'Open Folder'}
+                                            </button>
+                                            <button
+                                                onClick={() => void clearCache()}
+                                                disabled={isCacheLoading}
+                                                className="px-3 py-1.5 rounded-md text-[12px] font-medium text-[#717F9A] hover:bg-black/5 dark:text-[#8895AD] dark:hover:bg-white/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                            >
+                                                {isCacheLoading ? 'Clearing...' : 'Clear Cache'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="font-sans text-[13px] text-[#5F6B85] dark:text-folium-dark-text-secondary">
+                                        Currently using: {cacheUsageLabel}
+                                    </div>
+                                    {isCacheLarge && (
+                                        <div className="font-sans text-[13px] text-amber-600 dark:text-amber-400">
+                                            Cache is large ({largeCacheLabel}). Consider clearing to free up space.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

@@ -118,7 +118,8 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
         activeTabId: tabs.activeTabId,
         tabs: tabs.tabs,
         fileSystem,
-        isMoveModalOpen: modals.state.move.isOpen
+        isMoveModalOpen: modals.state.move.isOpen,
+        vaultRootPath: fileSystem.vault.rootPath
     });
 
     const {
@@ -130,7 +131,8 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
         activeTabId: tabs.splitTabId || null,
         tabs: tabs.tabs,
         fileSystem,
-        isMoveModalOpen: modals.state.move.isOpen
+        isMoveModalOpen: modals.state.move.isOpen,
+        vaultRootPath: fileSystem.vault.rootPath
     })
 
     const renderedTabIdRef = useRef<string | null>(null);

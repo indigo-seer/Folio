@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { loadConfig, saveConfig, hashPath, Workspace } from '../lib/config';
+import { loadConfig, saveConfig, Workspace } from '../lib/config';
 import { BootState } from '../App';
 import { runVaultImageMigrationInBackground } from '../lib/vaultImageMigration';
+import { getOrCreateVaultUid, resolveWorkspaceIdentity } from '../lib/vaultIdentity';
 
 interface WorkspaceContextType {
     workspaces: Workspace[];
@@ -37,16 +38,23 @@ export function WorkspaceProvider({
         if (result) {
             tabs.clearTabs();
             const config = await loadConfig();
-            const id = await hashPath(result.path);
+            const { workspaceId: id, vaultUid, matchedWorkspace } = await resolveWorkspaceIdentity(config.workspaces || [], result.path);
 
             let updatedWorkspaces = [...(config.workspaces || [])];
-            const existingIndex = updatedWorkspaces.findIndex(w => w.id === id || w.path === result.path);
+            const existingIndex = updatedWorkspaces.findIndex((workspace) =>
+                workspace.vaultUid === vaultUid ||
+                workspace.id === id ||
+                workspace.path === result.path ||
+                (matchedWorkspace ? workspace.id === matchedWorkspace.id : false)
+            );
 
             let newWorkspace: Workspace;
             if (existingIndex >= 0) {
                 newWorkspace = {
                     ...updatedWorkspaces[existingIndex],
                     id,
+                    vaultUid,
+                    path: result.path,
                     lastOpened: Date.now()
                 };
                 updatedWorkspaces.splice(existingIndex, 1);
@@ -54,6 +62,7 @@ export function WorkspaceProvider({
                 newWorkspace = {
                     id,
                     path: result.path,
+                    vaultUid,
                     displayName: result.name,
                     lastOpened: Date.now(),
                     createdAt: Date.now()
@@ -92,6 +101,8 @@ export function WorkspaceProvider({
             // Always route through loadVault() so dynamic fs scope is granted
             // before any read checks are performed by the adapter.
             await fileSystem.loadVault(targetWorkspace.path);
+            const vaultUid = await getOrCreateVaultUid(targetWorkspace.path);
+            targetWorkspace.vaultUid = vaultUid;
 
             targetWorkspace.lastOpened = Date.now();
             let updatedWorkspaces = [...config.workspaces]

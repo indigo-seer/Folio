@@ -3,8 +3,11 @@ export const isTauri = (): boolean => {
 }
 
 export interface Workspace {
+    // Deprecated: path-derived identifier retained for backward compatibility.
+    // Use vaultUid as the stable vault identity moving forward.
     id: string
     path: string
+    vaultUid?: string
     displayName: string
     lastOpened: number
     createdAt: number

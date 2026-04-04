@@ -1,3 +1,8 @@
+import { invoke } from '@tauri-apps/api/core'
+
+import { isTauri } from './config'
+import { getOrCreateVaultUid } from './vaultIdentity'
+
 export interface IngestedImage {
     bytes: Uint8Array
     extension: string
@@ -150,5 +155,20 @@ export async function ingestImageSourceToAttachments(
     const separator = await sep()
     const absolutePath = `${vaultRootPath}${separator}attachments${separator}${name}`
     await writeBinaryFile(absolutePath, bytes)
-    return `attachments/${name}`
+    const relativePath = `attachments/${name}`
+
+    if (isTauri()) {
+        try {
+            const vaultUid = await getOrCreateVaultUid(vaultRootPath)
+            await invoke('generate_cached_image', {
+                sourcePath: absolutePath,
+                vaultUid,
+                relativePath,
+            })
+        } catch (err) {
+            console.warn('[Folium Image Cache] Failed to warm cache after ingestion:', absolutePath, err)
+        }
+    }
+
+    return relativePath
 }

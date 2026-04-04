@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { BootState } from '../App';
-import { loadConfig, saveConfig, hashPath, Workspace, isTauri } from '../lib/config';
+import { loadConfig, saveConfig, Workspace, isTauri } from '../lib/config';
 import { createStarterNote, createDefaultVault } from '../lib/onboarding';
 import { runVaultImageMigrationInBackground } from '../lib/vaultImageMigration';
+import { sweepOrphanedCache } from '../lib/imageCache';
+import { getOrCreateVaultUid, resolveWorkspaceIdentity } from '../lib/vaultIdentity';
 
 export function useAppBootloader(
     fileSystem: any,
@@ -13,6 +15,7 @@ export function useAppBootloader(
 ) {
     const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
     const hasBooted = useRef(false);
+    const hasSweptImageCache = useRef(false);
 
     useEffect(() => {
         if (hasBooted.current) return;
@@ -37,8 +40,17 @@ export function useAppBootloader(
                             // Always route through loadVault() so dynamic fs scope
                             // is granted before any file checks occur.
                             await fileSystem.loadVault(activeWorkspace.path);
+                            if (!activeWorkspace.vaultUid) {
+                                activeWorkspace.vaultUid = await getOrCreateVaultUid(activeWorkspace.path);
+                                await saveConfig(config);
+                                setWorkspaces([...config.workspaces]);
+                            }
                             setActiveWorkspaceId(activeWorkspace.id);
                             setBootState(BootState.ReadyWithWorkspace);
+                            if (!hasSweptImageCache.current) {
+                                hasSweptImageCache.current = true;
+                                void sweepOrphanedCache();
+                            }
                             void runVaultImageMigrationInBackground(activeWorkspace.path, activeWorkspace.id);
                             return;
                         } catch (e) {
@@ -83,11 +95,12 @@ export function useAppBootloader(
             }
 
             const config = await loadConfig();
-            const id = await hashPath(vaultPath);
+            const { workspaceId: id, vaultUid } = await resolveWorkspaceIdentity(config.workspaces || [], vaultPath);
 
             const newWorkspace: Workspace = {
                 id,
                 path: vaultPath,
+                vaultUid,
                 displayName: vaultName,
                 lastOpened: Date.now(),
                 createdAt: Date.now()
@@ -113,6 +126,10 @@ export function useAppBootloader(
             }
 
             setBootState(BootState.ReadyWithWorkspace);
+            if (!hasSweptImageCache.current) {
+                hasSweptImageCache.current = true;
+                void sweepOrphanedCache();
+            }
             void runVaultImageMigrationInBackground(vaultPath, id);
         } catch (err) {
             console.error('Onboarding completion failed:', err);

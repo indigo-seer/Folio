@@ -4,6 +4,7 @@ import { tipTapToMarkdown } from '../lib/markdown';
 import { fs } from '../lib/fs';
 import { updateWordCountGlobally } from './useWordCount';
 import { detectCorruption } from '../lib/corruptionDetector';
+import { extractAttachmentImagePaths, warmCacheForNote } from '../lib/imageCache';
 
 interface UseEditorStateProps {
     activeTabId: string | null;
@@ -15,13 +16,15 @@ interface UseEditorStateProps {
         saveEditorState: (path: string, state: { scroll: number, cursor: number }) => void;
     };
     isMoveModalOpen: boolean;
+    vaultRootPath: string | null;
 }
 
 export function useEditorState({
     activeTabId,
     tabs,
     fileSystem,
-    isMoveModalOpen
+    isMoveModalOpen,
+    vaultRootPath
 }: UseEditorStateProps) {
     const [isNewNote, setIsNewNote] = useState(false);
     const [editorReady, setEditorReady] = useState(false);
@@ -114,6 +117,14 @@ export function useEditorState({
 
                     const markdown = raw;
 
+                    if (vaultRootPath) {
+                        const attachmentImagePaths = extractAttachmentImagePaths(markdown)
+                        if (attachmentImagePaths.length > 0) {
+                            const absoluteImagePaths = attachmentImagePaths.map((imagePath) => `${vaultRootPath}/${imagePath}`)
+                            void warmCacheForNote(absoluteImagePaths)
+                        }
+                    }
+
                     if (!isMounted) return;
                     if (!editorRef.current) {
                         isLoadingRef.current = false;
@@ -185,7 +196,7 @@ export function useEditorState({
         return () => {
             isMounted = false;
         };
-    }, [activeTabId, tabs, fileSystem, editorReady, editorInstanceVersion]);
+    }, [activeTabId, tabs, fileSystem, editorReady, editorInstanceVersion, vaultRootPath]);
 
     // Auto-save: debounced write back to disk
     const triggerAutoSave = useCallback(() => {

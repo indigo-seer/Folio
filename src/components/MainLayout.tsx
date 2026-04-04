@@ -7,6 +7,7 @@ import { StatusBar } from './StatusBar';
 import { GraphView } from './GraphView';
 import { useModals } from '../contexts/ModalContext';
 import { startAnimationAudit } from '../lib/performanceAudit';
+import { setImageCacheVaultUid } from '../lib/imageCache';
 
 interface MainLayoutProps {
     fileSystem: any;
@@ -139,6 +140,11 @@ export function MainLayout({
         window.addEventListener('folium:typewriter-manual-scroll', handleTypewriterSuspend);
         return () => window.removeEventListener('folium:typewriter-manual-scroll', handleTypewriterSuspend);
     }, []);
+
+    useEffect(() => {
+        const activeWorkspace = workspaces.find(workspace => workspace.id === activeWorkspaceId) || null
+        setImageCacheVaultUid(activeWorkspace?.vaultUid || null)
+    }, [workspaces, activeWorkspaceId]);
 
     useEffect(() => {
         if (!isResizingSplit) return;

@@ -7,7 +7,10 @@
     "dev": "npx vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:build": "tauri build",
+    "tauri:build:linux": "APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=1 tauri build",
+    "tauri:build:linux:noappimage": "tauri build --bundles deb,rpm"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.6.0",

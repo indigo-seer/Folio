@@ -7,6 +7,7 @@ import {
     shouldIngestImageSource,
     toVaultRelativeAttachmentPath,
 } from './imageIngestion'
+import { extractAttachmentImagePaths, warmCacheForNote } from './imageCache'
 
 const IMAGE_INGESTION_MIGRATION_VERSION = 1
 const activeMigrationRuns = new Set<string>()
@@ -181,9 +182,9 @@ function pendingMapToRecord(pending: Map<string, Set<string>>): PendingBySource 
     return out
 }
 
-async function migrateVaultImages(vaultPath: string): Promise<{ pending: PendingBySource }> {
+async function migrateVaultImages(vaultPath: string): Promise<{ pending: PendingBySource; discoveredImages: string[] }> {
     if (!fs.writeBinaryFile) {
-        return { pending: {} }
+        return { pending: {}, discoveredImages: [] }
     }
 
     await ensureAttachmentFolder(vaultPath)
@@ -194,6 +195,7 @@ async function migrateVaultImages(vaultPath: string): Promise<{ pending: Pending
 
     const sourceCache = new Map<string, Promise<ResolveResult>>()
     const pendingBySource = new Map<string, Set<string>>()
+    const discoveredImages = new Set<string>()
 
     const resolveReplacement = async (sourceRaw: string): Promise<ResolveResult> => {
         const source = sourceRaw.trim()
@@ -246,6 +248,12 @@ async function migrateVaultImages(vaultPath: string): Promise<{ pending: Pending
             }
 
             const { output, changed } = await migrateNoteContent(raw, noteAwareResolver)
+
+            const imagePaths = extractAttachmentImagePaths(output)
+            for (const imagePath of imagePaths) {
+                discoveredImages.add(`${vaultPath}/${imagePath}`)
+            }
+
             if (!changed || output === raw) continue
             await fs.writeFile(markdownPath, output)
             migratedCount += 1
@@ -260,6 +268,7 @@ async function migrateVaultImages(vaultPath: string): Promise<{ pending: Pending
 
     return {
         pending: pendingMapToRecord(pendingBySource),
+        discoveredImages: Array.from(discoveredImages),
     }
 }
 
@@ -367,6 +376,7 @@ export async function runVaultImageMigrationInBackground(vaultPath: string, work
             latestConfig.migrations.imageIngestionByWorkspace[resolvedWorkspaceId] = IMAGE_INGESTION_MIGRATION_VERSION
             latestConfig.migrations.imageIngestionPendingByWorkspace[resolvedWorkspaceId] = mergePending(existingPending, migrationResult.pending)
             await saveConfig(latestConfig)
+            void warmCacheForNote(migrationResult.discoveredImages)
             return
         }
 

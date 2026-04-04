@@ -13,7 +13,6 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { Highlight } from '@tiptap/extension-highlight'
 import { Markdown } from '@tiptap/markdown'
 import { common, createLowlight } from 'lowlight'
-import { convertFileSrc } from '@tauri-apps/api/core'
 
 import { isTauri } from '../config'
 import { Wikilink } from '../../extensions/Wikilink'
@@ -31,6 +30,7 @@ import { MarkdownPaste } from '../../extensions/MarkdownPaste'
 import { CodeBlockCopy } from '../../extensions/CodeBlockCopy'
 import { createWikilinkSuggestion } from '../../components/WikilinkSuggestion'
 import { createSlashCommandSuggestion } from '../../components/SlashCommandSuggestion'
+import { getCachePathForImage, setImageCacheVaultRoot } from '../imageCache'
 
 // Create lowlight instance with common languages
 const lowlight = createLowlight(common)
@@ -40,6 +40,7 @@ const lowlight = createLowlight(common)
 let vaultRootPath: string | null = null
 export function setVaultRootPath(path: string | null) {
     vaultRootPath = path
+    setImageCacheVaultRoot(path)
 }
 
 const TauriImage = Image.extend({
@@ -70,7 +71,8 @@ const TauriImage = Image.extend({
         if (isTauri() && src && src.startsWith('attachments/') && vaultRootPath) {
             // Build the absolute path: /vault/root/attachments/name.png
             const absolutePath = `${vaultRootPath}/${src}`
-            resolvedSrc = convertFileSrc(absolutePath)
+            resolvedSrc = getCachePathForImage(absolutePath)
+            HTMLAttributes['data-folium-image-source-path'] = absolutePath
         }
 
         return ['img', { ...HTMLAttributes, src: resolvedSrc }]

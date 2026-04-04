@@ -14,6 +14,7 @@ import {
     shouldIngestImageSource,
     toVaultRelativeAttachmentPath,
 } from '../lib/imageIngestion'
+import { subscribeImageCacheUpdates } from '../lib/imageCache'
 
 interface EditorProps {
     onUpdate?: (editor: ReturnType<typeof useEditor>) => void
@@ -237,6 +238,22 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
             if (onFocusRef.current) onFocusRef.current(e as ReturnType<typeof useEditor>)
         },
     })
+
+    useEffect(() => {
+        const unsubscribe = subscribeImageCacheUpdates((absolutePath, displayUrl) => {
+            const rootElement = editor?.view?.dom
+            if (!rootElement) return
+
+            const imageNodes = rootElement.querySelectorAll('img[data-folium-image-source-path]')
+            for (const imageNode of imageNodes) {
+                const sourcePath = imageNode.getAttribute('data-folium-image-source-path')
+                if (sourcePath !== absolutePath) continue
+                imageNode.setAttribute('src', displayUrl)
+            }
+        })
+
+        return unsubscribe
+    }, [editor])
 
     // Fire once when editor mounts — NOT on callback changes
     useEffect(() => {
