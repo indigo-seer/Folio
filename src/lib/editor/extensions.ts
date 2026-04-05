@@ -13,6 +13,7 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { Highlight } from '@tiptap/extension-highlight'
 import { Markdown } from '@tiptap/markdown'
 import { common, createLowlight } from 'lowlight'
+import { ReactNodeViewRenderer } from '@tiptap/react'
 
 import { isTauri } from '../config'
 import { Wikilink } from '../../extensions/Wikilink'
@@ -30,6 +31,7 @@ import { MarkdownPaste } from '../../extensions/MarkdownPaste'
 import { CodeBlockCopy } from '../../extensions/CodeBlockCopy'
 import { createWikilinkSuggestion } from '../../components/WikilinkSuggestion'
 import { createSlashCommandSuggestion } from '../../components/SlashCommandSuggestion'
+import ImageNodeView from '../../components/ImageNodeView'
 import { getCachePathForImage, setImageCacheVaultRoot } from '../imageCache'
 
 // Create lowlight instance with common languages
@@ -62,17 +64,35 @@ const TauriImage = Image.extend({
                 parseHTML: element => element.getAttribute('data-obsidian') === 'true',
                 renderHTML: attributes => attributes.obsidian ? { 'data-obsidian': 'true' } : {},
             },
+            align: {
+                default: null,
+                parseHTML: element => element.getAttribute('data-align') || element.getAttribute('align'),
+                renderHTML: attributes => attributes.align ? { 'data-align': attributes.align } : {},
+            },
         }
+    },
+    addNodeView() {
+        return ReactNodeViewRenderer(ImageNodeView)
     },
     renderHTML({ HTMLAttributes }) {
         const src = HTMLAttributes.src
         let resolvedSrc = src
+        const widthValue = HTMLAttributes.width
+        const styleValue = String(HTMLAttributes.style || '')
 
         if (isTauri() && src && src.startsWith('attachments/') && vaultRootPath) {
             // Build the absolute path: /vault/root/attachments/name.png
             const absolutePath = `${vaultRootPath}/${src}`
             resolvedSrc = getCachePathForImage(absolutePath)
             HTMLAttributes['data-folium-image-source-path'] = absolutePath
+        }
+
+        if (widthValue) {
+            const widthNumber = Number(widthValue)
+            if (Number.isFinite(widthNumber) && widthNumber > 0) {
+                const widthStyle = `width: ${Math.round(widthNumber)}px; max-width: 100%; height: auto;`
+                HTMLAttributes.style = styleValue ? `${styleValue} ${widthStyle}`.trim() : widthStyle
+            }
         }
 
         return ['img', { ...HTMLAttributes, src: resolvedSrc }]

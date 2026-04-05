@@ -58,6 +58,40 @@ function parseObsidianImageSize(sizePart?: string): { width: number | null; heig
     return { width: null, height: null }
 }
 
+function parseHtmlImageNode(rawTag: string): TipTapNode | null {
+    const attrs: Record<string, string> = {}
+    const attrRegex = /([^\s=/>]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/g
+    let match: RegExpExecArray | null
+
+    while ((match = attrRegex.exec(rawTag)) !== null) {
+        const key = (match[1] || '').toLowerCase()
+        const value = (match[3] ?? match[4] ?? match[5] ?? '').trim()
+        if (!key || !value) continue
+        attrs[key] = value
+    }
+
+    const src = attrs.src || ''
+    if (!src) return null
+
+    const width = normalizeDimension(attrs.width)
+    const height = normalizeDimension(attrs.height)
+    const alt = attrs.alt || defaultAltFromPath(src)
+    const obsidian = attrs['data-obsidian'] === 'true'
+    const align = attrs['data-align'] || attrs.align || null
+
+    return {
+        type: 'image',
+        attrs: {
+            src,
+            alt,
+            width,
+            height,
+            obsidian,
+            align,
+        },
+    }
+}
+
 // ============================================================
 // Markdown → TipTap
 // ============================================================
@@ -277,7 +311,7 @@ function parseInline(text: string): TipTapNode[] {
     const nodes: TipTapNode[] = []
     // Order matters: images ![]() must parse before links []()
     // Bold before italic since ** contains *
-    const inlineRegex = /!\[\[([^\]|]+?)(?:\|([^\]]+))?\]\]|!\[(.*?)\]\((.+?)\)|(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|~~(.+?)~~|\[\[(.*?)\]\]|\[(.+?)\]\((.+?)\))/g
+    const inlineRegex = /!\[\[([^\]|]+?)(?:\|([^\]]+))?\]\]|!\[(.*?)\]\((.+?)\)|(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|~~(.+?)~~|\[\[(.*?)\]\]|\[(.+?)\]\((.+?)\))|<img\b[^>]*>/gi
 
     let lastIndex = 0
     let match: RegExpExecArray | null
@@ -289,7 +323,15 @@ function parseInline(text: string): TipTapNode[] {
             if (before) addTextNode(nodes, before)
         }
 
-        if (match[1] !== undefined) {
+        const token = match[0] || ''
+        if (/^<img\b/i.test(token.trim())) {
+            const imageNode = parseHtmlImageNode(token)
+            if (imageNode) {
+                nodes.push(imageNode)
+            } else {
+                addTextNode(nodes, token)
+            }
+        } else if (match[1] !== undefined) {
             // Obsidian image wikilink: ![[image.png|300x200]]
             const src = (match[1] || '').trim()
             if (isImagePath(src)) {
@@ -452,6 +494,14 @@ function normalizeDimension(value: unknown): number | null {
     return Math.round(asNumber)
 }
 
+function escapeHtmlAttribute(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+}
+
 function imageNodeToMarkdown(node: TipTapNode): string {
     const rawSrc = (node.attrs?.src as string) || ''
     const src = normalizeAttachmentSrc(rawSrc)
@@ -460,8 +510,19 @@ function imageNodeToMarkdown(node: TipTapNode): string {
     const width = normalizeDimension(node.attrs?.width)
     const height = normalizeDimension(node.attrs?.height)
     const isObsidian = Boolean(node.attrs?.obsidian)
+    const align = String(node.attrs?.align || '').trim()
+    const alt = String(node.attrs?.alt || '')
 
     if (isObsidian || width || height) {
+        if (!isObsidian) {
+            const attrs: string[] = [`src="${escapeHtmlAttribute(src)}"`]
+            if (alt) attrs.push(`alt="${escapeHtmlAttribute(alt)}"`)
+            if (width) attrs.push(`width="${width}"`)
+            if (height) attrs.push(`height="${height}"`)
+            if (align) attrs.push(`data-align="${escapeHtmlAttribute(align)}"`)
+            return `<img ${attrs.join(' ')} />`
+        }
+
         let sizePart = ''
         if (width && height) sizePart = `|${width}x${height}`
         else if (width) sizePart = `|${width}`
@@ -469,7 +530,7 @@ function imageNodeToMarkdown(node: TipTapNode): string {
         return `![[${src}${sizePart}]]`
     }
 
-    return `![${(node.attrs?.alt as string) || ''}](${src})`
+    return `![${alt}](${src})`
 }
 
 function nodeToMarkdown(node: TipTapNode): string {

@@ -42,6 +42,10 @@ function toAbsolutePath(inputPath: string): string | null {
     return null
 }
 
+export function resolveAbsoluteImagePath(sourcePath: string): string | null {
+    return toAbsolutePath(sourcePath)
+}
+
 function toDisplayUrl(filePath: string): string {
     return convertFileSrc(filePath)
 }

@@ -1076,3 +1076,88 @@ ul[data-type="taskList"] li[data-checked="true"]>div {
       rgba(123, 158, 217, 0.36) 88%,
       rgba(123, 158, 217, 0) 88%);
 }
+
+.image-node-view {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  vertical-align: bottom;
+}
+
+.image-node-view img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.image-node-view.selected img {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.6);
+  border-radius: 4px;
+}
+
+.image-resize-handle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 56px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.24);
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.16);
+  cursor: col-resize;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  z-index: 2;
+}
+
+.dark .image-resize-handle {
+  background: #111827;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.image-node-view.selected .image-resize-handle {
+  opacity: 1;
+}
+
+.image-resize-handle.left {
+  left: -6px;
+}
+
+.image-resize-handle.right {
+  right: -6px;
+}
+
+.image-resize-handle.top,
+.image-resize-handle.bottom {
+  left: 50%;
+  top: auto;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 12px;
+  cursor: row-resize;
+}
+
+.image-resize-handle.top {
+  top: -6px;
+}
+
+.image-resize-handle.bottom {
+  bottom: -6px;
+}
+
+.image-width-label {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.66);
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 2px 6px;
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+}

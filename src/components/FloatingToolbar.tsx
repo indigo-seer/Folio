@@ -1,5 +1,6 @@
 import { type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
+import { NodeSelection } from 'prosemirror-state'
 
 interface FloatingToolbarProps {
     editor: Editor
@@ -13,6 +14,9 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
             shouldShow={({ editor: currentEditor, state }) => {
                 const { empty } = state.selection
                 if (empty) return false
+                if (state.selection instanceof NodeSelection && state.selection.node.type.name === 'image') {
+                    return false
+                }
                 return !currentEditor.isActive('table')
             }}
         >

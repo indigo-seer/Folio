@@ -5,6 +5,7 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::process::Stdio;
 use std::time::Instant;
 use std::time::UNIX_EPOCH;
 use tauri::{AppHandle, Manager};
@@ -351,10 +352,51 @@ pub fn open_cache_folder(app: AppHandle) -> Result<(), String> {
 
     #[cfg(all(unix, not(target_os = "macos")))]
     {
-        Command::new("xdg-open")
-            .arg(&cache_dir)
-            .spawn()
-            .map_err(|e| format!("Failed opening cache folder via xdg-open {}: {e}", cache_dir.display()))?;
+        let candidates: [(&str, &[&str]); 3] = [
+            ("gio", &["open"]),
+            ("xdg-open", &[]),
+            ("kioclient5", &["exec"]),
+        ];
+
+        let mut launch_errors: Vec<String> = Vec::new();
+        let mut opened = false;
+
+        for (command, args) in candidates {
+            let mut child = Command::new(command);
+            for arg in args {
+                child.arg(arg);
+            }
+
+            let status = child
+                .arg(&cache_dir)
+                .env_remove("PYTHONHOME")
+                .env_remove("PYTHONPATH")
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+
+            match status {
+                Ok(code) if code.success() => {
+                    opened = true;
+                    break;
+                }
+                Ok(code) => {
+                    launch_errors.push(format!("{command} exited with status {code}"));
+                }
+                Err(err) => {
+                    launch_errors.push(format!("{command} failed: {err}"));
+                }
+            }
+        }
+
+        if !opened {
+            return Err(format!(
+                "Failed opening cache folder {}. Attempts: {}",
+                cache_dir.display(),
+                launch_errors.join(" | ")
+            ));
+        }
     }
 
     Ok(())

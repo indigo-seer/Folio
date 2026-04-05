@@ -250,3 +250,64 @@ describe('tipTapToMarkdown Custom Extensions Serialization', () => {
     })
 
 })
+
+describe('Image Markdown Round-Trip', () => {
+    function roundTrip(markdown: string): string {
+        return tipTapToMarkdown(markdownToTipTap(markdown) as any)
+    }
+
+    it('round-trips standard image without width', () => {
+        const input = '![alt](attachments/photo.png)'
+        expect(roundTrip(input)).toBe(input)
+    })
+
+    it('round-trips standard html image with width', () => {
+        const input = '<img src="attachments/photo.png" alt="alt" width="640" />'
+        expect(roundTrip(input)).toBe(input)
+    })
+
+    it('round-trips Obsidian image without width', () => {
+        const input = '![[image.png]]'
+        expect(roundTrip(input)).toBe(input)
+    })
+
+    it('round-trips Obsidian image with width', () => {
+        const input = '![[image.png|640]]'
+        expect(roundTrip(input)).toBe(input)
+    })
+
+    it('round-trips Obsidian image with width and height', () => {
+        const input = '![[image.png|640x480]]'
+        expect(roundTrip(input)).toBe(input)
+    })
+
+    it('omits width attribute when width is 0 or undefined', () => {
+        const widthZero = '<img src="attachments/photo.png" alt="alt" width="0" />'
+        const parsedWidthZero = roundTrip(widthZero)
+        expect(parsedWidthZero).toBe('![alt](attachments/photo.png)')
+        expect(parsedWidthZero.includes('width="0"')).toBe(false)
+
+        const docWithUndefinedWidth = {
+            type: 'doc',
+            content: [
+                {
+                    type: 'paragraph',
+                    content: [
+                        {
+                            type: 'image',
+                            attrs: {
+                                src: 'attachments/photo.png',
+                                alt: 'alt',
+                                width: undefined,
+                            },
+                        },
+                    ],
+                },
+            ],
+        }
+
+        const serialized = tipTapToMarkdown(docWithUndefinedWidth as any)
+        expect(serialized).toBe('![alt](attachments/photo.png)')
+        expect(serialized.includes('width=')).toBe(false)
+    })
+})
