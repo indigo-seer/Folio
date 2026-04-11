@@ -93,19 +93,52 @@ fn syncthing_binary_candidates() -> Vec<String> {
 }
 
 fn resolve_syncthing_binary(app: &AppHandle) -> Result<PathBuf, String> {
-    let resource_dir = app
-        .path()
-        .resource_dir()
-        .map_err(|e| format!("Unable to resolve resource directory: {e}"))?;
+    let candidates = syncthing_binary_candidates();
 
-    for candidate in syncthing_binary_candidates() {
-        let path = resource_dir.join("bin").join(candidate);
+    // 1. Try Tauri resource directory (standard install)
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        let bin_dir = resource_dir.join("bin");
+        for candidate in &candidates {
+            let path = bin_dir.join(candidate);
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+    }
+
+    // 2. Try next to executable (portable installs, Windows Program Files)
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            // Try resources/bin alongside executable
+            for candidate in &candidates {
+                let path = exe_dir.join("resources").join("bin").join(candidate);
+                if path.exists() {
+                    return Ok(path);
+                }
+            }
+            // Try bin directly (some installer layouts)
+            for candidate in &candidates {
+                let path = exe_dir.join("bin").join(candidate);
+                if path.exists() {
+                    return Ok(path);
+                }
+            }
+        }
+    }
+
+    // 3. Try current working directory (development/testing)
+    for candidate in &candidates {
+        let path = PathBuf::from("resources").join("bin").join(candidate);
+        if path.exists() {
+            return Ok(path);
+        }
+        let path = PathBuf::from("resources/bin").join(candidate);
         if path.exists() {
             return Ok(path);
         }
     }
 
-    Err("Syncthing binary not found in app resources/bin".to_string())
+    Err("Syncthing binary not found. Checked: app resources/bin, executable resources/bin, executable bin, working directory resources/bin".to_string())
 }
 
 fn write_syncthing_config(

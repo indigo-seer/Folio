@@ -33,7 +33,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["msi", "nsis", "deb", "rpm", "dmg", "app"],
     "resources": [
       "resources/bin/*"
     ],

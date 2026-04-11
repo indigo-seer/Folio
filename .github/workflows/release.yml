@@ -59,3 +59,48 @@ jobs:
           releaseBody: "Official release of Folium ${{ github.ref_name }}"
           releaseDraft: true
           prerelease: false
+
+      - name: Create Linux portable tar.gz
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          # Find the built deb package
+          DEB_FILE=$(find src-tauri/target/release/bundle/deb -name "*.deb" | head -1)
+          if [ -n "$DEB_FILE" ]; then
+            # Extract deb contents
+            TEMP_DIR=$(mktemp -d)
+            dpkg-deb -x "$DEB_FILE" "$TEMP_DIR"
+            
+            # Find the app binary and resources
+            APP_DIR="$TEMP_DIR/usr/lib/folium"
+            if [ -d "$APP_DIR" ]; then
+              # Create portable tar.gz structure
+              PORTABLE_DIR="folium-linux-x64"
+              mkdir -p "$PORTABLE_DIR"
+              
+              # Copy binary
+              if [ -f "$APP_DIR/folium" ]; then
+                cp "$APP_DIR/folium" "$PORTABLE_DIR/"
+              fi
+              
+              # Copy resources (contains syncthing binary)
+              if [ -d "$APP_DIR/resources" ]; then
+                cp -r "$APP_DIR/resources" "$PORTABLE_DIR/"
+              fi
+              
+              # Create tar.gz
+              tar -czvf "folium-linux-x64.tar.gz" "$PORTABLE_DIR"
+              
+              # Upload as release asset
+              echo "Uploading Linux portable tar.gz..."
+              
+              # Get release ID
+              REPO="${{ github.repository }}"
+              TAG="${{ github.ref_name }}"
+              
+              # Upload using gh CLI
+              gh release upload "$TAG" "folium-linux-x64.tar.gz" --repo "$REPO" || true
+              
+              # Cleanup
+              rm -rf "$TEMP_DIR" "$PORTABLE_DIR"
+            fi
+          fi
