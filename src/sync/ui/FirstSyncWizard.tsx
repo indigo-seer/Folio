@@ -62,6 +62,20 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
         onComplete()
     }
 
+    const chooseCustomLocations = async () => {
+        const next = new Map(selectedVaults)
+        for (const vault of newVaults) {
+            if (!next.has(vault.name)) continue
+            const current = next.get(vault.name) || ''
+            const chosen = prompt(`Choose location for "${vault.name}"`, current)
+            if (chosen && chosen.trim()) {
+                next.set(vault.name, chosen.trim())
+                setCustomPaths(prev => new Map(prev).set(vault.name, true))
+            }
+        }
+        setSelectedVaults(next)
+    }
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -186,6 +200,14 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
                                     Sync {selectedVaults.size} vault{selectedVaults.size !== 1 ? 's' : ''} to default location
                                 </>
                             )}
+                        </button>
+                    </div>
+                    <div className="mt-3 text-center">
+                        <button
+                            onClick={chooseCustomLocations}
+                            className="font-sans text-[13px] text-folium-accent dark:text-folium-dark-accent hover:underline"
+                        >
+                            Let me choose where to sync
                         </button>
                     </div>
                 </div>

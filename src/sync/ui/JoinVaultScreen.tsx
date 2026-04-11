@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { X, Camera, Keyboard } from 'lucide-react'
 import { syncManager } from '../index'
 import { normalizePairingTokenInput } from '../pairing/QRCode'
+import { FirstSyncWizard } from './FirstSyncWizard'
+import type { VaultInfo } from '../vaultRegistry'
 
 interface JoinVaultScreenProps {
     onClose: () => void
@@ -14,6 +16,7 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
     const [isConnecting, setIsConnecting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [mode, setMode] = useState<'camera' | 'manual'>('manual')
+    const [incomingVaults, setIncomingVaults] = useState<VaultInfo[] | null>(null)
 
     const handleConnect = async () => {
         const normalized = normalizePairingTokenInput(tokenInput)
@@ -30,7 +33,19 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
         setError(null)
 
         try {
-            await syncManager.acceptPairingCode(normalized.token)
+            const result = await syncManager.acceptPairingCode(normalized.token)
+            if (result.status === 'paired_new_vault' && result.incomingVault) {
+                setIncomingVaults([
+                    {
+                        name: result.incomingVault.name,
+                        path: result.incomingVault.name,
+                        createdAt: new Date().toISOString(),
+                        deviceId: 'remote',
+                    },
+                ])
+                setIsConnecting(false)
+                return
+            }
             onSuccess()
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to connect')
@@ -49,6 +64,16 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
 
     const normalized = normalizePairingTokenInput(tokenInput)
     const isValidCode = normalized.kind === 'full_token'
+
+    if (incomingVaults) {
+        return (
+            <FirstSyncWizard
+                newVaults={incomingVaults}
+                onComplete={onSuccess}
+                onCancel={() => setIncomingVaults(null)}
+            />
+        )
+    }
 
     return createPortal(
         <div className="fixed inset-0 z-[150] flex items-center justify-center">

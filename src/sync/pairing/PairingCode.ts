@@ -6,6 +6,7 @@ export interface PairingPayload {
   deviceName: string
   platform: string
   vaultId: string
+  vaultName: string
   expires: number
   hmac: string
 }
@@ -71,6 +72,7 @@ export async function createSignedPayloadAsync(
   deviceName: string,
   platform: string,
   vaultId: string,
+  vaultName: string,
   secret: string,
   validityMs: number = 10 * 60 * 1000
 ): Promise<string> {
@@ -80,6 +82,7 @@ export async function createSignedPayloadAsync(
     deviceName,
     platform,
     vaultId,
+    vaultName,
     expires: Date.now() + validityMs,
   }
   
@@ -94,6 +97,7 @@ export async function createSignedPayload(
   deviceName: string,
   platform: string,
   vaultId: string,
+  vaultName: string,
   secret: string,
   validityMs: number = 10 * 60 * 1000
 ): Promise<string> {
@@ -103,6 +107,7 @@ export async function createSignedPayload(
     deviceName,
     platform,
     vaultId,
+    vaultName,
     secret,
     validityMs
   )
@@ -173,7 +178,7 @@ export async function validatePairingCode(
   }
 
   if (decoded.payload.vaultId !== expectedVaultId) {
-    return { valid: false, error: 'vault_mismatch' }
+    return { valid: false, payload: decoded.payload, error: 'vault_mismatch' }
   }
 
   if (isPayloadExpired(decoded.payload)) {

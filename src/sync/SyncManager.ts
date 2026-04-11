@@ -2,20 +2,12 @@ import { isTauri, type FoliumConfig } from '../lib/config'
 import { generatePairingCode, createSignedPayload, validatePairingCode } from './pairing/PairingCode'
 import { VaultSyncWatcher } from './VaultSyncWatcher'
 import { syncthingAPI } from './syncthing/SyncthingAPI'
+import { getOrCreateVaultUid } from '../lib/vaultIdentity'
 
-function hashString(str: string): string {
-    let hash = 0
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i)
-        hash = ((hash << 5) - hash) + char
-        hash = hash & hash
-    }
-    return Math.abs(hash).toString(36).substring(0, 8)
-}
-
-function getVaultId(vaultPath: string | null): string {
+async function getVaultId(vaultPath: string | null): Promise<string> {
     if (!vaultPath) return 'folium-default'
-    return 'folium-' + hashString(vaultPath)
+    const uid = await getOrCreateVaultUid(vaultPath)
+    return `folium-${uid}`
 }
 
 export interface SyncthingStartResult {
@@ -265,7 +257,8 @@ class SyncManager {
         const deviceId = this.config.sync.deviceId
         const deviceName = this.config.sync.deviceName
         const secret = this.config.sync.deviceSecret
-        const vaultId = getVaultId(this.initializedVaultPath)
+        const vaultId = await getVaultId(this.initializedVaultPath)
+        const vaultName = this.initializedVaultPath.split(/[\\/]/).pop() || 'Vault'
 
         if (!deviceId || !deviceName || !secret) {
             throw new Error('Device not configured for pairing')
@@ -281,6 +274,7 @@ class SyncManager {
             deviceName,
             platform,
             vaultId,
+            vaultName,
             secret
         )
         
@@ -293,13 +287,13 @@ class SyncManager {
         return { code, pairingToken, qrData, expiresAt, cancel }
     }
 
-    async acceptPairingCode(fullCode: string): Promise<void> {
+    async acceptPairingCode(fullCode: string): Promise<{ status: 'paired_same_vault' | 'paired_new_vault'; incomingVault?: { id: string; name: string } }> {
         if (!this.config) {
             throw new Error('Sync not configured')
         }
 
         const secret = this.config.sync.deviceSecret
-        const vaultId = getVaultId(this.initializedVaultPath)
+        const vaultId = await getVaultId(this.initializedVaultPath)
 
         if (!secret) {
             throw new Error('Device secret not configured')
@@ -312,7 +306,16 @@ class SyncManager {
                 case 'invalid_format':
                     throw new Error('Invalid code format. Paste full token or scan QR.')
                 case 'vault_mismatch':
-                    throw new Error('Code is for a different vault')
+                    if (!validation.payload) {
+                        throw new Error('Code is for a different vault')
+                    }
+                    return {
+                        status: 'paired_new_vault',
+                        incomingVault: {
+                            id: validation.payload.vaultId,
+                            name: validation.payload.vaultName || 'Imported Vault',
+                        },
+                    }
                 case 'expired':
                     throw new Error('Code has expired. Ask for a new one.')
                 case 'invalid_signature':
@@ -340,6 +343,8 @@ class SyncManager {
         
         const { saveConfig } = await import('../lib/config')
         await saveConfig(this.config)
+
+        return { status: 'paired_same_vault' }
     }
 
     async removeDevice(deviceId: string): Promise<void> {
