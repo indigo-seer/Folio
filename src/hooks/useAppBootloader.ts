@@ -5,10 +5,12 @@ import { createStarterNote, createDefaultVault } from '../lib/onboarding';
 import { runVaultImageMigrationInBackground } from '../lib/vaultImageMigration';
 import { sweepOrphanedCache } from '../lib/imageCache';
 import { getOrCreateVaultUid, resolveWorkspaceIdentity } from '../lib/vaultIdentity';
+import type { FileSystemAPI } from './useFileSystem';
+import type { TabsAPI } from './useTabs';
 
 export function useAppBootloader(
-    fileSystem: any,
-    tabs: any,
+    fileSystem: FileSystemAPI,
+    tabs: TabsAPI,
     setWorkspaces: (ws: Workspace[]) => void,
     setActiveWorkspaceId: (id: string | null) => void,
     setBootState: (state: BootState) => void

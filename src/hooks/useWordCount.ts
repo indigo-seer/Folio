@@ -7,12 +7,13 @@ export interface WordCountData {
     readingTime: string
 }
 
-let wordCountDebounceTimer: ReturnType<typeof setTimeout> | null = null
+const debounceTimers = new WeakMap<Editor, ReturnType<typeof setTimeout>>()
 
 export function updateWordCountGlobally(editor: Editor) {
-    if (wordCountDebounceTimer) clearTimeout(wordCountDebounceTimer)
+    const existingTimer = debounceTimers.get(editor)
+    if (existingTimer) clearTimeout(existingTimer)
 
-    wordCountDebounceTimer = setTimeout(() => {
+    const timer = setTimeout(() => {
         const text = editor.getText()
         const trimmed = text.trim()
         const words = trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length
@@ -24,6 +25,7 @@ export function updateWordCountGlobally(editor: Editor) {
             detail: { words, characters, readingTime }
         }))
     }, 300)
+    debounceTimers.set(editor, timer)
 }
 
 export function useWordCount() {

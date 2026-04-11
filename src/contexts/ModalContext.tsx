@@ -57,7 +57,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
             showToast: (msg) => updateState({ toast: msg }),
             hideToast: () => updateState({ toast: null }),
             openContextMenu: (x, y, path, kind) => updateState({ contextMenu: { isOpen: true, x, y, path, kind } }),
-            closeContextMenu: () => updateState({ contextMenu: { ...state.contextMenu, isOpen: false } }),
+            closeContextMenu: () => setState(prev => ({ ...prev, contextMenu: { ...prev.contextMenu, isOpen: false } })),
             openRenameModal: (path, initialName) => updateState({ rename: { isOpen: true, path, initialName } }),
             closeRenameModal: () => updateState({ rename: { isOpen: false, path: null, initialName: '' } }),
             openFolderModal: (parentPath, shouldMove) => updateState({ folder: { isOpen: true, parentPath, shouldMove } }),

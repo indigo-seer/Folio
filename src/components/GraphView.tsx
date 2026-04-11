@@ -1,11 +1,11 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d'
 import { VaultContext } from '../contexts/VaultContext'
-import { useTheme } from '../hooks/useTheme'
+import { useSettings } from '../hooks/useSettings'
 
 export function GraphView() {
     const { notes, backlinkIndex, onWikilinkClick } = useContext(VaultContext)
-    const { theme } = useTheme()
+    const { theme } = useSettings()
     const containerRef = useRef<HTMLDivElement>(null)
     const fgRef = useRef<ForceGraphMethods>()
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 })

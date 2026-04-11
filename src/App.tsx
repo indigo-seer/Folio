@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect, Dispatch, SetStateAction } from 'react';
 import { SettingsProvider } from './hooks/useSettings';
 import { useFileSystem } from './hooks/useFileSystem';
 import { useTabs } from './hooks/useTabs';
@@ -22,6 +22,9 @@ import { MainLayout } from './components/MainLayout';
 import { ModalRoot } from './components/ModalRoot';
 import { NoteTitle } from './components/NoteTitle';
 import { useWorkspace } from './contexts/WorkspaceContext';
+import type { FileSystemAPI } from './hooks/useFileSystem';
+import type { TabsAPI } from './hooks/useTabs';
+import type { Editor as TipTapEditor } from '@tiptap/react';
 
 export enum BootState {
     Initializing,
@@ -64,7 +67,18 @@ function AppContentInner() {
     );
 }
 
-function BootloaderWrappedContent({ bootState, setBootState, fileSystem, tabs, isFocusMode, setIsFocusMode, isTypewriterMode, setIsTypewriterMode }: any) {
+interface BootloaderContentProps {
+    bootState: BootState;
+    setBootState: (s: BootState) => void;
+    fileSystem: FileSystemAPI;
+    tabs: TabsAPI;
+    isFocusMode: boolean;
+    setIsFocusMode: Dispatch<SetStateAction<boolean>>;
+    isTypewriterMode: boolean;
+    setIsTypewriterMode: Dispatch<SetStateAction<boolean>>;
+}
+
+function BootloaderWrappedContent({ bootState, setBootState, fileSystem, tabs, isFocusMode, setIsFocusMode, isTypewriterMode, setIsTypewriterMode }: BootloaderContentProps) {
     const { setWorkspaces, setActiveWorkspaceId } = useWorkspace();
 
     // Hook: App Bootloader
@@ -102,7 +116,18 @@ function BootloaderWrappedContent({ bootState, setBootState, fileSystem, tabs, i
     );
 }
 
-function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, isTypewriterMode, setIsTypewriterMode, isOnboardingOpen, handleOnboardingComplete }: any) {
+interface VaultWrappedProps {
+    fileSystem: FileSystemAPI;
+    tabs: TabsAPI;
+    isFocusMode: boolean;
+    setIsFocusMode: Dispatch<SetStateAction<boolean>>;
+    isTypewriterMode: boolean;
+    setIsTypewriterMode: Dispatch<SetStateAction<boolean>>;
+    isOnboardingOpen: boolean;
+    handleOnboardingComplete: (mode: 'pick' | 'create') => Promise<void>;
+}
+
+function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, isTypewriterMode, setIsTypewriterMode, isOnboardingOpen, handleOnboardingComplete }: VaultWrappedProps) {
     const modals = useModals();
     const [focusedPane, setFocusedPane] = useState<'main' | 'split'>('main');
 
@@ -141,13 +166,13 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
 
     const renderedTabIdRef = useRef<string | null>(null);
 
-    const auditedMainEditorUpdate = useCallback((editor: any) => {
+    const auditedMainEditorUpdate = useCallback((editor: TipTapEditor) => {
         const docSize = Number(editor?.state?.doc?.content?.size ?? 0);
         recordTypingUpdate('main', docSize);
         handleMainEditorUpdate(editor);
     }, [handleMainEditorUpdate]);
 
-    const auditedSplitEditorUpdate = useCallback((editor: any) => {
+    const auditedSplitEditorUpdate = useCallback((editor: TipTapEditor) => {
         const docSize = Number(editor?.state?.doc?.content?.size ?? 0);
         recordTypingUpdate('split', docSize);
         handleSplitEditorUpdate(editor);

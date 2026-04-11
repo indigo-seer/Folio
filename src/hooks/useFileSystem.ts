@@ -2,10 +2,7 @@ import { useState, useCallback, useRef, useMemo } from 'react'
 import { isTauri } from '../lib/config'
 import { fs, sortTree, buildVaultIndex, extractWikilinks, VaultState, FileNode } from '../lib/fs'
 import { invalidateCacheEntry, isAttachmentImagePath, setImageCacheVaultImagePaths, warmCacheForNote } from '../lib/imageCache'
-
-const IMAGE_EXTENSIONS = new Set([
-    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'tif', 'tiff', 'ico', 'heic', 'heif'
-])
+import { IMAGE_EXTENSIONS, getBasename } from '../lib/constants'
 
 function collectVaultImagePaths(tree: FileNode[]): string[] {
     const out: string[] = []
@@ -102,15 +99,18 @@ export function useFileSystem() {
 
         // Update backlink index incrementally
         setVault(prev => {
-            const noteName = path.split(/[\/\\]/).pop()?.replace(/\.md$/, '')
+            const noteName = getBasename(path).replace(/\.md$/, '')
             if (!noteName) return prev
             const newIndex = new Map(prev.backlinkIndex)
-            for (const [, sources] of newIndex.entries()) {
+            // Remove stale outgoing links from this note
+            for (const [target, sources] of newIndex.entries()) {
                 if (sources.has(noteName)) {
                     const newSources = new Set(sources)
                     newSources.delete(noteName)
+                    newIndex.set(target, newSources) // ← was missing: write back the updated set
                 }
             }
+            // Add current outgoing links from this note
             for (const link of extractWikilinks(content)) {
                 const sources = newIndex.get(link) || new Set()
                 sources.add(noteName)
@@ -185,7 +185,7 @@ export function useFileSystem() {
 
     const renameFile = useCallback(async (oldPath: string, newName: string): Promise<string> => {
         if (!vault.rootPath) throw new Error('No vault open')
-        const oldFilename = oldPath.split(/[\/\\]/).pop()!
+        const oldFilename = getBasename(oldPath)
         const isFile = oldFilename.endsWith('.md')
 
         const oldNoteName = oldFilename.replace(/\.md$/, '')
@@ -324,6 +324,12 @@ export function useFileSystem() {
         deleteFile,
         saveEditorState,
         getEditorState,
-        refreshTree
+        refreshTree,
     ])
 }
+
+/**
+ * Type of the object returned by `useFileSystem`.
+ * Use this instead of `any` at every consumer boundary.
+ */
+export type FileSystemAPI = ReturnType<typeof useFileSystem>

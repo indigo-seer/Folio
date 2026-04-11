@@ -8,11 +8,14 @@ import { GraphView } from './GraphView';
 import { useModals } from '../contexts/ModalContext';
 import { startAnimationAudit } from '../lib/performanceAudit';
 import { setImageCacheVaultUid } from '../lib/imageCache';
+import type { FileSystemAPI } from '../hooks/useFileSystem';
+import type { TabsAPI } from '../hooks/useTabs';
+import type { FileOperationsAPI } from '../hooks/useFileOperations';
 
 interface MainLayoutProps {
-    fileSystem: any;
-    tabs: any;
-    fileOperations: any;
+    fileSystem: FileSystemAPI;
+    tabs: TabsAPI;
+    fileOperations: FileOperationsAPI;
     activeTabId: string | null;
     focusedPane?: 'main' | 'split';
     onFocusPane?: (pane: 'main' | 'split') => void;

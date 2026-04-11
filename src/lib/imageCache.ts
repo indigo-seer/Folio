@@ -1,13 +1,9 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 
 import { isTauri } from './config'
+import { RASTER_CACHE_EXTENSIONS, IMAGE_EXTENSIONS as ATTACHMENT_IMAGE_EXTENSIONS, normalizePathSeparators } from './constants'
 
-const ATTACHMENT_IMAGE_EXTENSIONS = new Set([
-    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'tif', 'tiff', 'ico', 'heic', 'heif'
-])
-const RASTER_CACHE_EXTENSIONS = new Set([
-    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif', 'tif', 'tiff', 'ico', 'heic', 'heif'
-])
+
 const MAX_CONCURRENT_CACHE_JOBS = 1
 
 let vaultRootPath: string | null = null
@@ -23,10 +19,6 @@ let activeWorkers = 0
 
 type CacheUpdateListener = (absolutePath: string, displayUrl: string) => void
 const listeners = new Set<CacheUpdateListener>()
-
-function normalizePathSeparators(path: string): string {
-    return path.replace(/\\/g, '/')
-}
 
 function normalizeLookupPath(path: string): string {
     return normalizePathSeparators(path).replace(/^\.?\//, '').trim().toLowerCase()

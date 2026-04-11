@@ -242,3 +242,9 @@ export function useTabs() {
         clearTabs
     }
 }
+
+/**
+ * Type of the object returned by `useTabs`.
+ * Use this instead of `any` at every consumer boundary.
+ */
+export type TabsAPI = ReturnType<typeof useTabs>

@@ -5,6 +5,10 @@ import { Palette, Type, Keyboard, Folder, HardDrive } from 'lucide-react'
 import { Workspace } from '../lib/config'
 import { useCacheSize } from '../hooks/useCacheSize'
 
+// ---------------------------------------------------------
+// Types & Props
+// ---------------------------------------------------------
+
 interface SettingsModalProps {
     onClose: () => void
     workspaces: Workspace[]
@@ -12,6 +16,10 @@ interface SettingsModalProps {
     onRemoveWorkspace: (id: string) => void
     onUpdateWorkspaceName: (id: string, newName: string) => void
 }
+
+// ---------------------------------------------------------
+// Workspace Row Component
+// ---------------------------------------------------------
 
 function WorkspaceRow({
     workspace,
@@ -40,7 +48,7 @@ function WorkspaceRow({
         if (trimmed && trimmed !== workspace.displayName) {
             onUpdateName(trimmed)
         } else {
-            setTempName(workspace.displayName) // Revert if blank or unchanged
+            setTempName(workspace.displayName)
         }
         setIsEditing(false)
     }
@@ -105,18 +113,150 @@ function WorkspaceRow({
     )
 }
 
-export function SettingsModal({
-    onClose,
-    workspaces,
-    activeWorkspaceId,
-    onRemoveWorkspace,
-    onUpdateWorkspaceName
-}: SettingsModalProps) {
-    const {
-        theme, setTheme,
-        fontSize, setFontSize,
-        typewriterBlur, setTypewriterBlur
-    } = useSettings()
+// ---------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------
+
+const FoliumLogo = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 654 654" className="w-[22px] h-[22px] text-folium-text-secondary/60 dark:text-folium-dark-text-secondary/60 fill-current">
+        <path d="M585.24,0H68.76A68.75,68.75,0,0,0,0,68.76V585.24A68.75,68.75,0,0,0,68.76,654H585.24A68.75,68.75,0,0,0,654,585.24V68.76A68.75,68.75,0,0,0,585.24,0ZM44.46,585.24v-23.8H128.1a48.6,48.6,0,0,0,48.54-48.54V146.76A48.6,48.6,0,0,0,128.1,98.22H44.46V68.76a24.33,24.33,0,0,1,24.3-24.3H420V609.54H68.76A24.33,24.33,0,0,1,44.46,585.24Zm565.08,0a24.33,24.33,0,0,1-24.3,24.3H464.43V44.46H585.24a24.33,24.33,0,0,1,24.3,24.3Z" />
+        <path d="M537.59,98.22a10.11,10.11,0,0,0-10.11,10.11V550.52a10.11,10.11,0,1,0,20.21,0V108.33A10.11,10.11,0,0,0,537.59,98.22Z" />
+    </svg>
+)
+
+function SettingsSidebar({ activeSection, onScrollToSection }: { activeSection: string, onScrollToSection: (id: string) => void }) {
+    const navItems = [
+        { id: 'appearance', label: 'Appearance', icon: Palette },
+        { id: 'typography', label: 'Typography', icon: Type },
+        { id: 'writing-modes', label: 'Writing Modes', icon: Keyboard },
+        { id: 'image-cache', label: 'Image Cache', icon: HardDrive },
+        { id: 'workspaces', label: 'Workspaces', icon: Folder },
+    ]
+
+    return (
+        <div className="w-[200px] sm:w-[240px] flex-shrink-0 border-r border-folium-border dark:border-folium-dark-border bg-[#FDFCFB] dark:bg-folium-dark-bg-secondary flex flex-col pt-8">
+            <div className="px-4 mb-6">
+                <div className="flex items-center gap-[10px] px-4">
+                    <FoliumLogo />
+                    <span className="font-sans font-bold text-[#A2A4B2] dark:text-[#7A7C8A] text-[21px] tracking-tight mt-[1px]">Folium</span>
+                </div>
+            </div>
+            <nav className="flex flex-col gap-1 px-4">
+                {navItems.map(item => {
+                    const Icon = item.icon
+                    const isActive = activeSection === item.id
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => onScrollToSection(item.id)}
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${isActive
+                                    ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
+                                    : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
+                                }`}
+                        >
+                            <Icon className="w-[18px] h-[18px]" strokeWidth={2} />
+                            {item.label}
+                        </button>
+                    )
+                })}
+            </nav>
+        </div>
+    )
+}
+
+function SectionAppearance() {
+    const { theme, setTheme } = useSettings()
+
+    return (
+        <div id="settings-appearance" className="flex flex-col gap-5 scroll-mt-6">
+            <div className="flex justify-between items-start">
+                <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Appearance</h4>
+            </div>
+            <div className="flex items-center justify-between border-b border-folium-border/50 dark:border-folium-dark-border/50 pb-5">
+                <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Theme</span>
+                <div className="flex bg-[#EAE8E2] dark:bg-folium-dark-bg-secondary p-1 rounded-[10px] shadow-sm">
+                    {(['light', 'dark', 'system'] as const).map((t) => (
+                        <button
+                            key={t}
+                            onClick={() => setTheme(t)}
+                            className={`px-4 py-1.5 font-sans text-[13px] capitalize rounded-md transition-all duration-200 ${theme === t
+                                    ? 'bg-white dark:bg-folium-dark-bg text-[#344054] dark:text-folium-dark-text shadow-[0_1px_3px_rgba(0,0,0,0.1)] font-medium'
+                                    : 'text-[#828896] dark:text-folium-dark-text-secondary hover:text-[#344054] dark:hover:text-folium-dark-text font-medium'
+                                }`}
+                        >
+                            {t}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function SectionTypography() {
+    const { fontSize, setFontSize } = useSettings()
+
+    return (
+        <div id="settings-typography" className="flex flex-col gap-5 scroll-mt-6">
+            <div className="flex justify-between items-start pt-2">
+                <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Typography</h4>
+            </div>
+            <div className="flex flex-col gap-4 border-b border-folium-border/50 dark:border-folium-dark-border/50 pb-6">
+                <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Base Font Size</span>
+                <div className="grid grid-cols-3 gap-3">
+                    {(['compact', 'default', 'relaxed'] as const).map((size) => (
+                        <button
+                            key={size}
+                            onClick={() => setFontSize(size)}
+                            className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all duration-200 ${fontSize === size
+                                    ? 'bg-[#F2F6FA] border-[#A8C7FA] text-[#295DAC] shadow-[0_0_0_1px_#A8C7FA] dark:bg-folium-dark-accent/10 dark:border-folium-dark-accent dark:text-folium-dark-accent dark:shadow-[0_0_0_1px_rgba(123,158,217,0.5)]'
+                                    : 'bg-white border-[#E8E6DF] text-[#7A869A] shadow-sm hover:border-[#D1CECB] dark:bg-folium-dark-bg-secondary dark:border-folium-dark-border dark:text-folium-dark-text-secondary dark:hover:border-folium-dark-text/30'
+                                }`}
+                        >
+                            <span className="font-sans text-[14px] capitalize font-semibold mb-1">{size}</span>
+                            <span className="font-sans text-[12px] opacity-70">
+                                {size === 'compact' ? '15px' : size === 'default' ? '17px' : '20px'}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function SectionWritingModes() {
+    const { typewriterBlur, setTypewriterBlur } = useSettings()
+
+    return (
+        <div id="settings-writing-modes" className="flex flex-col gap-5 scroll-mt-6">
+            <div className="flex justify-between items-start pt-2">
+                <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Writing Modes</h4>
+            </div>
+            <div className="flex items-center justify-between pb-5 border-b border-folium-border/50 dark:border-folium-dark-border/50">
+                <div className="flex flex-col">
+                    <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Blur for Typewriter</span>
+                    <span className="font-sans text-[13px] text-[#8692A6] dark:text-folium-dark-text-secondary mt-0.5">Masks surrounding text when typewriter mode is active</span>
+                </div>
+                <button
+                    onClick={() => setTypewriterBlur(!typewriterBlur)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-[3px] border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${typewriterBlur ? 'bg-[#3b5b8c] dark:bg-folium-dark-accent' : 'bg-[#E5E7EB] dark:bg-folium-dark-border'
+                        }`}
+                    role="switch"
+                    aria-checked={typewriterBlur}
+                >
+                    <span
+                        aria-hidden="true"
+                        className={`pointer-events-none inline-block h-4 w-4 mt-[1px] transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${typewriterBlur ? 'translate-x-[18px]' : 'translate-x-[2px]'
+                            }`}
+                    />
+                </button>
+            </div>
+        </div>
+    )
+}
+
+function SectionImageCache() {
     const {
         cacheSizeBytes,
         cacheSizeMB,
@@ -127,6 +267,99 @@ export function SettingsModal({
         openCacheFolder,
     } = useCacheSize()
 
+    const cacheUsageLabel = cacheSizeMB > 0 ? `${cacheSizeMB} MB` : '0 MB'
+    const largeCacheLabel = cacheSizeBytes >= 1024 * 1024 * 1024
+        ? `${(cacheSizeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+        : `${cacheSizeMB} MB`
+
+    return (
+        <div id="settings-image-cache" className="flex flex-col gap-5 scroll-mt-6">
+            <div className="flex justify-between items-start pt-2">
+                <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Image Cache</h4>
+            </div>
+            <div className="flex flex-col gap-2 pb-5 border-b border-folium-border/50 dark:border-folium-dark-border/50">
+                <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                        <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Image Cache</span>
+                        <span className="font-sans text-[13px] text-[#8692A6] dark:text-folium-dark-text-secondary mt-0.5">Stores optimized copies of large images for faster rendering.</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => void openCacheFolder()}
+                            disabled={isOpeningFolder}
+                            className="px-3 py-1.5 rounded-md text-[12px] font-medium text-[#717F9A] hover:bg-black/5 dark:text-[#8895AD] dark:hover:bg-white/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {isOpeningFolder ? 'Opening...' : 'Open Folder'}
+                        </button>
+                        <button
+                            onClick={() => void clearCache()}
+                            disabled={isCacheLoading}
+                            className="px-3 py-1.5 rounded-md text-[12px] font-medium text-[#717F9A] hover:bg-black/5 dark:text-[#8895AD] dark:hover:bg-white/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {isCacheLoading ? 'Clearing...' : 'Clear Cache'}
+                        </button>
+                    </div>
+                </div>
+                <div className="font-sans text-[13px] text-[#5F6B85] dark:text-folium-dark-text-secondary">
+                    Currently using: {cacheUsageLabel}
+                </div>
+                {isCacheLarge && (
+                    <div className="font-sans text-[13px] text-amber-600 dark:text-amber-400">
+                        Cache is large ({largeCacheLabel}). Consider clearing to free up space.
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+function SectionWorkspaces({
+    workspaces,
+    activeWorkspaceId,
+    onRemoveWorkspace,
+    onUpdateWorkspaceName
+}: {
+    workspaces: Workspace[]
+    activeWorkspaceId: string | null
+    onRemoveWorkspace: (id: string) => void
+    onUpdateWorkspaceName: (id: string, newName: string) => void
+}) {
+    return (
+        <div id="settings-workspaces" className="flex flex-col gap-5 scroll-mt-6">
+            <div className="flex justify-between items-start pt-2">
+                <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Workspaces</h4>
+            </div>
+            <div className="flex flex-col gap-3">
+                {workspaces.map((workspace) => (
+                    <WorkspaceRow
+                        key={workspace.id}
+                        workspace={workspace}
+                        isActive={workspace.id === activeWorkspaceId}
+                        onUpdateName={(name) => onUpdateWorkspaceName(workspace.id, name)}
+                        onRemove={() => onRemoveWorkspace(workspace.id)}
+                    />
+                ))}
+                {workspaces.length === 0 && (
+                    <div className="px-4 py-8 text-center text-[13px] text-folium-text-secondary dark:text-folium-dark-text-secondary/70 border border-dashed border-folium-border dark:border-folium-dark-border/50 rounded-xl">
+                        No workspaces connected
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// ---------------------------------------------------------
+// Main Modal Export
+// ---------------------------------------------------------
+
+export function SettingsModal({
+    onClose,
+    workspaces,
+    activeWorkspaceId,
+    onRemoveWorkspace,
+    onUpdateWorkspaceName
+}: SettingsModalProps) {
     const [activeSection, setActiveSection] = useState('appearance')
     const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -147,18 +380,6 @@ export function SettingsModal({
         }
     }
 
-    const cacheUsageLabel = cacheSizeMB > 0 ? `${cacheSizeMB} MB` : '0 MB'
-    const largeCacheLabel = cacheSizeBytes >= 1024 * 1024 * 1024
-        ? `${(cacheSizeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
-        : `${cacheSizeMB} MB`
-
-    const FoliumLogo = () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 654 654" className="w-[22px] h-[22px] text-folium-text-secondary/60 dark:text-folium-dark-text-secondary/60 fill-current">
-            <path d="M585.24,0H68.76A68.75,68.75,0,0,0,0,68.76V585.24A68.75,68.75,0,0,0,68.76,654H585.24A68.75,68.75,0,0,0,654,585.24V68.76A68.75,68.75,0,0,0,585.24,0ZM44.46,585.24v-23.8H128.1a48.6,48.6,0,0,0,48.54-48.54V146.76A48.6,48.6,0,0,0,128.1,98.22H44.46V68.76a24.33,24.33,0,0,1,24.3-24.3H420V609.54H68.76A24.33,24.33,0,0,1,44.46,585.24Zm565.08,0a24.33,24.33,0,0,1-24.3,24.3H464.43V44.46H585.24a24.33,24.33,0,0,1,24.3,24.3Z" />
-            <path d="M537.59,98.22a10.11,10.11,0,0,0-10.11,10.11V550.52a10.11,10.11,0,1,0,20.21,0V108.33A10.11,10.11,0,0,0,537.59,98.22Z" />
-        </svg>
-    )
-
     return createPortal(
         <div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/10 dark:bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 p-4 sm:p-6"
@@ -168,70 +389,7 @@ export function SettingsModal({
                 className="bg-[#FCFBFA] dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-xl shadow-2xl w-full max-w-[840px] h-[640px] max-h-[90vh] pointer-events-auto animate-in zoom-in-[0.98] duration-200 flex overflow-hidden"
                 onMouseDown={(e) => e.stopPropagation()}
             >
-                {/* Left Sidebar */}
-                <div className="w-[200px] sm:w-[240px] flex-shrink-0 border-r border-folium-border dark:border-folium-dark-border bg-[#FDFCFB] dark:bg-folium-dark-bg-secondary flex flex-col pt-8">
-                    {/* Brand */}
-                    <div className="px-4 mb-6">
-                        <div className="flex items-center gap-[10px] px-4">
-                            <FoliumLogo />
-                            <span className="font-sans font-bold text-[#A2A4B2] dark:text-[#7A7C8A] text-[21px] tracking-tight mt-[1px]">Folium</span>
-                        </div>
-                    </div>
-
-                    {/* Nav */}
-                    <nav className="flex flex-col gap-1 px-4">
-                        <button
-                            onClick={() => scrollToSection('appearance')}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${activeSection === 'appearance'
-                                ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
-                                : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
-                                }`}
-                        >
-                            <Palette className="w-[18px] h-[18px]" strokeWidth={2} />
-                            Appearance
-                        </button>
-                        <button
-                            onClick={() => scrollToSection('typography')}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${activeSection === 'typography'
-                                ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
-                                : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
-                                }`}
-                        >
-                            <Type className="w-[18px] h-[18px]" strokeWidth={2} />
-                            Typography
-                        </button>
-                        <button
-                            onClick={() => scrollToSection('writing-modes')}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${activeSection === 'writing-modes'
-                                ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
-                                : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
-                                }`}
-                        >
-                            <Keyboard className="w-[18px] h-[18px]" strokeWidth={2} />
-                            Writing Modes
-                        </button>
-                        <button
-                            onClick={() => scrollToSection('image-cache')}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${activeSection === 'image-cache'
-                                ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
-                                : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
-                                }`}
-                        >
-                            <HardDrive className="w-[18px] h-[18px]" strokeWidth={2} />
-                            Image Cache
-                        </button>
-                        <button
-                            onClick={() => scrollToSection('workspaces')}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-md font-sans text-[14px] transition-colors ${activeSection === 'workspaces'
-                                ? 'bg-black/5 dark:bg-white/10 text-folium-text dark:text-folium-dark-text font-medium'
-                                : 'text-folium-text-secondary dark:text-folium-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
-                                }`}
-                        >
-                            <Folder className="w-[18px] h-[18px]" strokeWidth={2} />
-                            Workspaces
-                        </button>
-                    </nav>
-                </div>
+                <SettingsSidebar activeSection={activeSection} onScrollToSection={scrollToSection} />
 
                 {/* Right Content */}
                 <div className="flex-1 flex flex-col min-w-0 bg-[#FDFCFB] dark:bg-folium-dark-bg">
@@ -256,154 +414,17 @@ export function SettingsModal({
                         className="flex-1 overflow-y-auto px-10 py-8 scroll-smooth"
                     >
                         <div className="flex flex-col gap-8 max-w-xl pb-16">
-
-                            {/* APPEARANCE ANCHOR */}
-                            <div id="settings-appearance" className="flex flex-col gap-5 scroll-mt-6">
-                                <div className="flex justify-between items-start">
-                                    <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Appearance</h4>
-                                </div>
-
-                                <div className="flex items-center justify-between border-b border-folium-border/50 dark:border-folium-dark-border/50 pb-5">
-                                    <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Theme</span>
-                                    <div className="flex bg-[#EAE8E2] dark:bg-folium-dark-bg-secondary p-1 rounded-[10px] shadow-sm">
-                                        {(['light', 'dark', 'system'] as const).map((t) => (
-                                            <button
-                                                key={t}
-                                                onClick={() => setTheme(t)}
-                                                className={`px-4 py-1.5 font-sans text-[13px] capitalize rounded-md transition-all duration-200 ${theme === t
-                                                    ? 'bg-white dark:bg-folium-dark-bg text-[#344054] dark:text-folium-dark-text shadow-[0_1px_3px_rgba(0,0,0,0.1)] font-medium'
-                                                    : 'text-[#828896] dark:text-folium-dark-text-secondary hover:text-[#344054] dark:hover:text-folium-dark-text font-medium'
-                                                    }`}
-                                            >
-                                                {t}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* TYPOGRAPHY ANCHOR */}
-                            <div id="settings-typography" className="flex flex-col gap-5 scroll-mt-6">
-                                <div className="flex justify-between items-start pt-2">
-                                    <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Typography</h4>
-                                </div>
-
-                                <div className="flex flex-col gap-4 border-b border-folium-border/50 dark:border-folium-dark-border/50 pb-6">
-                                    <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Base Font Size</span>
-
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {(['compact', 'default', 'relaxed'] as const).map((size) => (
-                                            <button
-                                                key={size}
-                                                onClick={() => setFontSize(size)}
-                                                className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all duration-200 ${fontSize === size
-                                                    ? 'bg-[#F2F6FA] border-[#A8C7FA] text-[#295DAC] shadow-[0_0_0_1px_#A8C7FA] dark:bg-folium-dark-accent/10 dark:border-folium-dark-accent dark:text-folium-dark-accent dark:shadow-[0_0_0_1px_rgba(123,158,217,0.5)]'
-                                                    : 'bg-white border-[#E8E6DF] text-[#7A869A] shadow-sm hover:border-[#D1CECB] dark:bg-folium-dark-bg-secondary dark:border-folium-dark-border dark:text-folium-dark-text-secondary dark:hover:border-folium-dark-text/30'
-                                                    }`}
-                                            >
-                                                <span className="font-sans text-[14px] capitalize font-semibold mb-1">{size}</span>
-                                                <span className="font-sans text-[12px] opacity-70">
-                                                    {size === 'compact' ? '15px' : size === 'default' ? '17px' : '20px'}
-                                                </span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            {/* WRITING MODES ANCHOR */}
-                            <div id="settings-writing-modes" className="flex flex-col gap-5 scroll-mt-6">
-                                <div className="flex justify-between items-start pt-2">
-                                    <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Writing Modes</h4>
-                                </div>
-
-                                <div className="flex items-center justify-between pb-5 border-b border-folium-border/50 dark:border-folium-dark-border/50">
-                                    <div className="flex flex-col">
-                                        <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Blur for Typewriter</span>
-                                        <span className="font-sans text-[13px] text-[#8692A6] dark:text-folium-dark-text-secondary mt-0.5">Masks surrounding text when typewriter mode is active</span>
-                                    </div>
-                                    <button
-                                        onClick={() => setTypewriterBlur(!typewriterBlur)}
-                                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-[3px] border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${typewriterBlur ? 'bg-[#3b5b8c] dark:bg-folium-dark-accent' : 'bg-[#E5E7EB] dark:bg-folium-dark-border'
-                                            }`}
-                                        role="switch"
-                                        aria-checked={typewriterBlur}
-                                    >
-                                        <span
-                                            aria-hidden="true"
-                                            className={`pointer-events-none inline-block h-4 w-4 mt-[1px] transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${typewriterBlur ? 'translate-x-[18px]' : 'translate-x-[2px]'
-                                                }`}
-                                        />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* IMAGE CACHE ANCHOR */}
-                            <div id="settings-image-cache" className="flex flex-col gap-5 scroll-mt-6">
-                                <div className="flex justify-between items-start pt-2">
-                                    <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Image Cache</h4>
-                                </div>
-
-                                <div className="flex flex-col gap-2 pb-5 border-b border-folium-border/50 dark:border-folium-dark-border/50">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex flex-col">
-                                            <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Image Cache</span>
-                                            <span className="font-sans text-[13px] text-[#8692A6] dark:text-folium-dark-text-secondary mt-0.5">Stores optimized copies of large images for faster rendering.</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => void openCacheFolder()}
-                                                disabled={isOpeningFolder}
-                                                className="px-3 py-1.5 rounded-md text-[12px] font-medium text-[#717F9A] hover:bg-black/5 dark:text-[#8895AD] dark:hover:bg-white/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                                            >
-                                                {isOpeningFolder ? 'Opening...' : 'Open Folder'}
-                                            </button>
-                                            <button
-                                                onClick={() => void clearCache()}
-                                                disabled={isCacheLoading}
-                                                className="px-3 py-1.5 rounded-md text-[12px] font-medium text-[#717F9A] hover:bg-black/5 dark:text-[#8895AD] dark:hover:bg-white/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                                            >
-                                                {isCacheLoading ? 'Clearing...' : 'Clear Cache'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="font-sans text-[13px] text-[#5F6B85] dark:text-folium-dark-text-secondary">
-                                        Currently using: {cacheUsageLabel}
-                                    </div>
-                                    {isCacheLarge && (
-                                        <div className="font-sans text-[13px] text-amber-600 dark:text-amber-400">
-                                            Cache is large ({largeCacheLabel}). Consider clearing to free up space.
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* WORKSPACES ANCHOR */}
-                            <div id="settings-workspaces" className="flex flex-col gap-5 scroll-mt-6">
-                                <div className="flex justify-between items-start pt-2">
-                                    <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Workspaces</h4>
-                                </div>
-                                <div className="flex flex-col gap-3">
-                                    {workspaces.map(workspace => (
-                                        <WorkspaceRow
-                                            key={workspace.id}
-                                            workspace={workspace}
-                                            isActive={workspace.id === activeWorkspaceId}
-                                            onUpdateName={(name) => onUpdateWorkspaceName(workspace.id, name)}
-                                            onRemove={() => onRemoveWorkspace(workspace.id)}
-                                        />
-                                    ))}
-                                    {workspaces.length === 0 && (
-                                        <div className="px-4 py-8 text-center text-[13px] text-folium-text-secondary dark:text-folium-dark-text-secondary/70 border border-dashed border-folium-border dark:border-folium-dark-border/50 rounded-xl">
-                                            No workspaces connected
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
+                            <SectionAppearance />
+                            <SectionTypography />
+                            <SectionWritingModes />
+                            <SectionImageCache />
+                            <SectionWorkspaces
+                                workspaces={workspaces}
+                                activeWorkspaceId={activeWorkspaceId}
+                                onRemoveWorkspace={onRemoveWorkspace}
+                                onUpdateWorkspaceName={onUpdateWorkspaceName}
+                            />
                         </div>
-
                     </div>
                 </div>
             </div>

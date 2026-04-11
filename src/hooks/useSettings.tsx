@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { FoliumConfig, UIConfig, saveConfig, loadConfig } from '../lib/config'
 
 interface SettingsContextValue {
@@ -17,14 +17,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<UIConfig['theme']>('system')
     const [fontSize, setFontSizeState] = useState<UIConfig['fontSize']>('default')
     const [typewriterBlur, setTypewriterBlurState] = useState<boolean>(true)
-    const [configRef, setConfigRef] = useState<FoliumConfig | null>(null)
+    // Use a ref (not state) so changes don't retrigger the save effect.
+    const configRef = useRef<FoliumConfig | null>(null)
 
     // First boot fetch - loads from disk or memory based on platform
     useEffect(() => {
         let mounted = true
         loadConfig().then(config => {
             if (mounted) {
-                setConfigRef(config)
+                configRef.current = config
                 setThemeState(config.ui.theme || 'system')
                 setFontSizeState(config.ui.fontSize || 'default')
                 setTypewriterBlurState(config.ui.typewriterBlur ?? true)
@@ -35,21 +36,23 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     // Debounced Config Saver mapped to local state changes
     useEffect(() => {
-        if (!configRef) return
+        const config = configRef.current
+        if (!config) return
 
         // Fast UI diff check to avoid unnecessary I/O
         let changed = false
-        const newConfig = { ...configRef }
+        const newConfig = { ...config, ui: { ...config.ui } }
 
         if (newConfig.ui.theme !== theme) { newConfig.ui.theme = theme; changed = true; }
         if (newConfig.ui.fontSize !== fontSize) { newConfig.ui.fontSize = fontSize; changed = true; }
         if (newConfig.ui.typewriterBlur !== typewriterBlur) { newConfig.ui.typewriterBlur = typewriterBlur; changed = true; }
 
         if (changed) {
-            setConfigRef(newConfig)
+            configRef.current = newConfig  // mutate ref, no re-render triggered
             saveConfig(newConfig).catch(console.error)
         }
-    }, [theme, fontSize, typewriterBlur, configRef])
+    }, [theme, fontSize, typewriterBlur])
+
 
     // Apply exact visual changes out-of-band to DOM (e.g tailwind dark mode, font sizing on html/body bounds)
     useEffect(() => {

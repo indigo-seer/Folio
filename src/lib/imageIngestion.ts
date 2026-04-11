@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 
 import { isTauri } from './config'
 import { getOrCreateVaultUid } from './vaultIdentity'
+import { normalizePathSeparators } from './constants'
 
 export interface IngestedImage {
     bytes: Uint8Array
@@ -85,9 +86,7 @@ export function getParentDirectory(path: string): string {
     return trimmed.slice(0, idx)
 }
 
-function normalizePathSeparators(path: string): string {
-    return path.replace(/\\/g, '/')
-}
+
 
 export function isVaultAttachmentAbsolutePath(src: string, vaultRoot: string): boolean {
     const normalizedSrc = normalizePathSeparators(src)

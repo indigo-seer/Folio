@@ -1,4 +1,5 @@
 import { parseWikilinkInner } from '../extensions/Wikilink';
+import { IMAGE_EXTENSIONS as IMAGE_EXT_SET } from './constants';
 
 /**
  * Markdown ↔ TipTap JSON conversion utilities.
@@ -31,15 +32,11 @@ export interface ReferenceStyleDefinition {
     title: string | null
 }
 
-const IMAGE_EXTENSIONS = [
-    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'heic', 'heif', 'tiff', 'tif'
-]
-
 function isImagePath(src: string): boolean {
     const clean = src.split('#')[0].split('?')[0].toLowerCase()
     const dot = clean.lastIndexOf('.')
     if (dot === -1) return false
-    return IMAGE_EXTENSIONS.includes(clean.slice(dot + 1))
+    return IMAGE_EXT_SET.has(clean.slice(dot + 1))
 }
 
 function defaultAltFromPath(src: string): string {

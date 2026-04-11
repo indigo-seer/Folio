@@ -9,16 +9,13 @@ import {
 import { fs } from '../lib/fs';
 import { updateWordCountGlobally } from './useWordCount';
 import { detectCorruption } from '../lib/corruptionDetector';
+import type { FileSystemAPI } from './useFileSystem';
+import type { TabData } from './useTabs';
 
 interface UseEditorStateProps {
     activeTabId: string | null;
-    tabs: any[];
-    fileSystem: {
-        readFile: (path: string) => Promise<string>;
-        writeFile: (path: string, content: string) => Promise<void>;
-        getEditorState: (path: string) => { scroll: number, cursor: number };
-        saveEditorState: (path: string, state: { scroll: number, cursor: number }) => void;
-    };
+    tabs: TabData[];
+    fileSystem: Pick<FileSystemAPI, 'readFile' | 'writeFile' | 'getEditorState' | 'saveEditorState'>;
     isMoveModalOpen: boolean;
     vaultRootPath: string | null;
 }
@@ -98,7 +95,7 @@ export function useEditorState({
                                 if (!shouldWrite) {
                                     console.warn('[Folium Debug] Tab-switch flush blocked by external file change:', prevTab.path);
                                 } else {
-                                    console.log('[Folium Debug] Tab-switch flush:', prevTab.path, 'length:', md.length);
+                                    if (import.meta.env.DEV) console.log('[Folium Debug] Tab-switch flush:', prevTab.path, 'length:', md.length);
                                     await fs.writeFile(prevTab.path, md);
                                     lastKnownDiskByPathRef.current.set(prevTab.path, md);
                                     lastFlushedTabRef.current = renderedTabIdRef.current;
@@ -253,11 +250,11 @@ export function useEditorState({
                 const md = restoreReferenceStyleLinks(rawMarkdown, definitions);
                 const { shouldWrite } = await checkExternalChangeBeforeWrite(tab.path, md);
                 if (!shouldWrite) return;
-                console.log('[Folium Debug] Autosave: markdown length:', md.length, 'preview:', md.substring(0, 100));
+                if (import.meta.env.DEV) console.log('[Folium Debug] Autosave: markdown length:', md.length, 'preview:', md.substring(0, 100));
                 await fileSystem.writeFile(tab.path, md);
                 lastKnownDiskByPathRef.current.set(tab.path, md);
                 setExternalChangeWarning(null);
-                console.log('[Folium Debug] Autosave: Write complete');
+                if (import.meta.env.DEV) console.log('[Folium Debug] Autosave: Write complete');
             } catch (err) {
                 console.error('[Folium Debug] Autosave FAILED:', err);
             }

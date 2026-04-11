@@ -3,6 +3,8 @@ import { loadConfig, saveConfig, Workspace } from '../lib/config';
 import { BootState } from '../App';
 import { runVaultImageMigrationInBackground } from '../lib/vaultImageMigration';
 import { getOrCreateVaultUid, resolveWorkspaceIdentity } from '../lib/vaultIdentity';
+import type { FileSystemAPI } from '../hooks/useFileSystem';
+import type { TabsAPI } from '../hooks/useTabs';
 
 interface WorkspaceContextType {
     workspaces: Workspace[];
@@ -25,8 +27,8 @@ export function WorkspaceProvider({
     showToast
 }: {
     children: ReactNode;
-    fileSystem: any;
-    tabs: any;
+    fileSystem: FileSystemAPI;
+    tabs: TabsAPI;
     setBootState: (state: BootState) => void;
     showToast: (msg: string) => void;
 }) {

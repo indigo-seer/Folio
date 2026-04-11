@@ -1,10 +1,12 @@
 import { useCallback, useMemo } from 'react';
 import { useModals } from '../contexts/ModalContext';
 import { exportNoteAsPdf } from '../lib/pdfExport';
+import type { FileSystemAPI } from './useFileSystem';
+import type { TabsAPI } from './useTabs';
 
 interface UseFileOperationsProps {
-    fileSystem: any;
-    tabs: any;
+    fileSystem: FileSystemAPI;
+    tabs: TabsAPI;
     activeTabId: string | null;
     renderedTabIdRef: React.MutableRefObject<string | null>;
     setIsNewNote: (isNew: boolean) => void;
@@ -84,6 +86,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
             return path;
         } catch (err) {
             console.error('Failed to create note:', err);
+            modals.showToast('Failed to create note.');
             return null;
         }
     }, [fileSystem, tabs, setIsNewNote]);
@@ -100,6 +103,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
             }
         } catch (err) {
             console.error('Failed to create folder:', err);
+            modals.showToast('Failed to create folder.');
         }
     }, [fileSystem, modals]);
 
@@ -132,6 +136,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
                 }
             } catch (err) {
                 console.error('Failed to create stub note:', err);
+                modals.showToast('Failed to create stub note.');
             }
         }
     }, [fileSystem, openPathInMainTab, openPathInSplitTab]);
@@ -173,6 +178,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
             }
         } catch (err) {
             console.error('Failed to rename file:', err);
+            modals.showToast('Failed to rename file.');
         }
     }, [modals.state.rename.path, tabs, activeTabId, fileSystem, renderedTabIdRef]);
 
@@ -203,6 +209,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
             modals.closeMoveModal();
         } catch (err) {
             console.error('Failed to move file/folder:', err);
+            modals.showToast('Failed to move file or folder.');
         }
     }, [modals, tabs, activeTabId, fileSystem, renderedTabIdRef]);
 
@@ -215,6 +222,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
             await handleMoveFile(newFolderPath);
         } catch (err) {
             console.error('Failed to create folder & move:', err);
+            modals.showToast('Failed to create folder and move.');
         }
     }, [fileSystem, handleMoveFile]);
 
@@ -240,6 +248,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
             }
         } catch (err) {
             console.error('Failed to delete file/folder:', err);
+            modals.showToast('Failed to delete file or folder.');
         }
     }, [tabs, fileSystem]);
 
@@ -331,3 +340,9 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         handleExportNoteAsPdf
     ]);
 }
+
+/**
+ * Type of the object returned by `useFileOperations`.
+ * Use this instead of `any` at every consumer boundary.
+ */
+export type FileOperationsAPI = ReturnType<typeof useFileOperations>
