@@ -10,11 +10,13 @@ interface AddDeviceModalProps {
 
 export function AddDeviceModal({ onClose }: AddDeviceModalProps) {
     const [code, setCode] = useState<string>('')
+    const [pairingToken, setPairingToken] = useState<string>('')
     const [qrDataUrl, setQrDataUrl] = useState<string>('')
     const [expiresAt, setExpiresAt] = useState<Date | null>(null)
     const [timeLeft, setTimeLeft] = useState<string>('')
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [copiedToken, setCopiedToken] = useState(false)
     const cancelFnRef = useRef<(() => void) | null>(null)
 
     useEffect(() => {
@@ -27,6 +29,7 @@ export function AddDeviceModal({ onClose }: AddDeviceModalProps) {
 
                 cancelFnRef.current = session.cancel
                 setCode(session.code)
+                setPairingToken(session.pairingToken)
                 setExpiresAt(session.expiresAt)
 
                 const qr = await generateQRDataURI(session.qrData)
@@ -82,6 +85,17 @@ export function AddDeviceModal({ onClose }: AddDeviceModalProps) {
         return () => document.removeEventListener('keydown', handleKeyDown)
     }, [onClose])
 
+    const handleCopyToken = async () => {
+        if (!pairingToken) return
+        try {
+            await navigator.clipboard.writeText(pairingToken)
+            setCopiedToken(true)
+            setTimeout(() => setCopiedToken(false), 1500)
+        } catch {
+            setError('Could not copy token. Please copy manually from QR flow.')
+        }
+    }
+
     return createPortal(
         <div className="fixed inset-0 z-[150] flex items-center justify-center">
             <div 
@@ -125,10 +139,22 @@ export function AddDeviceModal({ onClose }: AddDeviceModalProps) {
                             </div>
                         )}
 
-                        <div className="text-center mb-6">
+                        <div className="text-center mb-4">
                             <div className="font-sans text-[18px] font-medium text-[#344054] dark:text-folium-dark-text tracking-wider">
                                 {formatCodeForDisplay(code)}
                             </div>
+                        </div>
+
+                        <div className="text-center mb-6">
+                            <button
+                                onClick={handleCopyToken}
+                                className="font-sans text-[13px] text-folium-accent dark:text-folium-dark-accent hover:underline"
+                            >
+                                {copiedToken ? 'Copied full pairing token' : 'Copy full pairing token'}
+                            </button>
+                            <p className="mt-2 font-sans text-[12px] text-[#717F9A] dark:text-[#8895AD]">
+                                Manual entry requires full token paste or QR scan.
+                            </p>
                         </div>
 
                         <div className="flex items-center justify-center gap-2 mb-6">

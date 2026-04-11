@@ -26,3 +26,46 @@ export function parseCodeFromInput(input: string): string {
   // The payload is base64-like and starts after the 14-char code
   return codeFormatted + cleaned.substring(12)
 }
+
+export type PairingInputKind = 'full_token' | 'short_code' | 'invalid'
+
+function classifyPairingToken(candidate: string): { kind: PairingInputKind; token?: string } {
+  const trimmed = candidate.trim()
+  if (!trimmed) {
+    return { kind: 'invalid' }
+  }
+
+  const shortCodePattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+  if (shortCodePattern.test(trimmed)) {
+    return { kind: 'short_code', token: trimmed }
+  }
+
+  const fullTokenPattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Za-z0-9_-]+$/
+  if (fullTokenPattern.test(trimmed)) {
+    return { kind: 'full_token', token: trimmed }
+  }
+
+  return { kind: 'invalid' }
+}
+
+export function normalizePairingTokenInput(input: string): { kind: PairingInputKind; token?: string } {
+  const trimmed = input.trim()
+  if (!trimmed) {
+    return { kind: 'invalid' }
+  }
+
+  if (trimmed.startsWith('folium://pair?')) {
+    const match = trimmed.match(/[?&]code=([^&]+)/)
+    if (!match) {
+      return { kind: 'invalid' }
+    }
+    try {
+      const decoded = decodeURIComponent(match[1])
+      return classifyPairingToken(decoded)
+    } catch {
+      return { kind: 'invalid' }
+    }
+  }
+
+  return classifyPairingToken(trimmed)
+}

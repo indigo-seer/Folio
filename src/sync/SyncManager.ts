@@ -257,7 +257,7 @@ class SyncManager {
         await saveConfig(this.config)
     }
 
-    async startPairing(): Promise<{ code: string; qrData: string; expiresAt: Date; cancel: () => void }> {
+    async startPairing(): Promise<{ code: string; pairingToken: string; qrData: string; expiresAt: Date; cancel: () => void }> {
         if (!this.config || !this.initializedVaultPath) {
             throw new Error('Sync must be initialized before pairing')
         }
@@ -284,12 +284,13 @@ class SyncManager {
             secret
         )
         
-        const qrData = `folium://pair?code=${encodeURIComponent(code)}-${payloadBase}`
+        const pairingToken = `${code}-${payloadBase}`
+        const qrData = `folium://pair?code=${encodeURIComponent(pairingToken)}`
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
         const cancel = () => {}
 
-        return { code, qrData, expiresAt, cancel }
+        return { code, pairingToken, qrData, expiresAt, cancel }
     }
 
     async acceptPairingCode(fullCode: string): Promise<void> {
@@ -304,10 +305,21 @@ class SyncManager {
             throw new Error('Device secret not configured')
         }
 
-        const validation = validatePairingCode(fullCode, vaultId, secret)
-        
+        const validation = await validatePairingCode(fullCode, vaultId, secret)
+
         if (!validation.valid || !validation.payload) {
-            throw new Error(validation.error || 'Invalid code')
+            switch (validation.error) {
+                case 'invalid_format':
+                    throw new Error('Invalid code format. Paste full token or scan QR.')
+                case 'vault_mismatch':
+                    throw new Error('Code is for a different vault')
+                case 'expired':
+                    throw new Error('Code has expired. Ask for a new one.')
+                case 'invalid_signature':
+                    throw new Error('Invalid code signature')
+                default:
+                    throw new Error('Invalid code')
+            }
         }
 
         const { deviceId, deviceName, syncthingId, platform, vaultId: incomingVaultId } = validation.payload

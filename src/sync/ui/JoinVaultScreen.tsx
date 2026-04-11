@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Camera, Keyboard } from 'lucide-react'
 import { syncManager } from '../index'
-import { parseCodeFromInput } from '../pairing/QRCode'
+import { normalizePairingTokenInput } from '../pairing/QRCode'
 
 interface JoinVaultScreenProps {
     onClose: () => void
@@ -10,24 +10,27 @@ interface JoinVaultScreenProps {
 }
 
 export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
-    const [code, setCode] = useState('')
+    const [tokenInput, setTokenInput] = useState('')
     const [isConnecting, setIsConnecting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [mode, setMode] = useState<'camera' | 'manual'>('manual')
 
     const handleConnect = async () => {
-        if (!isValidCode) {
-            setError('Please enter a complete code')
+        const normalized = normalizePairingTokenInput(tokenInput)
+        if (normalized.kind === 'short_code') {
+            setError('Short code alone cannot be validated. Paste full token or scan QR.')
+            return
+        }
+        if (normalized.kind !== 'full_token' || !normalized.token) {
+            setError('Invalid code format. Paste full token or scan QR.')
             return
         }
 
-        const formattedCode = parseCodeFromInput(code)
-        
         setIsConnecting(true)
         setError(null)
 
         try {
-            await syncManager.acceptPairingCode(formattedCode)
+            await syncManager.acceptPairingCode(normalized.token)
             onSuccess()
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to connect')
@@ -36,7 +39,7 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && code.length >= 12) {
+        if (e.key === 'Enter') {
             handleConnect()
         }
         if (e.key === 'Escape') {
@@ -44,7 +47,8 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
         }
     }
 
-    const isValidCode = code.length >= 14 // 12 chars + 2 dashes = minimum visible length, but full string has payload too
+    const normalized = normalizePairingTokenInput(tokenInput)
+    const isValidCode = normalized.kind === 'full_token'
 
     return createPortal(
         <div className="fixed inset-0 z-[150] flex items-center justify-center">
@@ -96,10 +100,10 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
                     <div className="mb-6">
                         <input
                             type="text"
-                            value={code}
-                            onChange={(e) => setCode(parseCodeFromInput(e.target.value))}
+                            value={tokenInput}
+                            onChange={(e) => setTokenInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="Enter code (e.g., KXBT-M92P-HJ4R)"
+                            placeholder="Paste full token or folium://pair?..."
                             className="w-full px-4 py-3 font-sans text-[16px] text-[#344054] dark:text-folium-dark-text bg-[#F8F7F6] dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-lg outline-none focus:ring-2 focus:ring-folium-accent dark:focus:ring-folium-dark-accent"
                             autoFocus
                         />

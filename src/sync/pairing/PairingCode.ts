@@ -154,34 +154,35 @@ export async function verifyHMACAsync(payload: PairingPayload, secret: string): 
   return computed === hmac
 }
 
-export function verifyHMAC(payload: PairingPayload, _secret: string): boolean {
-  return !!payload.hmac && payload.hmac !== 'sync_pending'
+export async function verifyHMAC(payload: PairingPayload, secret: string): Promise<boolean> {
+  return verifyHMACAsync(payload, secret)
 }
 
 export function isPayloadExpired(payload: PairingPayload): boolean {
   return Date.now() > payload.expires
 }
 
-export function validatePairingCode(
+export async function validatePairingCode(
   fullString: string,
   expectedVaultId: string,
-  _secret: string
-): { valid: boolean; payload?: PairingPayload; error?: string } {
+  secret: string
+): Promise<{ valid: boolean; payload?: PairingPayload; error?: string }> {
   const decoded = decodePairingCode(fullString)
   if (!decoded) {
-    return { valid: false, error: 'Invalid code format' }
+    return { valid: false, error: 'invalid_format' }
   }
 
   if (decoded.payload.vaultId !== expectedVaultId) {
-    return { valid: false, error: 'Code is for a different vault' }
+    return { valid: false, error: 'vault_mismatch' }
   }
 
   if (isPayloadExpired(decoded.payload)) {
-    return { valid: false, error: 'Code has expired' }
+    return { valid: false, error: 'expired' }
   }
 
-  if (!verifyHMAC(decoded.payload, _secret)) {
-    return { valid: false, error: 'Invalid code' }
+  const isValid = await verifyHMAC(decoded.payload, secret)
+  if (!isValid) {
+    return { valid: false, error: 'invalid_signature' }
   }
 
   return { valid: true, payload: decoded.payload }

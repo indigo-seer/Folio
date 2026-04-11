@@ -23,6 +23,7 @@ export interface PairedDevice {
 export interface PairingSession {
     code: string
     qrData: string
+    pairingToken: string
     expiresAt: Date
     cancel(): void
 }
