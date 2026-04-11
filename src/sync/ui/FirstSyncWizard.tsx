@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, FolderOpen, Check } from 'lucide-react'
 import { getDefaultVaultPath } from '../vaultRegistry'
-import { syncManager } from '../index'
+import { syncManager, syncRuntimeForVault } from '../index'
 import type { VaultInfo } from '../vaultRegistry'
+import { loadConfig, saveConfig } from '../../lib/config'
 
 interface FirstSyncWizardProps {
     newVaults: VaultInfo[]
@@ -49,15 +50,30 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
 
     const syncToDefault = async () => {
         setIsSyncing(true)
-        
+
+        const config = await loadConfig()
+
         for (const [vaultName, vaultPath] of selectedVaults) {
             try {
                 await syncManager.addVaultToSync(vaultName, vaultPath)
+                if (!config.workspaces) config.workspaces = []
+                if (!config.workspaces.find(w => w.path === vaultPath)) {
+                    config.workspaces.push({
+                        id: `workspace-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                        path: vaultPath,
+                        displayName: vaultName,
+                        lastOpened: Date.now(),
+                        createdAt: Date.now()
+                    })
+                }
             } catch (err) {
                 console.error(`Failed to add vault ${vaultName}:`, err)
             }
         }
-        
+
+        await saveConfig(config)
+        await syncRuntimeForVault(config)
+
         setIsSyncing(false)
         onComplete()
     }
@@ -99,7 +115,7 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
 
     return createPortal(
         <div className="fixed inset-0 z-[150] flex items-center justify-center">
-            <div 
+            <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm"
                 onClick={onCancel}
             />
@@ -126,15 +142,14 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
                         {newVaults.map(vault => {
                             const isSelected = selectedVaults.has(vault.name)
                             const currentPath = selectedVaults.get(vault.name) || ''
-                            
+
                             return (
-                                <div 
+                                <div
                                     key={vault.name}
-                                    className={`p-4 rounded-xl border transition-colors ${
-                                        isSelected 
+                                    className={`p-4 rounded-xl border transition-colors ${isSelected
                                             ? 'border-folium-accent dark:border-folium-dark-accent bg-folium-accent/5 dark:bg-folium-dark-accent/5'
                                             : 'border-folium-border dark:border-folium-dark-border'
-                                    }`}
+                                        }`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <input
@@ -153,7 +168,7 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     {isSelected && (
                                         <div className="mt-3 ml-8">
                                             <button

@@ -85,7 +85,7 @@ export function WorkspaceProvider({
             setActiveWorkspaceId(id);
 
             await saveConfig(config);
-            await syncRuntimeForVault(result.path, config);
+            await syncRuntimeForVault(config);
             setBootState(BootState.ReadyWithWorkspace);
             void runVaultImageMigrationInBackground(result.path, id);
 
@@ -119,7 +119,7 @@ export function WorkspaceProvider({
             setWorkspaces(updatedWorkspaces);
             setActiveWorkspaceId(targetWorkspace.id);
             await saveConfig(config);
-            await syncRuntimeForVault(targetWorkspace.path, config);
+            await syncRuntimeForVault(config);
             setBootState(BootState.ReadyWithWorkspace);
             void runVaultImageMigrationInBackground(targetWorkspace.path, targetWorkspace.id);
         } catch (err) {
@@ -144,13 +144,13 @@ export function WorkspaceProvider({
                     tabs.clearTabs();
                     await fileSystem.loadVault(nextWorkspace.path);
                     setActiveWorkspaceId(nextWorkspace.id);
-                    await syncRuntimeForVault(nextWorkspace.path, config);
+                    await syncRuntimeForVault(config);
                     setBootState(BootState.ReadyWithWorkspace);
                     void runVaultImageMigrationInBackground(nextWorkspace.path, nextWorkspace.id);
                 } else {
                     config.activeWorkspaceId = null;
                     setActiveWorkspaceId(null);
-                    await syncRuntimeForVault(null, config);
+                    await syncRuntimeForVault(config);
                     setBootState(BootState.ReadyWithoutWorkspace);
                     tabs.clearTabs();
                 }

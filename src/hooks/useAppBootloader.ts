@@ -48,7 +48,7 @@ export function useAppBootloader(
                                 await saveConfig(config);
                                 setWorkspaces([...config.workspaces]);
                             }
-                            await syncRuntimeForVault(activeWorkspace.path, config);
+                            await syncRuntimeForVault(config);
                             setActiveWorkspaceId(activeWorkspace.id);
                             setBootState(BootState.ReadyWithWorkspace);
                             if (!hasSweptImageCache.current) {
@@ -68,7 +68,7 @@ export function useAppBootloader(
                     }
                 }
 
-                await syncRuntimeForVault(null, config);
+                await syncRuntimeForVault(config);
                 setBootState(BootState.ReadyWithoutWorkspace);
             } catch (err) {
                 console.error('Fatal boot error processing config', err);
@@ -124,7 +124,7 @@ export function useAppBootloader(
             if (mode === 'create' || starterPath) {
                 await fileSystem.loadVault(vaultPath);
             }
-            await syncRuntimeForVault(vaultPath, config);
+            await syncRuntimeForVault(config);
 
             if (starterPath) {
                 const title = 'Getting Started with Folium';
@@ -142,7 +142,7 @@ export function useAppBootloader(
             const config = await loadConfig();
             config.hasCompletedOnboarding = true;
             await saveConfig(config);
-            await syncRuntimeForVault(null, config);
+            await syncRuntimeForVault(config);
             setBootState(BootState.ReadyWithoutWorkspace);
         }
     }, [fileSystem, tabs, setWorkspaces, setActiveWorkspaceId, setBootState]);
