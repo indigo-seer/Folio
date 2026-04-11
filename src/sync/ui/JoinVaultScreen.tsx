@@ -17,8 +17,8 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
 
     const handleConnect = async () => {
         const cleanCode = code.replace(/[^A-Za-z0-9]/g, '')
-        if (cleanCode.length !== 14) {
-            setError('Please enter a complete 14-character code')
+        if (cleanCode.length !== 12) {
+            setError('Please enter a complete 12-character code')
             return
         }
 
@@ -37,7 +37,7 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && code.length >= 14) {
+        if (e.key === 'Enter' && code.length >= 12) {
             handleConnect()
         }
         if (e.key === 'Escape') {

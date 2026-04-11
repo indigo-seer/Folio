@@ -63,44 +63,139 @@ jobs:
       - name: Create Linux portable tar.gz
         if: matrix.platform == 'ubuntu-22.04'
         run: |
-          # Find the built deb package
-          DEB_FILE=$(find src-tauri/target/release/bundle/deb -name "*.deb" | head -1)
-          if [ -n "$DEB_FILE" ]; then
+          echo "=== Checking for deb package ==="
+          
+          # Find deb file in multiple possible locations
+          DEB_FILE=""
+          for dir in src-tauri/target/release/bundle/deb src-tauri/target/release/bundle; do
+            echo "Checking: $dir"
+            if [ -d "$dir" ]; then
+              FOUND=$(find "$dir" -name "*.deb" 2>/dev/null | head -1)
+              if [ -n "$FOUND" ]; then
+                DEB_FILE="$FOUND"
+                break
+              fi
+            fi
+          done
+          
+          echo "Found deb: $DEB_FILE"
+          
+          if [ -z "$DEB_FILE" ]; then
+            echo "No deb file found, looking for app binary directly..."
+            # Fallback: look for the built binary
+            if [ -f "src-tauri/target/release/folium" ]; then
+              PORTABLE_DIR="folium-linux-x64"
+              mkdir -p "$PORTABLE_DIR"
+              cp "src-tauri/target/release/folium" "$PORTABLE_DIR/"
+              
+              # Copy resources if they exist
+              if [ -d "src-tauri/target/release/resources" ]; then
+                cp -r "src-tauri/target/release/resources" "$PORTABLE_DIR/"
+              fi
+              
+              # Also check in bundle directory
+              if [ -d "src-tauri/target/release/bundle" ]; then
+                for res_dir in src-tauri/target/release/bundle/*/resources; do
+                  if [ -d "$res_dir" ]; then
+                    mkdir -p "$PORTABLE_DIR/resources"
+                    cp -r "$res_dir"/* "$PORTABLE_DIR/resources/" 2>/dev/null || true
+                  fi
+                done
+                # Also copy bin if it exists
+                for bin_dir in src-tauri/target/release/bundle/*/resources/bin; do
+                  if [ -d "$bin_dir" ]; then
+                    mkdir -p "$PORTABLE_DIR/resources/bin"
+                    cp -r "$bin_dir"/* "$PORTABLE_DIR/resources/bin/" 2>/dev/null || true
+                  fi
+                done
+              fi
+              
+              if [ -d "$PORTABLE_DIR/resources" ]; then
+                tar -czvf "folium-linux-x64.tar.gz" "$PORTABLE_DIR"
+                echo "Created tar.gz with resources"
+              else
+                echo "No resources found, skipping tar.gz"
+                rm -rf "$PORTABLE_DIR"
+              fi
+            else
+              echo "No binary found at src-tauri/target/release/folium"
+            fi
+          else
             # Extract deb contents
+            echo "Extracting deb: $DEB_FILE"
             TEMP_DIR=$(mktemp -d)
             dpkg-deb -x "$DEB_FILE" "$TEMP_DIR"
             
-            # Find the app binary and resources
-            APP_DIR="$TEMP_DIR/usr/lib/folium"
-            if [ -d "$APP_DIR" ]; then
-              # Create portable tar.gz structure
+            # Find the app directory
+            APP_DIR=""
+            for dir in "$TEMP_DIR/usr/lib/folium" "$TEMP_DIR/usr/bin"; do
+              if [ -d "$dir" ]; then
+                APP_DIR="$dir"
+                break
+              fi
+            done
+            
+            echo "App directory: $APP_DIR"
+            
+            if [ -n "$APP_DIR" ] && [ -d "$APP_DIR" ]; then
               PORTABLE_DIR="folium-linux-x64"
               mkdir -p "$PORTABLE_DIR"
               
-              # Copy binary
-              if [ -f "$APP_DIR/folium" ]; then
-                cp "$APP_DIR/folium" "$PORTABLE_DIR/"
-              fi
+              # Copy binary (might be named 'folium')
+              for bin in "$APP_DIR/folium" "$APP_DIR/folium-bin"; do
+                if [ -f "$bin" ]; then
+                  cp "$bin" "$PORTABLE_DIR/folium"
+                  break
+                fi
+              done
               
-              # Copy resources (contains syncthing binary)
+              # Copy resources
               if [ -d "$APP_DIR/resources" ]; then
                 cp -r "$APP_DIR/resources" "$PORTABLE_DIR/"
               fi
               
-              # Create tar.gz
-              tar -czvf "folium-linux-x64.tar.gz" "$PORTABLE_DIR"
+              # Also check for resources in usr/share
+              if [ -d "$TEMP_DIR/usr/share/folium/resources" ]; then
+                mkdir -p "$PORTABLE_DIR/resources"
+                cp -r "$TEMP_DIR/usr/share/folium/resources"/* "$PORTABLE_DIR/resources/" 2>/dev/null || true
+              fi
               
-              # Upload as release asset
-              echo "Uploading Linux portable tar.gz..."
+              # Also copy lib/folium/resources if exists
+              if [ -d "$TEMP_DIR/usr/lib/folium/resources" ]; then
+                mkdir -p "$PORTABLE_DIR/resources"
+                cp -r "$TEMP_DIR/usr/lib/folium/resources"/* "$PORTABLE_DIR/resources/" 2>/dev/null || true
+              fi
               
-              # Get release ID
-              REPO="${{ github.repository }}"
-              TAG="${{ github.ref_name }}"
+              # Find syncthing binary in lib folder
+              if [ -d "$TEMP_DIR/usr/lib/folium" ]; then
+                SYNCBIN=$(find "$TEMP_DIR/usr/lib/folium" -name "syncthing-*" -type f 2>/dev/null | head -1)
+                if [ -n "$SYNCBIN" ]; then
+                  echo "Found syncthing: $SYNCBIN"
+                  mkdir -p "$PORTABLE_DIR/resources/bin"
+                  cp "$SYNCBIN" "$PORTABLE_DIR/resources/bin/"
+                fi
+              fi
               
-              # Upload using gh CLI
-              gh release upload "$TAG" "folium-linux-x64.tar.gz" --repo "$REPO" || true
+              if [ -d "$PORTABLE_DIR/resources" ] || [ -f "$PORTABLE_DIR/folium" ]; then
+                tar -czvf "folium-linux-x64.tar.gz" "$PORTABLE_DIR"
+                echo "Created tar.gz successfully"
+              else
+                echo "No contents to package"
+              fi
               
-              # Cleanup
-              rm -rf "$TEMP_DIR" "$PORTABLE_DIR"
+              rm -rf "$TEMP_DIR"
+            else
+              echo "Could not find app directory in deb"
+              rm -rf "$TEMP_DIR"
             fi
+          fi
+          
+          # Upload if created
+          if [ -f "folium-linux-x64.tar.gz" ]; then
+            echo "Uploading tar.gz..."
+            REPO="${{ github.repository }}"
+            TAG="${{ github.ref_name }}"
+            gh release upload "$TAG" "folium-linux-x64.tar.gz" --repo "$REPO" || echo "Upload failed (may need to check release exists)"
+          else
+            echo "tar.gz was not created"
           fi
