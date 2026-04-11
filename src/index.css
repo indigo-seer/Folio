@@ -688,6 +688,19 @@ ul[data-type="taskList"] li[data-checked="true"]>div {
   @apply text-xs opacity-70;
 }
 
+.corruption-banner-actions {
+  @apply mt-2;
+}
+
+.corruption-banner-action {
+  @apply text-xs px-2.5 py-1.5 rounded-md border transition-colors;
+  @apply bg-white text-amber-900 border-amber-300 hover:bg-amber-100;
+}
+
+.dark .corruption-banner-action {
+  @apply bg-amber-950/40 text-amber-200 border-amber-700 hover:bg-amber-900/50;
+}
+
 .corruption-banner-dismiss {
   @apply flex-shrink-0 p-1 rounded opacity-60 hover:opacity-100 transition-opacity cursor-pointer;
   @apply text-amber-700 hover:bg-amber-100;
@@ -1083,12 +1096,56 @@ ul[data-type="taskList"] li[data-checked="true"]>div {
   max-width: 100%;
   line-height: 0;
   vertical-align: bottom;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .image-node-view img {
   display: block;
   max-width: 100%;
   height: auto;
+}
+
+.image-node-media {
+  transition: opacity 200ms ease;
+}
+
+.image-node-media.is-loading {
+  opacity: 0;
+}
+
+.image-node-media.is-loaded {
+  opacity: 1;
+}
+
+.image-skeleton {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    linear-gradient(110deg,
+      rgba(148, 163, 184, 0.18) 8%,
+      rgba(148, 163, 184, 0.36) 18%,
+      rgba(148, 163, 184, 0.18) 33%);
+  background-size: 220% 100%;
+  animation: folium-image-skeleton-shimmer 1.2s linear infinite;
+}
+
+.dark .image-skeleton {
+  background:
+    linear-gradient(110deg,
+      rgba(71, 85, 105, 0.4) 8%,
+      rgba(100, 116, 139, 0.55) 18%,
+      rgba(71, 85, 105, 0.4) 33%);
+  background-size: 220% 100%;
+}
+
+@keyframes folium-image-skeleton-shimmer {
+  to {
+    background-position-x: -220%;
+  }
 }
 
 .image-node-view.selected img {

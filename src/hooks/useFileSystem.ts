@@ -1,7 +1,32 @@
 import { useState, useCallback, useRef, useMemo } from 'react'
 import { isTauri } from '../lib/config'
-import { fs, sortTree, buildVaultIndex, extractWikilinks, VaultState } from '../lib/fs'
-import { invalidateCacheEntry, isAttachmentImagePath, warmCacheForNote } from '../lib/imageCache'
+import { fs, sortTree, buildVaultIndex, extractWikilinks, VaultState, FileNode } from '../lib/fs'
+import { invalidateCacheEntry, isAttachmentImagePath, setImageCacheVaultImagePaths, warmCacheForNote } from '../lib/imageCache'
+
+const IMAGE_EXTENSIONS = new Set([
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'tif', 'tiff', 'ico', 'heic', 'heif'
+])
+
+function collectVaultImagePaths(tree: FileNode[]): string[] {
+    const out: string[] = []
+    const stack = [...tree]
+
+    while (stack.length > 0) {
+        const node = stack.pop()
+        if (!node) continue
+
+        if (node.kind === 'directory') {
+            if (node.children?.length) stack.push(...node.children)
+            continue
+        }
+
+        const extension = node.name.includes('.') ? node.name.split('.').pop()!.toLowerCase() : ''
+        if (!IMAGE_EXTENSIONS.has(extension)) continue
+        out.push(node.path)
+    }
+
+    return out
+}
 
 export function useFileSystem() {
     const [vault, setVault] = useState<VaultState>({
@@ -27,6 +52,7 @@ export function useFileSystem() {
                 notes,
                 backlinkIndex,
             })
+            setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
 
             return { path: rootPath, name: rootName }
         } catch (err) {
@@ -51,6 +77,7 @@ export function useFileSystem() {
                 notes,
                 backlinkIndex
             })
+            setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
 
             return { path: rootPath, name: rootName }
         } catch (err) {
@@ -139,6 +166,7 @@ export function useFileSystem() {
             newNotes.add(noteName)
             return { ...prev, tree: sortTree(tree), notes: newNotes }
         })
+        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
 
         return newPath
     }, [vault.rootPath])
@@ -150,6 +178,7 @@ export function useFileSystem() {
         const tree = await fs.scanDirectory(vault.rootPath)
 
         setVault(prev => ({ ...prev, tree: sortTree(tree) }))
+        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
 
         return newPath
     }, [vault.rootPath])
@@ -208,6 +237,7 @@ export function useFileSystem() {
             notes,
             backlinkIndex,
         }))
+        setImageCacheVaultImagePaths(collectVaultImagePaths(freshTree))
 
         return newPath
     }, [vault.rootPath, vault.backlinkIndex])
@@ -226,6 +256,7 @@ export function useFileSystem() {
         const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
 
         setVault(prev => ({ ...prev, tree: sortTree(tree), notes, backlinkIndex }))
+        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
         return newPath
     }, [vault.rootPath])
 
@@ -240,6 +271,7 @@ export function useFileSystem() {
         const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
 
         setVault(prev => ({ ...prev, tree: sortTree(tree), notes, backlinkIndex }))
+        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
     }, [vault.rootPath])
 
     const saveEditorState = useCallback((path: string, state: { scroll: number, cursor: number }) => {
@@ -255,6 +287,7 @@ export function useFileSystem() {
         const tree = await fs.scanDirectory(vault.rootPath)
         const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
         setVault(prev => ({ ...prev, tree: sortTree(tree), notes, backlinkIndex }))
+        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
     }, [vault.rootPath])
 
     return useMemo(() => ({

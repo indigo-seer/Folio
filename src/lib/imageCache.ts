@@ -12,6 +12,8 @@ const MAX_CONCURRENT_CACHE_JOBS = 1
 
 let vaultRootPath: string | null = null
 let activeVaultUid: string | null = null
+const imagePathByRelative = new Map<string, string>()
+const imagePathByBasename = new Map<string, string>()
 const resolvedDisplayUrls = new Map<string, string>()
 const inflightLookups = new Map<string, Promise<void>>()
 const inflightGenerations = new Set<string>()
@@ -26,6 +28,18 @@ function normalizePathSeparators(path: string): string {
     return path.replace(/\\/g, '/')
 }
 
+function normalizeLookupPath(path: string): string {
+    return normalizePathSeparators(path).replace(/^\.?\//, '').trim().toLowerCase()
+}
+
+function joinVaultPath(relativePath: string): string | null {
+    if (!vaultRootPath) return null
+    const cleanRoot = normalizePathSeparators(vaultRootPath).replace(/\/+$/, '')
+    const cleanRelative = normalizePathSeparators(relativePath).replace(/^\/+/, '')
+    if (!cleanRelative) return cleanRoot
+    return `${cleanRoot}/${cleanRelative}`
+}
+
 function isAbsolutePath(path: string): boolean {
     return path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path)
 }
@@ -35,8 +49,29 @@ function toAbsolutePath(inputPath: string): string | null {
     if (!trimmed) return null
 
     if (isAbsolutePath(trimmed)) return trimmed
-    if (trimmed.startsWith('attachments/') && vaultRootPath) {
-        return `${vaultRootPath}/${trimmed}`
+    if (trimmed.startsWith('attachments/')) {
+        return joinVaultPath(trimmed)
+    }
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+        return null
+    }
+
+    // Explicit vault-relative references such as "assets/img.png".
+    if ((trimmed.includes('/') || trimmed.includes('\\')) && vaultRootPath) {
+        return joinVaultPath(trimmed)
+    }
+
+    const normalized = normalizeLookupPath(trimmed)
+    const byRelative = imagePathByRelative.get(normalized)
+    if (byRelative) return byRelative
+
+    const baseName = normalizeLookupPath(normalizePathSeparators(trimmed).split('/').pop() || trimmed)
+    const byBasename = imagePathByBasename.get(baseName)
+    if (byBasename) return byBasename
+
+    if (vaultRootPath) {
+        // Last-resort guess to preserve existing behavior for uncommon layouts.
+        return joinVaultPath(trimmed)
     }
 
     return null
@@ -178,10 +213,57 @@ function pumpQueue() {
 
 export function setImageCacheVaultRoot(path: string | null) {
     vaultRootPath = path
+    if (!path) {
+        imagePathByRelative.clear()
+        imagePathByBasename.clear()
+    }
 }
 
 export function setImageCacheVaultUid(vaultUid: string | null) {
     activeVaultUid = vaultUid || null
+}
+
+export function setImageCacheVaultImagePaths(imageAbsolutePaths: string[]): void {
+    imagePathByRelative.clear()
+    imagePathByBasename.clear()
+
+    const normalizedRoot = vaultRootPath
+        ? normalizePathSeparators(vaultRootPath).replace(/\/+$/, '')
+        : null
+
+    function shouldPreferCandidate(currentPath: string | undefined, candidatePath: string): boolean {
+        if (!currentPath) return true
+
+        const currentLower = normalizePathSeparators(currentPath).toLowerCase()
+        const candidateLower = normalizePathSeparators(candidatePath).toLowerCase()
+        const currentInAttachments = currentLower.includes('/attachments/')
+        const candidateInAttachments = candidateLower.includes('/attachments/')
+        if (candidateInAttachments && !currentInAttachments) return true
+        if (currentInAttachments && !candidateInAttachments) return false
+
+        const currentDepth = currentLower.split('/').length
+        const candidateDepth = candidateLower.split('/').length
+        return candidateDepth < currentDepth
+    }
+
+    for (const absolutePath of imageAbsolutePaths) {
+        const normalizedAbsolute = normalizePathSeparators(String(absolutePath || '')).trim()
+        if (!normalizedAbsolute) continue
+
+        const loweredAbsolute = normalizedAbsolute.toLowerCase()
+        const basename = normalizeLookupPath(normalizedAbsolute.split('/').pop() || normalizedAbsolute)
+        if (shouldPreferCandidate(imagePathByBasename.get(basename), normalizedAbsolute)) {
+            imagePathByBasename.set(basename, normalizedAbsolute)
+        }
+
+        if (normalizedRoot && loweredAbsolute.startsWith(`${normalizedRoot.toLowerCase()}/`)) {
+            const relative = normalizedAbsolute.slice(normalizedRoot.length + 1)
+            const normalizedRelative = normalizeLookupPath(relative)
+            if (normalizedRelative && shouldPreferCandidate(imagePathByRelative.get(normalizedRelative), normalizedAbsolute)) {
+                imagePathByRelative.set(normalizedRelative, normalizedAbsolute)
+            }
+        }
+    }
 }
 
 export function subscribeImageCacheUpdates(listener: CacheUpdateListener): () => void {

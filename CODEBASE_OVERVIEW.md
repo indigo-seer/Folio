@@ -1,8 +1,9 @@
 # Folium — Codebase Overview (Current)
 
-> Version: 0.3.0  
+> Version: 0.4.5  
 > Stack: Tauri v2 + React 18 + TypeScript + TipTap 3 + Tailwind CSS 3 + Vite  
-> Last updated: March 29, 2026
+> Key Libraries: framer-motion, react-force-graph-2d, jspdf, html2canvas, fuse.js, lowlight, katex
+> Last updated: April 10, 2026
 
 ---
 
@@ -15,27 +16,23 @@ App
    ├─ ModalProvider
    └─ WorkspaceProvider
       └─ Bootloader + VaultContext wiring
-         └─ MainLayout
-            ├─ Sidebar
-            ├─ TabBar (main + split strips in same top row)
-            ├─ Editor pane A (main)
-            ├─ Editor pane B (split, optional)
-            ├─ Split drag separator (shared ratio)
-            └─ StatusBar
-
-ModalRoot (global overlays)
-├─ QuickSwitcher (commands + notes)
-├─ ContextMenu
-├─ RenameModal / MoveModal / Folder flow
-├─ SettingsModal
-└─ Toast
+         └─ VaultProviderWrapped
+            └─ MainLayout
+               ├─ Sidebar (File Tree)
+               ├─ TabBar (main + split strips in same top row)
+               ├─ Main Pane Context
+               │  ├─ Editor Component (with corruption banners, note titles)
+               │  └─ folium-graph (Graph View)
+               ├─ Split Pane Context (optional)
+               │  └─ Editor Component
+               ├─ Split drag separator (shared ratio)
+               └─ StatusBar
 ```
 
-Core idea:
-
-- The app is a **single editing shell** with optional split-pane mode.
-- Both panes are first-class tabs with independent active state.
-- Markdown is parsed by TipTap markdown extensions on load, then serialized by `tipTapToMarkdown` on save.
+### Core Idea:
+- **Folium is an integrated editing shell** that brings powerful Obsidian Flavored Markdown (OFM) to life inside a responsive split-pane UI.
+- The app has been renamed to **Folium** from Folio, reflecting its evolution.
+- Extensive features like native Graph Views, PDF Exports, robust OFM support (Wikilinks, Math, Embeds), and smooth animations construct an integrated desktop experience.
 
 ---
 
@@ -44,272 +41,101 @@ Core idea:
 ### 2.1 UI and State
 
 - `src/App.tsx`
-  - Builds provider hierarchy.
-  - Runs boot flow (`useAppBootloader`).
-  - Owns pane focus state (`main` vs `split`).
-  - Creates two editor state channels (one per pane) through `useEditorState`.
-
+  - Defines Provider hierarchy.
+  - Controls initial Bootloader state (`useAppBootloader`) and Onboarding.
+  - Manages editor and split states using `BootloaderWrappedContent` and `VaultProviderWrapped`.
+  - Audits typings using `performanceAudit.ts`.
 - `src/components/MainLayout.tsx`
-  - Shell layout, focus mode visibility behavior, sidebar collapse behavior.
-  - Split-pane rendering and drag-resize ratio state.
-  - Passes split ratio into top `TabBar` so tab geometry matches content geometry.
-
-- `src/components/TabBar.tsx`
-  - Renders main/split tabs in the same strip.
-  - Applies pane-focused active styling.
-  - Houses theme toggle and native window control integration.
+  - Container layout encompassing the Sidebar, Focus Mode features, and top TabBar.
+  - Handles the split-pane logic natively and responsive active Tab mappings.
+- `src/components/GraphView.tsx`
+  - Uses `react-force-graph-2d` to visualize vault note nodes and relationships extracted via backlinks and wikilinks. Handled as a tab in MainLayout.
 
 ### 2.2 Domain Hooks
 
 - `src/hooks/useTabs.ts`
-  - Canonical tab model:
-    - `mainTabIds`, `splitTabIds`, `activeTabId`, `splitTabId`, shared `tabById`.
-  - Pane-aware open/close/select APIs:
-    - `openTab`, `openTabInSplit`, `closeTabInPane`, `setActiveTabId`, `setSplitTabId`, `closeSplitTab`.
-  - Contains lifecycle guards to avoid tab-content loss scenarios when moving between main/split contexts.
-
+  - The canonical Tab state machine: `mainTabIds`, `splitTabIds`, `activeTabId`, `splitTabId`, and `tabById`.
+  - Operations for layout logic: `openTab`, `openTabInSplit`, `setActiveTabId`, `setSplitTabId`, `closeTabInPane`.
 - `src/hooks/useFileSystem.ts`
-  - Vault state authority (`rootPath`, tree, notes, backlink index).
-  - Uses adapter API from `src/lib/fs` for read/write/scan/move/rename/delete.
-  - Maintains incremental index updates and editor scroll/cursor state snapshots.
-
+  - Controls vault authority: `rootPath`, vault files tree, indexed notes, and dynamic `backlinkIndex`.
 - `src/hooks/useFileOperations.ts`
-  - UI-facing operations (new note, rename, move, delete, export PDF, open in split).
-  - Handles wikilink click routing and same-note anchor behavior.
-
+  - Provides UX actions: creating Notes, renaming, moving, deleting, creating Wikilink structures, routing, and **Exporting to PDF**.
 - `src/hooks/useEditorState.ts`
-  - Content hydration and autosave loop (debounced + tab-switch flush).
-  - Corruption detection integration.
-  - Editor lifecycle guard rails around hydration, remounting, and sync.
+  - Combines hydration, corruption prevention, cursor positioning logic, and the core saving debouncer hooked into markdown serialization.
 
 ### 2.3 Contexts
 
-- `src/contexts/VaultContext.tsx`
-  - Exposes vault notes/backlinks and wikilink-open handler to editor widgets.
-
-- `src/contexts/ModalContext.tsx`
-  - Single state machine for global modal orchestration.
-
-- `src/contexts/WorkspaceContext.tsx`
-  - Multi-vault workspace list and active-workspace routing.
+- `src/contexts/VaultContext.tsx`: Distributes access to `notes`, `backlinkIndex`, and handles file interactions inside the React tree.
+- `src/contexts/ModalContext.tsx`: Single global machine for Modals (`QuickSwitcher`, `MoveModal`, etc.).
+- `src/contexts/WorkspaceContext.tsx`: Deals with managing multiple distinct target folders that have `.folium` workspaces.
 
 ---
 
 ## 3) Markdown + Editor Pipeline
 
-## 3.1 Extension Registry
+Folium's most crucial layer handles parsing Obsidian styling locally while editing.
 
-`src/lib/editor/extensions.ts` is the single most important markdown/editor registry.
+### 3.1 Extension Registry (`src/lib/editor/extensions.ts`)
+The TipTap environment is augmented extensively:
+- **Content Blocks:** `Markdown`, `Typography`, `TaskList`, `Table` Suite (`TableRow`, `TableHeader`, `TableCell`).
+- **Obsidian Syntax Nodes:** `Wikilink`, `Callout`, `Tag`, `Frontmatter`, `Embed`, `MathBlock`, `InlineMath`.
+- **Media Customization:** `TauriImage` and `ObsidianImage` resolve local caching dynamically taking resources from `attachments/*` and fetching via caching system.
+- **UX Behaviors:** `TypewriterMode`, `SmoothCaret`, `SlashCommand`, `MarkdownPaste`, `CodeBlockCopy`, and `Highlight`.
 
-Current stack includes:
+### 3.2 Parsing / Loading Path
+- Reads markdown -> `stripFrontMatter` handles legacy edge-cases.
+- `setContent(markdown)` processes node parsing. Caching functions (`imageCache.ts`) load images smoothly natively without performance penalties.
 
-- `StarterKit` (H1-H6 enabled)
-- `Markdown` (`@tiptap/markdown`) with `breaks: true`
-- `Typography`, `Placeholder`
-- `CodeBlockLowlight`
-- `Link`
-- Custom nodes/extensions:
-  - `Wikilink`
-  - `Callout`
-  - `Frontmatter`
-  - `Tag`
-  - `MathBlock`
-  - `InlineMath`
-  - `Embed`
-- UX/editor behavior:
-  - `TypewriterMode`
-  - `SlashCommand` (includes `/Code Block` insertion command)
-  - `SmoothCaret`
-  - `MarkdownPaste`
-  - `CodeBlockCopy` (hover copy affordance for fenced code blocks)
-- Table suite:
-  - `Table`, `TableRow`, `TableHeader`, `TableCell`
-- `Highlight`
-- `TauriImage` wrapper (maps `attachments/...` to `convertFileSrc(...)` in Tauri)
-
-## 3.2 Load Path
-
-- `useEditorState` reads markdown from file.
-- It currently strips leading YAML frontmatter via `stripFrontMatter(...)`.
-- Editor content is then set using `setContent(markdown, { contentType: 'markdown' })` so TipTap parser + custom tokenizers run.
-
-## 3.3 Save Path
-
-- `useEditorState` autosave and tab-switch flush call `tipTapToMarkdown` (`src/lib/markdown.ts`).
-- Serializer handles:
-  - headings/lists/tasks/quotes/code/hr/hardbreak
-  - callouts
-  - tables
-  - highlights
-  - math inline/block
-  - tags
-  - wikilinks and embeds
-  - frontmatter node
-  - Tauri attachment URL normalization back to portable markdown paths
+### 3.3 Autosave & Serializer Path
+- Debounced functions track typed words (`performanceAudit.ts`).
+- When triggered, `tipTapToMarkdown` (`src/lib/markdown.ts`) normalizes structures like equations, embedded media, metadata objects, and callouts back perfectly to markdown.
 
 ---
 
-## 4) Split Pane and Tab System (Current)
+## 4) Key Submodules & Utilities
 
-### 4.1 Behavior
+### 4.1 PDF Export (`src/lib/pdfExport.ts`)
+- Allows users to turn a single markdown document into a shareable A4-sized PDF.
+- Renders an invisible DOM with the note content, awaits font/image stabilization (`waitForImages`), and leverages `html2canvas` generating imagery mapped into a `jsPDF` component handling chunking dimensions dynamically.
 
-- Two panes: `main` and optional `split`.
-- Each pane has its own active tab pointer.
-- Command palette (`Ctrl/Cmd+K`) and close-tab (`Ctrl/Cmd+W`) actions are routed to the **focused pane**.
-- `Alt/Ctrl/Cmd + Enter` in quick switcher opens in split.
-- Context menu includes “Open in Split”.
+### 4.2 Image Caching & Processing
+- Contains a complex media proxy (`vaultImageMigration.ts`, `imageIngestion.ts`, `imageCache.ts`).
+- Images dropped/pasted are moved to an `attachments/` folder asynchronously and cached to improve initial load speed on large graph contexts. 
 
-### 4.2 UI Details
-
-- Both pane tab groups are rendered in one top strip (`TabBar`).
-- Split ratio is shared between:
-  - top tab strip pane widths
-  - editor pane widths
-- Divider is draggable and clamped to a safe range (prevents pane collapse).
-
-Key files:
-
-- `src/components/MainLayout.tsx`
-- `src/components/TabBar.tsx`
-- `src/hooks/useTabs.ts`
-- `src/components/ModalRoot.tsx`
-- `src/components/QuickSwitcher.tsx`
+### 4.3 Corruption Protection
+- Implemented `CorruptionBanner.tsx` and `corruptionDetector.ts` that warns users if structural breaks occur inside the markdown abstract syntax tree preventing save failures.
 
 ---
 
-## 5) Markdown-Focused Custom Components
+## 5) Tab and UI Ecosystem
 
-- `src/components/CalloutNodeView.tsx`
-  - Icon-triggered type menu (icon-only grid)
-  - fold toggle in floating menu
-  - empty-callout inline hint
-
-- `src/components/TableToolbar.tsx`
-  - Bubble controls for row/column insert/delete, merge/split, header row toggle
-
-- Codeblock copy UX (Obsidian-style hover affordance)
-  - Implemented via `CodeBlockCopy` extension using a safe overlay button that copies full block text.
-
-- `src/components/FrontmatterNodeView.tsx`
-  - Collapsible properties block UI for frontmatter nodes
-
-- `src/components/WikilinkNodeView.tsx`
-  - Rich inline wikilink rendering and interaction
-
-- `src/components/MathBlockNodeView.tsx` / `InlineMathNodeView.tsx`
-  - KaTeX-backed rendering/editing UX
+- **Tab Manager**: The unified `TabBar.tsx` supports split strips gracefully, displaying names extracted accurately from `useTabs.ts` mappings.
+- **Global Modals**: `QuickSwitcher.tsx` helps rapidly navigate tags, commands, and notes. Operations are focused dynamically checking `focusedPane` state from `App.tsx`.
+- **Note Frontmatter & Callouts**: Visual interactive boxes managed by `FrontmatterNodeView.tsx` and `CalloutNodeView.tsx`.
+- **Animations:** Utilizing `framer-motion` inside Modals and smooth UI elements, including smooth responsive typing cursors using `SmoothCaret`.
 
 ---
 
-## 6) Key User Flows
+## 6) Testing and Quality Signals
 
-### 6.1 Note Open / Edit / Save
-
-1. User opens note (sidebar, quick switcher, wikilink).
-2. `useEditorState` hydrates markdown into TipTap.
-3. User edits content.
-4. Debounced autosave serializes TipTap JSON via `tipTapToMarkdown` and writes file.
-5. Switching tabs flushes immediately to avoid lost writes.
-
-### 6.2 Open in Split
-
-1. Trigger via context menu or command palette.
-2. `useFileOperations.handleOpenInSplit` calls `tabs.openTabInSplit(...)`.
-3. Split pane mounts if needed.
-4. Focused pane determines where quick-switch actions target.
-
-### 6.3 Rename / Move / Delete
-
-1. Action originates in sidebar/context menu/modals.
-2. `useFileOperations` invokes filesystem adapter operations.
-3. `useTabs` remaps IDs/paths where required.
-4. Vault tree + notes + backlinks are rebuilt or incrementally updated.
+- Test suites located in `src/lib/__tests__/`.
+- Highly targeted tests including `parse.test.ts` and `markdown.test.ts` matching TipTap serializers to exact String formats to avoid markdown drift in features like tables, equations, and tasks.
 
 ---
 
-## 7) Testing and Quality Signals
+## 7) Important Caveats / Technical Debt
 
-Current markdown-focused tests:
-
-- `src/lib/__tests__/markdown.test.ts`
-  - Serializer coverage for highlight, tag, callout, frontmatter, embed, math, table.
-
-- `src/lib/__tests__/parse.test.ts`
-  - Parser coverage for callout/embed/math and frontmatter false-positive regression around hr/table/hr patterns.
-
-Note:
-
-- Test suite is targeted rather than exhaustive; many UX-level interactions are still verified manually.
+1. **Vault Duality**: Parsing and serialization have separate pipelines (`extensions.ts` vs `markdown.ts`). Changes to block representations must always modify *both* pipelines concurrently.
+2. **Graph View Size**: `react-force-graph-2d` loads in a single pass; scaling logic needs periodic observation for mega-vault geometries.
+3. **Embed Semantics**: Standard Obsidian block ID embedding (`![[note#block]]`) is parsed, but deep, nested cyclic transclusion logic handles basic cases natively for stability.
+4. **Graph Tab Hack**: `folium-graph` operates as an irregular tab identifier within standard Note layout flow triggering custom renders on switch.
 
 ---
 
-## 8) Important Caveats / Technical Debt
+## 8) Contributor Notes
 
-1. Frontmatter mismatch in runtime path:
-- Extension + serializer exist, but load pipeline currently strips leading YAML before editor hydration.
-
-2. Embed semantics:
-- Syntax nodes exist; full transclusion/media rendering parity with Obsidian is not complete.
-
-3. Parser duality complexity:
-- There is TipTap markdown parsing on load and custom serialization on save, so parity regressions can appear in edge formats.
-
-4. Legacy artifact:
-- `src/components/PaneTabStrip.tsx` remains in tree but is no longer used after unified top-strip implementation.
-
-5. Duplicate extension warning:
-- Runtime currently logs duplicate `link` extension names; worth cleanup to avoid extension ordering edge-cases.
-
----
-
-## 9) Quick Reference Map
-
-### App shell and layout
-- `src/App.tsx`
-- `src/components/MainLayout.tsx`
-- `src/components/Sidebar.tsx`
-- `src/components/TabBar.tsx`
-- `src/components/StatusBar.tsx`
-
-### Modal and command surfaces
-- `src/components/ModalRoot.tsx`
-- `src/components/QuickSwitcher.tsx`
-- `src/components/ContextMenu.tsx`
-- `src/components/RenameModal.tsx`
-- `src/components/MoveModal.tsx`
-
-### Editing core
-- `src/components/Editor.tsx`
-- `src/lib/editor/extensions.ts`
-- `src/lib/markdown.ts`
-- `src/hooks/useEditorState.ts`
-
-### Filesystem and data
-- `src/hooks/useFileSystem.ts`
-- `src/hooks/useFileOperations.ts`
-- `src/hooks/useTabs.ts`
-- `src/lib/fs/*`
-
-### Markdown extension modules
-- `src/extensions/Wikilink.ts`
-- `src/extensions/Callout.ts`
-- `src/extensions/Frontmatter.ts`
-- `src/extensions/Tag.ts`
-- `src/extensions/Embed.ts`
-- `src/extensions/MathBlock.ts`
-- `src/extensions/InlineMath.ts`
-- `src/extensions/MarkdownPaste.ts`
-- `src/extensions/CodeBlockCopy.ts`
-
----
-
-## 10) Contributor Notes
-
-If you are changing markdown behavior, update these together:
-
-1. Extension tokenizer/parsing (`src/extensions/*`)  
-2. Save serializer (`src/lib/markdown.ts`)  
-3. Parse + serializer tests (`src/lib/__tests__/parse.test.ts`, `src/lib/__tests__/markdown.test.ts`)  
-4. User-facing docs (`markdown_comparison.md`, this file)
-
-Keeping those in sync is the best defense against silent markdown drift.
+When adding new Markdown behaviors:
+1. Extend Tokenizer in (`src/extensions/*`).
+2. Add Serializer formatting in (`src/lib/markdown.ts`).
+3. Add respective test logic in (`src/lib/__tests__/`).
+4. Update this overview logic file if adding massive structural shifts.

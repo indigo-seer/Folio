@@ -112,6 +112,8 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
         isNewNote,
         setIsNewNote,
         corruptionWarnings: mainCorruptionWarnings,
+        externalChangeWarning: mainExternalChangeWarning,
+        reloadActiveTabFromDisk: reloadMainFromDisk,
         handleEditorUpdate: handleMainEditorUpdate,
         handleEditorReady: handleMainEditorReady
     } = useEditorState({
@@ -125,6 +127,8 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
     const {
         editorScrollRef: splitEditorScrollRef,
         corruptionWarnings: splitCorruptionWarnings,
+        externalChangeWarning: splitExternalChangeWarning,
+        reloadActiveTabFromDisk: reloadSplitFromDisk,
         handleEditorUpdate: handleSplitEditorUpdate,
         handleEditorReady: handleSplitEditorReady
     } = useEditorState({
@@ -234,6 +238,13 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                             {tabs.activeTabId && tabs.activeTabId !== 'folium-graph' && (
                                 <>
                                     <CorruptionBanner warnings={mainCorruptionWarnings} />
+                                    <CorruptionBanner
+                                        warnings={mainExternalChangeWarning ? [mainExternalChangeWarning] : []}
+                                        title="This note changed on disk while you were editing."
+                                        hint="Folium paused auto-save to prevent overwriting newer file contents. Reload this note and merge your changes."
+                                        actionLabel="Reload from disk"
+                                        onAction={reloadMainFromDisk}
+                                    />
                                     <NoteTitle
                                         title={tabs.tabs.find((t: any) => t.id === tabs.activeTabId)?.title || 'Folium'}
                                         onRename={fileOperations.handleRename}
@@ -257,6 +268,13 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                         <div className={`absolute inset-0 overflow-y-auto overscroll-none ${isTypewriterMode ? 'typewriter-active-container' : ''}`} ref={splitEditorScrollRef}>
                             <div>
                                 <CorruptionBanner warnings={splitCorruptionWarnings} />
+                                <CorruptionBanner
+                                    warnings={splitExternalChangeWarning ? [splitExternalChangeWarning] : []}
+                                    title="This note changed on disk while you were editing."
+                                    hint="Folium paused auto-save to prevent overwriting newer file contents. Reload this note and merge your changes."
+                                    actionLabel="Reload from disk"
+                                    onAction={reloadSplitFromDisk}
+                                />
                                 <div className="max-w-prose-folium mx-auto px-6 pt-10 pb-2">
                                     <h1 className="note-title text-folium-text dark:text-folium-dark-text font-serif font-light m-0 pb-1 border-b-2 border-transparent">
                                         {tabs.tabs.find((t: any) => t.id === tabs.splitTabId)?.title || 'Untitled'}

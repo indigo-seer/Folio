@@ -2,9 +2,13 @@ import { NodeViewProps, NodeViewWrapper } from '@tiptap/react'
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { isTauri } from '../lib/config'
 import { getCachePathForImage, resolveAbsoluteImagePath } from '../lib/imageCache'
 
 const MIN_WIDTH = 100
+const VIEWPORT_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+const DEFAULT_IMAGE_RATIO = 16 / 10
+const imageRatioCache = new Map<string, number>()
 
 function normalizePixelDimension(value: unknown): number | null {
     if (value === null || value === undefined || value === '') return null
@@ -26,26 +30,43 @@ export default function ImageNodeView(props: NodeViewProps) {
         ratio: number
     } | null>(null)
     const [dragSize, setDragSize] = useState<{ width: number; height: number } | null>(null)
+    const [hasEnteredViewport, setHasEnteredViewport] = useState(false)
+    const [isImageLoaded, setIsImageLoaded] = useState(false)
 
     const src = String(node.attrs.src || '')
     const alt = String(node.attrs.alt || '')
     const width = normalizePixelDimension(node.attrs.width)
     const height = normalizePixelDimension(node.attrs.height)
     const absoluteSourcePath = resolveAbsoluteImagePath(src)
-    const resolvedSrc = getCachePathForImage(src)
+    const shouldDelayOffscreenLoad = isTauri() && Boolean(absoluteSourcePath)
+    const resolvedSrc = useMemo(() => {
+        if (shouldDelayOffscreenLoad && !hasEnteredViewport) {
+            return VIEWPORT_PLACEHOLDER
+        }
+        return getCachePathForImage(src)
+    }, [shouldDelayOffscreenLoad, hasEnteredViewport, src])
 
     const displayWidth = dragSize?.width ?? width
     const displayHeight = dragSize?.height ?? height
+    const expectedRatio = useMemo(() => {
+        if (displayWidth && displayHeight) {
+            return Math.max(0.05, displayWidth / displayHeight)
+        }
+        return imageRatioCache.get(src) || DEFAULT_IMAGE_RATIO
+    }, [displayHeight, displayWidth, src])
+    const isLoadingVisual = !isImageLoaded
     const imageStyle = useMemo(() => {
         if (!displayWidth && !displayHeight) {
             return {
                 maxWidth: '100%',
                 height: 'auto',
+                aspectRatio: `${expectedRatio}`,
             } as CSSProperties
         }
 
         const style: CSSProperties = {
             maxWidth: '100%',
+            aspectRatio: `${expectedRatio}`,
         }
 
         if (displayWidth) {
@@ -61,13 +82,63 @@ export default function ImageNodeView(props: NodeViewProps) {
         }
 
         return style
-    }, [displayWidth, displayHeight])
+    }, [displayWidth, displayHeight, expectedRatio])
 
     useEffect(() => {
         return () => {
             dragStateRef.current = null
         }
     }, [])
+
+    useEffect(() => {
+        setHasEnteredViewport(false)
+    }, [src])
+
+    useEffect(() => {
+        setIsImageLoaded(false)
+    }, [src, resolvedSrc])
+
+    useEffect(() => {
+        const wrapper = wrapperRef.current
+        if (!wrapper) return
+
+        if (!shouldDelayOffscreenLoad) {
+            setHasEnteredViewport(true)
+            return
+        }
+
+        if (hasEnteredViewport) return
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const isVisible = entries.some((entry) => entry.isIntersecting)
+                if (!isVisible) return
+                setHasEnteredViewport(true)
+                observer.disconnect()
+            },
+            {
+                root: null,
+                // Start warming slightly before true viewport entry.
+                rootMargin: '240px 0px',
+                threshold: 0.01,
+            },
+        )
+
+        observer.observe(wrapper)
+        return () => {
+            observer.disconnect()
+        }
+    }, [hasEnteredViewport, shouldDelayOffscreenLoad])
+
+    const handleImageLoaded = () => {
+        if (resolvedSrc === VIEWPORT_PLACEHOLDER) return
+
+        const imageEl = imageRef.current
+        if (imageEl && imageEl.naturalWidth > 0 && imageEl.naturalHeight > 0) {
+            imageRatioCache.set(src, imageEl.naturalWidth / imageEl.naturalHeight)
+        }
+        setIsImageLoaded(true)
+    }
 
     const beginDrag = (event: React.MouseEvent, direction: 'left' | 'right' | 'top' | 'bottom') => {
         event.preventDefault()
@@ -134,15 +205,21 @@ export default function ImageNodeView(props: NodeViewProps) {
         <NodeViewWrapper
             as="span"
             ref={wrapperRef}
-            className={`image-node-view ${selected ? 'selected' : ''}`}
+            className={`image-node-view ${selected ? 'selected' : ''} ${isLoadingVisual ? 'is-loading' : ''}`}
             data-image-node-view="true"
         >
+            {isLoadingVisual && <span className="image-skeleton" contentEditable={false} />}
             <img
                 ref={imageRef}
                 src={resolvedSrc}
                 alt={alt}
                 style={imageStyle}
+                className={`image-node-media ${isLoadingVisual ? 'is-loading' : 'is-loaded'}`}
+                loading="lazy"
+                decoding="async"
                 draggable={false}
+                onLoad={handleImageLoaded}
+                onError={handleImageLoaded}
                 data-folium-image-source-path={absoluteSourcePath || undefined}
             />
 

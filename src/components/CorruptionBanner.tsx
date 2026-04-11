@@ -1,11 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface CorruptionBannerProps {
     warnings: string[]
+    title?: string
+    hint?: string
+    actionLabel?: string
+    onAction?: () => void | Promise<void>
 }
 
-export function CorruptionBanner({ warnings }: CorruptionBannerProps) {
+export function CorruptionBanner({
+    warnings,
+    title = 'This note may contain formatting altered by an older version of Folium.',
+    hint = 'Please review the raw markdown before editing.',
+    actionLabel,
+    onAction,
+}: CorruptionBannerProps) {
     const [dismissed, setDismissed] = useState(false)
+    const signature = `${title}|${hint}|${warnings.join('||')}`
+
+    useEffect(() => {
+        setDismissed(false)
+    }, [signature])
 
     if (dismissed || warnings.length === 0) return null
 
@@ -20,13 +35,20 @@ export function CorruptionBanner({ warnings }: CorruptionBannerProps) {
                     </svg>
                 </div>
                 <div className="corruption-banner-text">
-                    <strong>This note may contain formatting altered by an older version of Folium.</strong>
+                    <strong>{title}</strong>
                     <ul>
                         {warnings.map((w, i) => (
                             <li key={i}>{w}</li>
                         ))}
                     </ul>
-                    <span className="corruption-banner-hint">Please review the raw markdown before editing.</span>
+                    <span className="corruption-banner-hint">{hint}</span>
+                    {actionLabel && onAction && (
+                        <div className="corruption-banner-actions">
+                            <button className="corruption-banner-action" onClick={() => void onAction()}>
+                                {actionLabel}
+                            </button>
+                        </div>
+                    )}
                 </div>
                 <button
                     className="corruption-banner-dismiss"

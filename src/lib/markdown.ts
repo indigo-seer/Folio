@@ -24,6 +24,13 @@ interface TipTapMark {
     attrs?: Record<string, unknown>
 }
 
+export interface ReferenceStyleDefinition {
+    label: string
+    normalizedLabel: string
+    url: string
+    title: string | null
+}
+
 const IMAGE_EXTENSIONS = [
     'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'heic', 'heif', 'tiff', 'tif'
 ]
@@ -332,7 +339,7 @@ function parseInline(text: string): TipTapNode[] {
                 addTextNode(nodes, token)
             }
         } else if (match[1] !== undefined) {
-            // Obsidian image wikilink: ![[image.png|300x200]]
+            // Obsidian wikilink embeds: image or note transclusion.
             const src = (match[1] || '').trim()
             if (isImagePath(src)) {
                 const { width, height } = parseObsidianImageSize(match[2] || '')
@@ -347,7 +354,15 @@ function parseInline(text: string): TipTapNode[] {
                     },
                 })
             } else {
-                addTextNode(nodes, match[0])
+                const { noteName, anchor } = parseWikilinkInner(src)
+                if (noteName) {
+                    nodes.push({
+                        type: 'embed',
+                        attrs: { noteName, anchor: anchor || null },
+                    })
+                } else {
+                    addTextNode(nodes, match[0])
+                }
             }
         } else if (match[3] !== undefined && match[4] !== undefined) {
             // Standard image ![alt](src)
@@ -390,6 +405,147 @@ function parseInline(text: string): TipTapNode[] {
     }
 
     return nodes
+}
+
+function normalizeReferenceLabel(label: string): string {
+    return label.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+function parseReferenceTitle(match: RegExpMatchArray): string | null {
+    return (match[3] ?? match[4] ?? match[5] ?? null) || null
+}
+
+function normalizeReferenceUrl(rawUrl: string): string {
+    const trimmed = rawUrl.trim()
+    if (trimmed.startsWith('<') && trimmed.endsWith('>') && trimmed.length > 2) {
+        return trimmed.slice(1, -1)
+    }
+    return trimmed
+}
+
+export function extractReferenceStyleDefinitions(markdown: string): ReferenceStyleDefinition[] {
+    const lines = markdown.replace(/\r/g, '').split('\n')
+    const out: ReferenceStyleDefinition[] = []
+    const seen = new Set<string>()
+    let inFence = false
+
+    for (const line of lines) {
+        const trimmed = line.trim()
+        if (/^```/.test(trimmed)) {
+            inFence = !inFence
+            continue
+        }
+        if (inFence) continue
+
+        const match = line.match(/^\s{0,3}\[([^\]]+)\]:\s*(\S+)(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?\s*$/)
+        if (!match) continue
+
+        const label = (match[1] || '').trim()
+        const normalizedLabel = normalizeReferenceLabel(label)
+        const url = normalizeReferenceUrl(match[2] || '')
+        const title = parseReferenceTitle(match)
+        if (!label || !url || !normalizedLabel) continue
+        if (seen.has(normalizedLabel)) continue
+
+        seen.add(normalizedLabel)
+        out.push({ label, normalizedLabel, url, title })
+    }
+
+    return out
+}
+
+function formatReferenceDefinition(definition: ReferenceStyleDefinition): string {
+    if (!definition.title) {
+        return `[${definition.label}]: ${definition.url}`
+    }
+
+    if (!definition.title.includes('"')) {
+        return `[${definition.label}]: ${definition.url} "${definition.title}"`
+    }
+
+    if (!definition.title.includes("'")) {
+        return `[${definition.label}]: ${definition.url} '${definition.title}'`
+    }
+
+    return `[${definition.label}]: ${definition.url} (${definition.title})`
+}
+
+function stripReferenceDefinitionLines(markdown: string): string {
+    const lines = markdown.replace(/\r/g, '').split('\n')
+    const kept: string[] = []
+    let inFence = false
+
+    for (const line of lines) {
+        const trimmed = line.trim()
+        if (/^```/.test(trimmed)) {
+            inFence = !inFence
+            kept.push(line)
+            continue
+        }
+
+        if (!inFence && /^\s{0,3}\[[^\]]+\]:\s*(\S+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*$/.test(line)) {
+            continue
+        }
+
+        kept.push(line)
+    }
+
+    return kept.join('\n')
+}
+
+export function restoreReferenceStyleLinks(
+    markdown: string,
+    definitions: ReferenceStyleDefinition[],
+): string {
+    if (definitions.length === 0) return markdown
+
+    const byExact = new Map<string, ReferenceStyleDefinition>()
+    const byUrl = new Map<string, ReferenceStyleDefinition>()
+    for (const definition of definitions) {
+        const exactKey = `${definition.url}\u0000${definition.title || ''}`
+        if (!byExact.has(exactKey)) byExact.set(exactKey, definition)
+        if (!byUrl.has(definition.url)) byUrl.set(definition.url, definition)
+    }
+
+    const lines = markdown.replace(/\r/g, '').split('\n')
+    const usedLabels = new Set<string>()
+    let inFence = false
+
+    const converted = lines.map((line) => {
+        const trimmed = line.trim()
+        if (/^```/.test(trimmed)) {
+            inFence = !inFence
+            return line
+        }
+        if (inFence) return line
+
+        return line.replace(
+            /(^|[^!])\[([^\]]+)\]\((<[^>\n]+>|[^)\s]+)(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?\)/g,
+            (_whole, prefix: string, text: string, rawUrl: string, title1?: string, title2?: string, title3?: string) => {
+                const url = normalizeReferenceUrl(rawUrl || '')
+                const title = title1 ?? title2 ?? title3 ?? ''
+                const exactKey = `${url}\u0000${title}`
+                const match = byExact.get(exactKey) || byUrl.get(url)
+
+                if (!match) {
+                    return `${prefix}[${text}](${rawUrl}${title ? ` "${title}"` : ''})`
+                }
+
+                usedLabels.add(match.normalizedLabel)
+                return `${prefix}[${text}][${match.label}]`
+            }
+        )
+    }).join('\n')
+
+    if (usedLabels.size === 0) return markdown
+
+    const withoutDefinitions = stripReferenceDefinitionLines(converted).trimEnd()
+    const definitionsToAppend = definitions
+        .filter((definition) => usedLabels.has(definition.normalizedLabel))
+        .map(formatReferenceDefinition)
+
+    if (definitionsToAppend.length === 0) return withoutDefinitions
+    return `${withoutDefinitions}\n\n${definitionsToAppend.join('\n')}`
 }
 
 function addTextNode(nodes: TipTapNode[], text: string): void {

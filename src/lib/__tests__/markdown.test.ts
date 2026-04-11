@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { markdownToTipTap, tipTapToMarkdown } from '../markdown'
+import {
+    extractReferenceStyleDefinitions,
+    markdownToTipTap,
+    restoreReferenceStyleLinks,
+    tipTapToMarkdown,
+} from '../markdown'
 
 describe('tipTapToMarkdown Custom Extensions Serialization', () => {
 
@@ -249,6 +254,15 @@ describe('tipTapToMarkdown Custom Extensions Serialization', () => {
         expect(firstInline?.attrs?.obsidian).toBeUndefined()
     })
 
+    it('parses non-image wikilink embeds in fallback parser', () => {
+        const doc = markdownToTipTap('![[Some Note#Heading]]')
+        const firstInline = doc.content?.[0]?.content?.[0] as any
+
+        expect(firstInline?.type).toBe('embed')
+        expect(firstInline?.attrs?.noteName).toBe('Some Note')
+        expect(firstInline?.attrs?.anchor).toBe('#Heading')
+    })
+
 })
 
 describe('Image Markdown Round-Trip', () => {
@@ -309,5 +323,23 @@ describe('Image Markdown Round-Trip', () => {
         const serialized = tipTapToMarkdown(docWithUndefinedWidth as any)
         expect(serialized).toBe('![alt](attachments/photo.png)')
         expect(serialized.includes('width=')).toBe(false)
+    })
+})
+
+describe('Reference Link Restoration', () => {
+    it('restores inline links to reference-style links when definitions exist', () => {
+        const source = [
+            'Example [OpenAI][oa].',
+            '',
+            '[oa]: https://openai.com "OpenAI"',
+        ].join('\n')
+
+        const definitions = extractReferenceStyleDefinitions(source)
+        const converted = restoreReferenceStyleLinks(
+            'Example [OpenAI](https://openai.com "OpenAI").',
+            definitions,
+        )
+
+        expect(converted).toBe(source)
     })
 })
