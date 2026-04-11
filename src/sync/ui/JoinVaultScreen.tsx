@@ -16,9 +16,8 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
     const [mode, setMode] = useState<'camera' | 'manual'>('manual')
 
     const handleConnect = async () => {
-        const cleanCode = code.replace(/[^A-Za-z0-9]/g, '')
-        if (cleanCode.length !== 12) {
-            setError('Please enter a complete 12-character code')
+        if (!isValidCode) {
+            setError('Please enter a complete code')
             return
         }
 
@@ -44,6 +43,8 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
             onClose()
         }
     }
+
+    const isValidCode = code.length >= 14 // 12 chars + 2 dashes = minimum visible length, but full string has payload too
 
     return createPortal(
         <div className="fixed inset-0 z-[150] flex items-center justify-center">
@@ -127,7 +128,7 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
 
                 <button
                     onClick={handleConnect}
-                    disabled={isConnecting || code.length < 14}
+                    disabled={isConnecting || !isValidCode}
                     className="w-full py-3 px-4 bg-folium-accent hover:bg-folium-accent/90 disabled:bg-[#D0D0D0] text-white font-sans text-[15px] font-medium rounded-lg transition-colors disabled:cursor-not-allowed"
                 >
                     {isConnecting ? 'Connecting...' : 'Connect'}

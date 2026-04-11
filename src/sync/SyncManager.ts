@@ -3,7 +3,20 @@ import { generatePairingCode, createSignedPayload, validatePairingCode } from '.
 import { VaultSyncWatcher } from './VaultSyncWatcher'
 import { syncthingAPI } from './syncthing/SyncthingAPI'
 
-const VAULT_ID = 'folium-vault'
+function hashString(str: string): string {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash = hash & hash
+    }
+    return Math.abs(hash).toString(36).substring(0, 8)
+}
+
+function getVaultId(vaultPath: string | null): string {
+    if (!vaultPath) return 'folium-default'
+    return 'folium-' + hashString(vaultPath)
+}
 
 export interface SyncthingStartResult {
     running: boolean
@@ -252,7 +265,7 @@ class SyncManager {
         const deviceId = this.config.sync.deviceId
         const deviceName = this.config.sync.deviceName
         const secret = this.config.sync.deviceSecret
-        const vaultId = VAULT_ID
+        const vaultId = getVaultId(this.initializedVaultPath)
 
         if (!deviceId || !deviceName || !secret) {
             throw new Error('Device not configured for pairing')
@@ -262,7 +275,7 @@ class SyncManager {
         const platform = this.getPlatform()
         
         const code = generatePairingCode()
-        const payloadBase = createSignedPayload(
+        const payloadBase = await createSignedPayload(
             deviceId,
             syncthingId,
             deviceName,
@@ -285,7 +298,7 @@ class SyncManager {
         }
 
         const secret = this.config.sync.deviceSecret
-        const vaultId = VAULT_ID
+        const vaultId = getVaultId(this.initializedVaultPath)
 
         if (!secret) {
             throw new Error('Device secret not configured')
@@ -297,10 +310,10 @@ class SyncManager {
             throw new Error(validation.error || 'Invalid code')
         }
 
-        const { deviceId, deviceName, syncthingId, platform } = validation.payload
+        const { deviceId, deviceName, syncthingId, platform, vaultId: incomingVaultId } = validation.payload
 
         await syncthingDesktopManager.addPeerDevice(syncthingId, deviceName)
-        await syncthingDesktopManager.shareFolderWithDevice(VAULT_ID, syncthingId)
+        await syncthingDesktopManager.shareFolderWithDevice(incomingVaultId, syncthingId)
 
         const pairedDevices = this.config.sync.pairedDevices || []
         pairedDevices.push({

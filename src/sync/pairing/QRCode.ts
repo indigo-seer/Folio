@@ -19,6 +19,10 @@ export function formatCodeForDisplay(code: string): string {
 
 export function parseCodeFromInput(input: string): string {
   const cleaned = input.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
-  const formatted = cleaned.match(/.{1,4}/g)?.join('-') || cleaned
-  return formatted.substring(0, 14)
+  // First format the code portion (first 12 alphanumeric chars = 4-4-4 format with dashes)
+  const codeChars = cleaned.substring(0, 12)
+  const codeFormatted = codeChars.match(/.{1,4}/g)?.join('-') || codeChars
+  // Keep the full string including any payload characters that follow
+  // The payload is base64-like and starts after the 14-char code
+  return codeFormatted + cleaned.substring(12)
 }

@@ -88,25 +88,24 @@ export async function createSignedPayloadAsync(
   return base64Encode(fullPayload)
 }
 
-export function createSignedPayload(
+export async function createSignedPayload(
   deviceId: string,
   syncthingId: string,
   deviceName: string,
   platform: string,
   vaultId: string,
-  _secret: string,
+  secret: string,
   validityMs: number = 10 * 60 * 1000
-): string {
-  const payload = {
+): Promise<string> {
+  return createSignedPayloadAsync(
     deviceId,
     syncthingId,
     deviceName,
     platform,
     vaultId,
-    expires: Date.now() + validityMs,
-    hmac: 'sync_pending',
-  }
-  return base64Encode(payload)
+    secret,
+    validityMs
+  )
 }
 
 export function encodePairingCode(code: string, payload: PairingPayload): string {
@@ -117,18 +116,34 @@ export function encodePairingCode(code: string, payload: PairingPayload): string
 export function decodePairingCode(
   fullString: string
 ): { code: string; payload: PairingPayload } | null {
-  const lastDash = fullString.lastIndexOf('-')
-  if (lastDash === -1) return null
-
-  const code = fullString.substring(0, lastDash)
-  const encoded = fullString.substring(lastDash + 1)
-
-  if (code.length !== 14) return null
+  // The code portion is ALWAYS exactly 14 chars (XXXX-XXXX-XXXX format)
+  // Find the position after the 14-char code plus one dash = position 15
+  const CODE_LENGTH = 14 // "XXXX-XXXX-XXXX"
+  
+  if (fullString.length < CODE_LENGTH + 1) {
+    return null
+  }
+  
+  // Extract the code portion (first 14 chars)
+  const code = fullString.substring(0, CODE_LENGTH)
+  
+  // Validate it's in correct format
   const codePattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
-  if (!codePattern.test(code)) return null
+  if (!codePattern.test(code)) {
+    return null
+  }
+  
+  // The payload starts at position 15 (after 14-char code + first dash)
+  const encoded = fullString.substring(CODE_LENGTH + 1)
+  
+  if (encoded.length === 0) {
+    return null
+  }
 
   const decoded = base64Decode(encoded)
-  if (!decoded) return null
+  if (!decoded) {
+    return null
+  }
 
   return { code, payload: decoded as PairingPayload }
 }
