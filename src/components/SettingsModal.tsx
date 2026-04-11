@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSettings } from '../hooks/useSettings'
-import { Palette, Type, Keyboard, Folder, HardDrive } from 'lucide-react'
+import { Palette, Type, Keyboard, Folder, HardDrive, RefreshCw } from 'lucide-react'
 import { Workspace } from '../lib/config'
 import { useCacheSize } from '../hooks/useCacheSize'
+import { isSyncRuntimeEnabledForVault, syncManager } from '../sync'
+import { AddDeviceModal } from '../sync/ui/AddDeviceModal'
+import { JoinVaultScreen } from '../sync/ui/JoinVaultScreen'
+import { RemoveDeviceModal } from '../sync/ui/RemoveDeviceModal'
+import type { PairedDevice } from '../sync/types'
 
 // ---------------------------------------------------------
 // Types & Props
@@ -15,6 +20,7 @@ interface SettingsModalProps {
     activeWorkspaceId: string | null
     onRemoveWorkspace: (id: string) => void
     onUpdateWorkspaceName: (id: string, newName: string) => void
+    vaultPath: string | null
 }
 
 // ---------------------------------------------------------
@@ -124,7 +130,7 @@ const FoliumLogo = () => (
     </svg>
 )
 
-function SettingsSidebar({ activeSection, onScrollToSection }: { activeSection: string, onScrollToSection: (id: string) => void }) {
+function SettingsSidebar({ activeSection, onScrollToSection, showSync }: { activeSection: string, onScrollToSection: (id: string) => void, showSync?: boolean }) {
     const navItems = [
         { id: 'appearance', label: 'Appearance', icon: Palette },
         { id: 'typography', label: 'Typography', icon: Type },
@@ -132,6 +138,10 @@ function SettingsSidebar({ activeSection, onScrollToSection }: { activeSection: 
         { id: 'image-cache', label: 'Image Cache', icon: HardDrive },
         { id: 'workspaces', label: 'Workspaces', icon: Folder },
     ]
+
+    if (showSync) {
+        navItems.splice(1, 0, { id: 'sync', label: 'Sync', icon: RefreshCw })
+    }
 
     return (
         <div className="w-[200px] sm:w-[240px] flex-shrink-0 border-r border-folium-border dark:border-folium-dark-border bg-[#FDFCFB] dark:bg-folium-dark-bg-secondary flex flex-col pt-8">
@@ -313,6 +323,222 @@ function SectionImageCache() {
     )
 }
 
+function SectionSync({ vaultPath }: { vaultPath: string | null }) {
+    const [status, setStatus] = useState<{
+        enabled: boolean
+        syncthingRunning: boolean
+        lastError: string | null
+    }>({
+        enabled: false,
+        syncthingRunning: false,
+        lastError: null,
+    })
+    const [pairedDevices, setPairedDevices] = useState<PairedDevice[]>([])
+    const [deviceName, setDeviceName] = useState<string | null>(null)
+    const [isEditingName, setIsEditingName] = useState(false)
+    const [tempName, setTempName] = useState('')
+    const [showAddDevice, setShowAddDevice] = useState(false)
+    const [showJoinVault, setShowJoinVault] = useState(false)
+    const [deviceToRemove, setDeviceToRemove] = useState<PairedDevice | null>(null)
+
+    useEffect(() => {
+        if (!vaultPath || !isSyncRuntimeEnabledForVault(vaultPath)) {
+            setStatus({ enabled: false, syncthingRunning: false, lastError: null })
+            return
+        }
+
+        const syncStatus = syncManager.getStatus()
+        setStatus({
+            enabled: true,
+            syncthingRunning: syncStatus.syncthingRunning,
+            lastError: syncStatus.lastError,
+        })
+
+        setPairedDevices(syncManager.getPairedDevices())
+        setDeviceName(syncManager.getDeviceName())
+
+        const interval = setInterval(() => {
+            const currentStatus = syncManager.getStatus()
+            setStatus({
+                enabled: true,
+                syncthingRunning: currentStatus.syncthingRunning,
+                lastError: currentStatus.lastError,
+            })
+            setPairedDevices(syncManager.getPairedDevices())
+        }, 3000)
+
+        return () => clearInterval(interval)
+    }, [vaultPath])
+
+    const handleSaveName = async () => {
+        const trimmed = tempName.trim()
+        if (trimmed && trimmed !== deviceName) {
+            await syncManager.updateDeviceName(trimmed)
+            setDeviceName(trimmed)
+        }
+        setIsEditingName(false)
+    }
+
+    const handleRemoveDevice = async () => {
+        if (!deviceToRemove) return
+        await syncManager.removeDevice(deviceToRemove.deviceId)
+        setPairedDevices(syncManager.getPairedDevices())
+        setDeviceToRemove(null)
+    }
+
+    const getStatusColor = () => {
+        if (!status.enabled) return 'bg-gray-400'
+        if (status.lastError) return 'bg-red-500'
+        if (status.syncthingRunning) return 'bg-green-500'
+        return 'bg-amber-500'
+    }
+
+    const getStatusText = () => {
+        if (!status.enabled) return 'Disabled'
+        if (status.lastError) return 'Error'
+        if (status.syncthingRunning) return 'Active'
+        return 'Starting...'
+    }
+
+    if (!status.enabled) {
+        return (
+            <div id="settings-sync" className="flex flex-col gap-5 scroll-mt-6">
+                <div className="flex justify-between items-start">
+                    <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Sync</h4>
+                </div>
+                <div className="flex items-center justify-between border-b border-folium-border/50 dark:border-folium-dark-border/50 pb-5">
+                    <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">
+                        Sync is not enabled
+                    </span>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div id="settings-sync" className="flex flex-col gap-6 scroll-mt-6">
+            <div className="flex justify-between items-start">
+                <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Sync</h4>
+                <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} />
+                    <span className="font-sans text-[13px] text-[#717F9A] dark:text-[#8895AD]">{getStatusText()}</span>
+                </div>
+            </div>
+
+            {status.lastError && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <span className="font-sans text-[13px] text-red-600 dark:text-red-400">{status.lastError}</span>
+                </div>
+            )}
+
+            <div className="border-b border-folium-border/50 dark:border-folium-dark-border/50 pb-5">
+                <span className="font-sans text-[14px] font-medium text-[#344054] dark:text-folium-dark-text mb-3 block">
+                    This Device
+                </span>
+                {isEditingName ? (
+                    <input
+                        value={tempName}
+                        onChange={(e) => setTempName(e.target.value)}
+                        onBlur={handleSaveName}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                        className="font-sans text-[15px] text-[#344054] dark:text-folium-dark-text bg-white dark:bg-folium-dark-bg-secondary border border-folium-border dark:border-folium-dark-border rounded px-2 py-1 outline-none focus:ring-2 focus:ring-folium-accent dark:focus:ring-folium-dark-accent"
+                        autoFocus
+                    />
+                ) : (
+                    <div 
+                        className="flex items-center gap-2 cursor-pointer hover:underline"
+                        onClick={() => {
+                            setTempName(deviceName || '')
+                            setIsEditingName(true)
+                        }}
+                    >
+                        <span className="font-sans text-[15px] text-[#344054] dark:text-folium-dark-text">
+                            {deviceName || 'Unnamed Device'}
+                        </span>
+                        <span className="text-[12px] text-[#717F9A] dark:text-[#8895AD]">(click to rename)</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="border-b border-folium-border/50 dark:border-folium-dark-border/50 pb-5">
+                <div className="flex justify-between items-center mb-4">
+                    <span className="font-sans text-[14px] font-medium text-[#344054] dark:text-folium-dark-text">
+                        My Devices
+                    </span>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setShowJoinVault(true)}
+                            className="font-sans text-[13px] text-[#717F9A] dark:text-[#8895AD] hover:text-folium-accent dark:hover:text-folium-dark-accent"
+                        >
+                            Join from device
+                        </button>
+                        <button
+                            onClick={() => setShowAddDevice(true)}
+                            className="font-sans text-[13px] text-folium-accent dark:text-folium-dark-accent hover:underline"
+                        >
+                            + Add Device
+                        </button>
+                    </div>
+                </div>
+
+                {pairedDevices.length === 0 ? (
+                    <p className="font-sans text-[13px] text-[#717F9A] dark:text-[#8895AD]">
+                        No devices connected yet
+                    </p>
+                ) : (
+                    <div className="flex flex-col gap-3">
+                        {pairedDevices.map((device) => (
+                            <div 
+                                key={device.deviceId}
+                                className="flex items-center justify-between p-3 bg-[#F8F7F6] dark:bg-folium-dark-bg-secondary rounded-lg"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                                    <div className="flex flex-col">
+                                        <span className="font-sans text-[14px] text-[#344054] dark:text-folium-dark-text">
+                                            {device.deviceName}
+                                        </span>
+                                        <span className="font-sans text-[11px] text-[#717F9A] dark:text-[#8895AD]">
+                                            Paired {new Date(device.pairedAt).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setDeviceToRemove(device)}
+                                    className="font-sans text-[12px] text-[#717F9A] dark:text-[#8895AD] hover:text-red-500"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="flex items-center justify-between pb-2">
+                <div className="flex flex-col">
+                    <span className="font-sans text-[14px] font-medium text-[#344054] dark:text-folium-dark-text">
+                        Vault
+                    </span>
+                    <span className="font-sans text-[12px] text-[#717F9A] dark:text-[#8895AD]">
+                        {vaultPath || 'Not connected'}
+                    </span>
+                </div>
+            </div>
+
+            {showAddDevice && <AddDeviceModal onClose={() => setShowAddDevice(false)} />}
+            {showJoinVault && <JoinVaultScreen onClose={() => setShowJoinVault(false)} onSuccess={() => { setShowJoinVault(false); setPairedDevices(syncManager.getPairedDevices()) }} />}
+            {deviceToRemove && (
+                <RemoveDeviceModal 
+                    device={deviceToRemove} 
+                    onClose={() => setDeviceToRemove(null)} 
+                    onSuccess={handleRemoveDevice}
+                />
+            )}
+        </div>
+    )
+}
+
 function SectionWorkspaces({
     workspaces,
     activeWorkspaceId,
@@ -358,10 +584,13 @@ export function SettingsModal({
     workspaces,
     activeWorkspaceId,
     onRemoveWorkspace,
-    onUpdateWorkspaceName
+    onUpdateWorkspaceName,
+    vaultPath
 }: SettingsModalProps) {
     const [activeSection, setActiveSection] = useState('appearance')
     const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+    const showSync = vaultPath ? isSyncRuntimeEnabledForVault(vaultPath) : false
 
     // Handle escape key to close
     useEffect(() => {
@@ -389,7 +618,7 @@ export function SettingsModal({
                 className="bg-[#FCFBFA] dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border rounded-xl shadow-2xl w-full max-w-[840px] h-[640px] max-h-[90vh] pointer-events-auto animate-in zoom-in-[0.98] duration-200 flex overflow-hidden"
                 onMouseDown={(e) => e.stopPropagation()}
             >
-                <SettingsSidebar activeSection={activeSection} onScrollToSection={scrollToSection} />
+                <SettingsSidebar activeSection={activeSection} onScrollToSection={scrollToSection} showSync={showSync} />
 
                 {/* Right Content */}
                 <div className="flex-1 flex flex-col min-w-0 bg-[#FDFCFB] dark:bg-folium-dark-bg">
@@ -414,6 +643,7 @@ export function SettingsModal({
                         className="flex-1 overflow-y-auto px-10 py-8 scroll-smooth"
                     >
                         <div className="flex flex-col gap-8 max-w-xl pb-16">
+                            {showSync && <SectionSync vaultPath={vaultPath} />}
                             <SectionAppearance />
                             <SectionTypography />
                             <SectionWritingModes />

@@ -26,6 +26,9 @@ export function ModalRoot({
     const modals = useModals();
     const { workspaces, activeWorkspaceId, handleRemoveWorkspace, handleUpdateWorkspaceName } = useWorkspace();
 
+    const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId)
+    const vaultPath = activeWorkspace?.path || null
+
     const quickSwitcherCommands = useMemo<QuickSwitcherCommand[]>(() => {
         const activeTab = tabs.tabs.find((t: any) => t.id === activeTabId);
         const hasActiveMarkdownTab = Boolean(activeTab && activeTab.path && activeTab.id !== 'folium-graph');
@@ -217,6 +220,7 @@ export function ModalRoot({
                     activeWorkspaceId={activeWorkspaceId}
                     onRemoveWorkspace={(id) => handleRemoveWorkspace(id)}
                     onUpdateWorkspaceName={handleUpdateWorkspaceName}
+                    vaultPath={vaultPath}
                 />
             )}
 

@@ -36,6 +36,7 @@
     "@tiptap/react": "^3.20.0",
     "@tiptap/starter-kit": "^3.20.0",
     "@tiptap/suggestion": "^3.20.0",
+    "@types/qrcode": "^1.5.6",
     "framer-motion": "^12.34.3",
     "fuse.js": "^7.1.0",
     "html2canvas": "^1.4.1",
@@ -45,14 +46,16 @@
     "lucide-react": "^0.575.0",
     "prosemirror-state": "^1.4.4",
     "prosemirror-view": "^1.41.3",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-force-graph-2d": "^1.29.1",
-    "tippy.js": "^6.3.7"
+    "tippy.js": "^6.3.7",
+    "yjs": "^13.6.30"
   },
   "devDependencies": {
-    "@types/katex": "^0.16.8",
     "@tauri-apps/cli": "^2.10.0",
+    "@types/katex": "^0.16.8",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",

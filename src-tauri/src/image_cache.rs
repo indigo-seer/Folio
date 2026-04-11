@@ -61,7 +61,12 @@ fn cache_images_dir(app: &AppHandle) -> Result<PathBuf, String> {
 
     app.asset_protocol_scope()
         .allow_directory(&dir, true)
-        .map_err(|e| format!("Failed to allow image cache dir in asset scope {}: {e}", dir.display()))?;
+        .map_err(|e| {
+            format!(
+                "Failed to allow image cache dir in asset scope {}: {e}",
+                dir.display()
+            )
+        })?;
 
     Ok(dir)
 }
@@ -73,7 +78,12 @@ fn cache_webp_path(cache_dir: &Path, cache_key: &str) -> PathBuf {
 fn allow_asset_file(app: &AppHandle, file_path: &Path) -> Result<(), String> {
     app.asset_protocol_scope()
         .allow_file(file_path)
-        .map_err(|e| format!("Failed to allow file in asset scope {}: {e}", file_path.display()))
+        .map_err(|e| {
+            format!(
+                "Failed to allow file in asset scope {}: {e}",
+                file_path.display()
+            )
+        })
 }
 
 fn log_cache_event(action: &str, source_path: &Path, relative_path: &str, cache_path: &Path) {
@@ -89,7 +99,11 @@ fn cache_meta_path(cache_dir: &Path, cache_key: &str) -> PathBuf {
     cache_dir.join(format!("{cache_key}.json"))
 }
 
-fn write_cache_metadata(cache_dir: &Path, cache_key: &str, source_path: &Path) -> Result<(), String> {
+fn write_cache_metadata(
+    cache_dir: &Path,
+    cache_key: &str,
+    source_path: &Path,
+) -> Result<(), String> {
     let metadata = CacheSourceMetadata {
         source_path: source_path.to_string_lossy().to_string(),
     };
@@ -339,15 +353,22 @@ pub fn open_cache_folder(app: AppHandle) -> Result<(), String> {
         Command::new("explorer")
             .arg(&cache_dir)
             .spawn()
-            .map_err(|e| format!("Failed opening cache folder in explorer {}: {e}", cache_dir.display()))?;
+            .map_err(|e| {
+                format!(
+                    "Failed opening cache folder in explorer {}: {e}",
+                    cache_dir.display()
+                )
+            })?;
     }
 
     #[cfg(target_os = "macos")]
     {
-        Command::new("open")
-            .arg(&cache_dir)
-            .spawn()
-            .map_err(|e| format!("Failed opening cache folder in Finder {}: {e}", cache_dir.display()))?;
+        Command::new("open").arg(&cache_dir).spawn().map_err(|e| {
+            format!(
+                "Failed opening cache folder in Finder {}: {e}",
+                cache_dir.display()
+            )
+        })?;
     }
 
     #[cfg(all(unix, not(target_os = "macos")))]

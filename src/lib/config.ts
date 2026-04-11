@@ -24,6 +24,15 @@ export interface UIConfig {
 export interface SyncConfig {
     enabled: boolean
     deviceId: string | null
+    deviceName: string | null
+    deviceSecret: string | null
+    pairedDevices: Array<{
+        deviceId: string
+        deviceName: string
+        syncthingId: string
+        platform: string
+        pairedAt: string
+    }>
 }
 
 export interface FoliumConfig {
@@ -54,6 +63,9 @@ const DEFAULT_CONFIG: FoliumConfig = {
     sync: {
         enabled: false,
         deviceId: null,
+        deviceName: null,
+        deviceSecret: null,
+        pairedDevices: [],
     },
     migrations: {
         imageIngestionByWorkspace: {},

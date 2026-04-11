@@ -33,6 +33,7 @@ App
 - **Folium is an integrated editing shell** that brings powerful Obsidian Flavored Markdown (OFM) to life inside a responsive split-pane UI.
 - The app has been renamed to **Folium** from Folio, reflecting its evolution.
 - Extensive features like native Graph Views, PDF Exports, robust OFM support (Wikilinks, Math, Embeds), and smooth animations construct an integrated desktop experience.
+- **Architectural Tenets:** The app strictly enforces TypeScript interfaces, deeply gates debug logging behind DEV flags, and relies on encapsulated instances (avoiding global mutable state) to ensure robust type-safety and optimal performance.
 
 ---
 
@@ -44,9 +45,10 @@ App
   - Defines Provider hierarchy.
   - Controls initial Bootloader state (`useAppBootloader`) and Onboarding.
   - Manages editor and split states using `BootloaderWrappedContent` and `VaultProviderWrapped`.
-  - Audits typings using `performanceAudit.ts`.
+  - Interfaces with singleton instance state classes for auditing (`performanceAudit.ts`), strictly avoiding global mutable state.
 - `src/components/MainLayout.tsx`
   - Container layout encompassing the Sidebar, Focus Mode features, and top TabBar.
+  - Broken down deliberately into targeted sub-components (e.g., `Sidebar.tsx`, `TabBar.tsx`, `StatusBar.tsx`) rather than a monolithic render.
   - Handles the split-pane logic natively and responsive active Tab mappings.
 - `src/components/GraphView.tsx`
   - Uses `react-force-graph-2d` to visualize vault note nodes and relationships extracted via backlinks and wikilinks. Handled as a tab in MainLayout.
@@ -87,7 +89,7 @@ The TipTap environment is augmented extensively:
 - `setContent(markdown)` processes node parsing. Caching functions (`imageCache.ts`) load images smoothly natively without performance penalties.
 
 ### 3.3 Autosave & Serializer Path
-- Debounced functions track typed words (`performanceAudit.ts`).
+- Debounced functions track typed words and performance using cleanly instanced classes in `performanceAudit.ts` rather than global arrays to prevent memory leaks.
 - When triggered, `tipTapToMarkdown` (`src/lib/markdown.ts`) normalizes structures like equations, embedded media, metadata objects, and callouts back perfectly to markdown.
 
 ---

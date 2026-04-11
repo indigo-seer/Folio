@@ -9,6 +9,8 @@ import {
 import { fs } from '../lib/fs';
 import { updateWordCountGlobally } from './useWordCount';
 import { detectCorruption } from '../lib/corruptionDetector';
+import { isSyncRuntimeEnabledForVault } from '../sync/bootstrap';
+import { yjsVault } from '../sync/YjsVault';
 import type { FileSystemAPI } from './useFileSystem';
 import type { TabData } from './useTabs';
 
@@ -18,6 +20,7 @@ interface UseEditorStateProps {
     fileSystem: Pick<FileSystemAPI, 'readFile' | 'writeFile' | 'getEditorState' | 'saveEditorState'>;
     isMoveModalOpen: boolean;
     vaultRootPath: string | null;
+    showToast?: (msg: string) => void;
 }
 
 export function useEditorState({
@@ -25,7 +28,8 @@ export function useEditorState({
     tabs,
     fileSystem,
     isMoveModalOpen,
-    vaultRootPath
+    vaultRootPath,
+    showToast
 }: UseEditorStateProps) {
     const [isNewNote, setIsNewNote] = useState(false);
     const [editorReady, setEditorReady] = useState(false);
@@ -43,6 +47,11 @@ export function useEditorState({
     const lastFlushedTabRef = useRef<string | null>(null);
     const referenceStyleByPathRef = useRef<Map<string, ReferenceStyleDefinition[]>>(new Map());
     const lastKnownDiskByPathRef = useRef<Map<string, string>>(new Map());
+    const lastKnownYjsByPathRef = useRef<Map<string, string>>(new Map());
+    const lastEditorUpdateAtRef = useRef<number>(0);
+    const isSyncWriteEnabled = useCallback(() => {
+        return isSyncRuntimeEnabledForVault(vaultRootPath);
+    }, [vaultRootPath]);
 
     const checkExternalChangeBeforeWrite = useCallback(async (path: string, nextMarkdown: string) => {
         const expectedDisk = lastKnownDiskByPathRef.current.get(path);
@@ -97,7 +106,11 @@ export function useEditorState({
                                 } else {
                                     if (import.meta.env.DEV) console.log('[Folium Debug] Tab-switch flush:', prevTab.path, 'length:', md.length);
                                     await fs.writeFile(prevTab.path, md);
+                                    if (isSyncWriteEnabled()) {
+                                        await yjsVault.writeNote(prevTab.path, md);
+                                    }
                                     lastKnownDiskByPathRef.current.set(prevTab.path, md);
+                                    lastKnownYjsByPathRef.current.set(prevTab.path, md);
                                     lastFlushedTabRef.current = renderedTabIdRef.current;
                                     if (activeTabId === renderedTabIdRef.current) {
                                         setExternalChangeWarning(null);
@@ -144,15 +157,21 @@ export function useEditorState({
 
                 try {
                     const raw = await fileSystem.readFile(tab.path);
-                    referenceStyleByPathRef.current.set(tab.path, extractReferenceStyleDefinitions(raw));
+                    const yjsMarkdown = isSyncWriteEnabled()
+                        ? await yjsVault.readNote(tab.path)
+                        : null;
+                    const markdownFromSource = yjsMarkdown ?? raw;
+
+                    referenceStyleByPathRef.current.set(tab.path, extractReferenceStyleDefinitions(markdownFromSource));
                     lastKnownDiskByPathRef.current.set(tab.path, raw);
+                    lastKnownYjsByPathRef.current.set(tab.path, markdownFromSource);
                     setExternalChangeWarning(null);
 
                     // Phase 0: detect corruption from older parser versions
-                    const warnings = detectCorruption(raw);
+                    const warnings = detectCorruption(markdownFromSource);
                     setCorruptionWarnings(warnings);
 
-                    const markdown = raw;
+                    const markdown = markdownFromSource;
 
                     if (!isMounted) return;
                     if (!editorRef.current) {
@@ -252,20 +271,80 @@ export function useEditorState({
                 if (!shouldWrite) return;
                 if (import.meta.env.DEV) console.log('[Folium Debug] Autosave: markdown length:', md.length, 'preview:', md.substring(0, 100));
                 await fileSystem.writeFile(tab.path, md);
+                if (isSyncWriteEnabled()) {
+                    await yjsVault.writeNote(tab.path, md);
+                }
                 lastKnownDiskByPathRef.current.set(tab.path, md);
+                lastKnownYjsByPathRef.current.set(tab.path, md);
                 setExternalChangeWarning(null);
                 if (import.meta.env.DEV) console.log('[Folium Debug] Autosave: Write complete');
             } catch (err) {
                 console.error('[Folium Debug] Autosave FAILED:', err);
             }
         }, 1000);
-    }, [activeTabId, tabs, fileSystem, isMoveModalOpen]);
+    }, [activeTabId, tabs, fileSystem, isMoveModalOpen, isSyncWriteEnabled]);
+
+    useEffect(() => {
+        if (!activeTabId || !isSyncWriteEnabled()) return;
+
+        let isMounted = true;
+
+        const pollForRemoteYjsUpdate = async () => {
+            if (!isMounted || !activeTabId) return;
+            if (!editorRef.current) return;
+            if (renderedTabIdRef.current !== activeTabId || hydratedTabIdRef.current !== activeTabId) return;
+            if (Date.now() - lastEditorUpdateAtRef.current < 1500) return;
+
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab?.path) return;
+
+            const remoteMarkdown = await yjsVault.readNote(tab.path);
+            if (remoteMarkdown === null) return;
+
+            const knownYjs = lastKnownYjsByPathRef.current.get(tab.path);
+            if (knownYjs === remoteMarkdown) return;
+
+            const selectionHead = editorRef.current.state.selection.head;
+            const currentJson = editorRef.current.getJSON();
+            const currentRawMarkdown = tipTapToMarkdown(currentJson);
+            const definitions = referenceStyleByPathRef.current.get(tab.path) || [];
+            const currentMarkdown = restoreReferenceStyleLinks(currentRawMarkdown, definitions);
+
+            if (currentMarkdown !== remoteMarkdown) {
+                editorRef.current.commands.setContent(remoteMarkdown, {
+                    emitUpdate: false,
+                    contentType: 'markdown'
+                } as any);
+                try {
+                    editorRef.current.commands.setTextSelection(selectionHead);
+                } catch {
+                    // Cursor may be out of range after remote update.
+                }
+                showToast?.('Note updated from sync');
+            }
+
+            await fileSystem.writeFile(tab.path, remoteMarkdown);
+            lastKnownDiskByPathRef.current.set(tab.path, remoteMarkdown);
+            lastKnownYjsByPathRef.current.set(tab.path, remoteMarkdown);
+            setExternalChangeWarning(null);
+        };
+
+        const timer = setInterval(() => {
+            void pollForRemoteYjsUpdate();
+        }, 1500);
+
+        return () => {
+            isMounted = false;
+            clearInterval(timer);
+        };
+    }, [activeTabId, tabs, fileSystem, isSyncWriteEnabled, showToast]);
 
     // Handle editor updates: word count + auto-save
     const handleEditorUpdate = useCallback(
         (editor: TipTapEditor | null) => {
             if (!editor) return;
             editorRef.current = editor;
+            lastEditorUpdateAtRef.current = Date.now();
             updateWordCountGlobally(editor);
             triggerAutoSave();
         },
