@@ -98,9 +98,11 @@ fn resolve_syncthing_binary(app: &AppHandle) -> Result<PathBuf, String> {
     // 1. Try Tauri resource directory (standard install)
     if let Ok(resource_dir) = app.path().resource_dir() {
         let bin_dir = resource_dir.join("bin");
+        eprintln!("[DEBUG] Checking Tauri resource dir: {}", bin_dir.display());
         for candidate in &candidates {
             let path = bin_dir.join(candidate);
             if path.exists() {
+                eprintln!("[DEBUG] Found binary at: {}", path.display());
                 return Ok(path);
             }
         }
@@ -109,10 +111,12 @@ fn resolve_syncthing_binary(app: &AppHandle) -> Result<PathBuf, String> {
     // 2. Try next to executable (portable installs, Windows Program Files)
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
+            eprintln!("[DEBUG] Checking next to executable: {}", exe_dir.display());
             // Try resources/bin alongside executable
             for candidate in &candidates {
                 let path = exe_dir.join("resources").join("bin").join(candidate);
                 if path.exists() {
+                    eprintln!("[DEBUG] Found binary at: {}", path.display());
                     return Ok(path);
                 }
             }
@@ -120,6 +124,7 @@ fn resolve_syncthing_binary(app: &AppHandle) -> Result<PathBuf, String> {
             for candidate in &candidates {
                 let path = exe_dir.join("bin").join(candidate);
                 if path.exists() {
+                    eprintln!("[DEBUG] Found binary at: {}", path.display());
                     return Ok(path);
                 }
             }
@@ -127,18 +132,36 @@ fn resolve_syncthing_binary(app: &AppHandle) -> Result<PathBuf, String> {
     }
 
     // 3. Try current working directory (development/testing)
+    eprintln!("[DEBUG] Checking current working directory");
     for candidate in &candidates {
         let path = PathBuf::from("resources").join("bin").join(candidate);
         if path.exists() {
+            eprintln!("[DEBUG] Found binary at CWD: {}", path.display());
             return Ok(path);
         }
         let path = PathBuf::from("resources/bin").join(candidate);
         if path.exists() {
+            eprintln!("[DEBUG] Found binary at CWD: {}", path.display());
             return Ok(path);
         }
     }
 
-    Err("Syncthing binary not found. Checked: app resources/bin, executable resources/bin, executable bin, working directory resources/bin".to_string())
+    // 4. Try app data directory (another possible location)
+    if let Ok(data_dir) = app.path().app_data_dir() {
+        let alt_path = data_dir.join("resources").join("bin");
+        eprintln!("[DEBUG] Checking app data dir: {}", alt_path.display());
+        for candidate in &candidates {
+            let path = alt_path.join(candidate);
+            if path.exists() {
+                eprintln!("[DEBUG] Found binary at: {}", path.display());
+                return Ok(path);
+            }
+        }
+    }
+
+    let err = format!("Syncthing binary not found. Checked paths above.");
+    eprintln!("[ERROR] {}", err);
+    Err(err)
 }
 
 fn write_syncthing_config(
@@ -230,26 +253,34 @@ fn start_syncthing_sidecar(
     }
 
     let binary = resolve_syncthing_binary(&app)?;
+    eprintln!("[DEBUG] Using binary: {}", binary.display());
+
     let port = pick_open_port()?;
     let api_key = random_api_key();
 
     let app_config_dir = app
         .path()
         .app_config_dir()
-        .map_err(|e| format!("Unable to resolve app config directory: {e}"))?;
+        .map_err(|e| format!("Unable to resolve app config directory: {}", e))?;
 
     let syncthing_home = app_config_dir.join("sync").join("syncthing");
     write_syncthing_config(&syncthing_home, vault_paths.clone(), &api_key, port)?;
 
-    let child = Command::new(binary)
+    let child = Command::new(&binary)
         .arg("-home")
         .arg(&syncthing_home)
         .arg("-no-browser")
         .arg("-no-restart")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
         .spawn()
-        .map_err(|e| format!("Failed to spawn syncthing sidecar: {e}"))?;
+        .map_err(|e| {
+            format!(
+                "Failed to spawn syncthing sidecar: binary='{}', error='{}'",
+                binary.display(),
+                e
+            )
+        })?;
 
     let pid = child.id();
     state.runtime = Some(SyncthingRuntime {
