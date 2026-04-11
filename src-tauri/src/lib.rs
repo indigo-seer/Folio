@@ -635,10 +635,8 @@ fn add_syncthing_folder(
         .unwrap_or_default();
     folders.push(new_folder);
 
-    let updated_config = serde_json::json!({
-        ..config,
-        "folder": folders
-    });
+    let mut updated_config = config.clone();
+    updated_config["folder"] = serde_json::json!(folders);
 
     let put_url = format!("http://127.0.0.1:{}/rest/system/config", runtime.port);
     client

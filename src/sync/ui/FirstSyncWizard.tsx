@@ -12,22 +12,31 @@ interface FirstSyncWizardProps {
 }
 
 export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWizardProps) {
-    const [selectedVaults, setSelectedVaults] = useState<Map<string, string>>(() => {
-        const map = new Map<string, string>()
-        newVaults.forEach(vault => {
-            map.set(vault.name, getDefaultVaultPath(vault.name))
-        })
-        return map
-    })
+    const [selectedVaults, setSelectedVaults] = useState<Map<string, string>>(new Map())
     const [isSyncing, setIsSyncing] = useState(false)
     const [customPaths, setCustomPaths] = useState<Map<string, boolean>>(new Map())
+    const [isLoading, setIsLoading] = useState(true)
 
-    const toggleVault = (vaultName: string) => {
+    useEffect(() => {
+        const initVaults = async () => {
+            const map = new Map<string, string>()
+            for (const vault of newVaults) {
+                const defaultPath = await getDefaultVaultPath(vault.name)
+                map.set(vault.name, defaultPath)
+            }
+            setSelectedVaults(map)
+            setIsLoading(false)
+        }
+        initVaults()
+    }, [newVaults])
+
+    const toggleVault = async (vaultName: string) => {
         const newSelected = new Map(selectedVaults)
         if (newSelected.has(vaultName)) {
             newSelected.delete(vaultName)
         } else {
-            newSelected.set(vaultName, getDefaultVaultPath(vaultName))
+            const defaultPath = await getDefaultVaultPath(vaultName)
+            newSelected.set(vaultName, defaultPath)
         }
         setSelectedVaults(newSelected)
     }
@@ -63,6 +72,17 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [onCancel])
 
+    if (isLoading) {
+        return createPortal(
+            <div className="fixed inset-0 z-[150] flex items-center justify-center">
+                <div className="relative bg-white dark:bg-folium-dark-bg-secondary rounded-2xl shadow-2xl w-[500px] max-w-[90vw] p-8 flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-folium-accent border-t-transparent rounded-full animate-spin" />
+                </div>
+            </div>,
+            document.body
+        )
+    }
+
     return createPortal(
         <div className="fixed inset-0 z-[150] flex items-center justify-center">
             <div 
@@ -91,7 +111,7 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
                     <div className="flex flex-col gap-3">
                         {newVaults.map(vault => {
                             const isSelected = selectedVaults.has(vault.name)
-                            const currentPath = selectedVaults.get(vault.name) || getDefaultVaultPath(vault.name)
+                            const currentPath = selectedVaults.get(vault.name) || ''
                             
                             return (
                                 <div 

@@ -1,5 +1,5 @@
-import * as fs from 'fs/promises'
-import * as path from 'path'
+import { join } from '@tauri-apps/api/path'
+import { readTextFile, writeTextFile, mkdir, exists } from '@tauri-apps/plugin-fs'
 
 export interface VaultInfo {
     name: string
@@ -16,8 +16,8 @@ const VAULT_REGISTRY_FILENAME = 'vaults.json'
 
 export async function getVaultManifest(vaultPath: string): Promise<VaultManifest | null> {
     try {
-        const manifestPath = path.join(vaultPath, '.vault-sync', VAULT_REGISTRY_FILENAME)
-        const content = await fs.readFile(manifestPath, 'utf-8')
+        const manifestPath = await join(vaultPath, '.vault-sync', VAULT_REGISTRY_FILENAME)
+        const content = await readTextFile(manifestPath)
         return JSON.parse(content) as VaultManifest
     } catch {
         return null
@@ -25,10 +25,13 @@ export async function getVaultManifest(vaultPath: string): Promise<VaultManifest
 }
 
 export async function saveVaultManifest(vaultPath: string, manifest: VaultManifest): Promise<void> {
-    const syncDir = path.join(vaultPath, '.vault-sync')
-    await fs.mkdir(syncDir, { recursive: true })
-    const manifestPath = path.join(syncDir, VAULT_REGISTRY_FILENAME)
-    await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8')
+    const syncDir = await join(vaultPath, '.vault-sync')
+    const syncDirExists = await exists(syncDir)
+    if (!syncDirExists) {
+        await mkdir(syncDir, { recursive: true })
+    }
+    const manifestPath = await join(syncDir, VAULT_REGISTRY_FILENAME)
+    await writeTextFile(manifestPath, JSON.stringify(manifest, null, 2))
 }
 
 export async function addVaultToManifest(
@@ -72,7 +75,7 @@ export async function discoverLocalVaults(vaultPaths: string[]): Promise<VaultIn
         if (manifest) {
             vaults.push(...manifest.vaults)
         } else {
-            const vaultName = path.basename(vaultPath)
+            const vaultName = vaultPath.split(/[/\\]/).pop() || 'vault'
             vaults.push({
                 name: vaultName,
                 path: vaultName,
@@ -97,21 +100,10 @@ export async function mergeVaultManifests(
     return { allVaults, newVaults }
 }
 
-export function getDefaultVaultPath(vaultName: string): string {
-    const homedir = require('os').homedir()
-    const platform = process.platform
-    
-    let basePath: string
-    
-    if (platform === 'win32') {
-        basePath = path.join(homedir, 'Documents', 'Folium', 'vaults')
-    } else if (platform === 'darwin') {
-        basePath = path.join(homedir, 'Documents', 'Folium', 'vaults')
-    } else {
-        basePath = path.join(homedir, 'Documents', 'Folium', 'vaults')
-    }
-    
-    return path.join(basePath, vaultName)
+export async function getDefaultVaultPath(vaultName: string): Promise<string> {
+    const { documentDir } = await import('@tauri-apps/api/path')
+    const basePath = await documentDir()
+    return await join(basePath, 'Folium', 'vaults', vaultName)
 }
 
 export function isVaultNameValid(name: string): boolean {
