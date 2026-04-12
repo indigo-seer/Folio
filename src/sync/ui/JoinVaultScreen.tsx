@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Camera, Keyboard } from 'lucide-react'
 import { syncManager } from '../index'
+import { syncthingAPI } from '../syncthing/SyncthingAPI'
 import { normalizePairingTokenInput } from '../pairing/QRCode'
 import { FirstSyncWizard } from './FirstSyncWizard'
 import type { VaultInfo } from '../vaultRegistry'
@@ -17,6 +18,57 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
     const [error, setError] = useState<string | null>(null)
     const [mode, setMode] = useState<'camera' | 'manual'>('manual')
     const [incomingVaults, setIncomingVaults] = useState<VaultInfo[] | null>(null)
+    const [nearbyDevices, setNearbyDevices] = useState<string[]>([])
+
+    import('react').then(({ useEffect }) => {
+        useEffect(() => {
+            let mounted = true
+
+            syncManager.startHandshakePolling((vault) => {
+                if (!mounted) return
+                setIncomingVaults([
+                    {
+                        name: vault.name,
+                        path: vault.name,
+                        createdAt: new Date().toISOString(),
+                        deviceId: 'remote',
+                    },
+                ])
+                setIsConnecting(false)
+            })
+
+            const pollDiscovery = async () => {
+                if (!mounted) return
+                try {
+                    const devices = await syncthingAPI.getLocalDevices()
+                    const paired = syncManager.getPairedDevices().map((d: any) => d.syncthingId)
+                    setNearbyDevices(devices.filter(d => !paired.includes(d)))
+                } catch {
+                    // Ignore errors
+                }
+            }
+
+            pollDiscovery()
+            const pollInterval = setInterval(pollDiscovery, 3000)
+
+            return () => {
+                mounted = false
+                clearInterval(pollInterval)
+                syncManager.stopHandshakePolling()
+            }
+        }, [])
+    })
+
+    const handleNearbyConnect = async (deviceId: string) => {
+        setIsConnecting(true)
+        setError(null)
+        try {
+            await syncthingAPI.addDevice(deviceId, 'Nearby Device')
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to connect')
+            setIsConnecting(false)
+        }
+    }
 
     const handleConnect = async () => {
         const normalized = normalizePairingTokenInput(tokenInput)
@@ -77,7 +129,7 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
 
     return createPortal(
         <div className="fixed inset-0 z-[150] flex items-center justify-center">
-            <div 
+            <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm"
                 onClick={onClose}
             />
@@ -92,29 +144,52 @@ export function JoinVaultScreen({ onClose, onSuccess }: JoinVaultScreenProps) {
                 <h2 className="font-sans text-[20px] font-semibold text-[#344054] dark:text-folium-dark-text mb-2">
                     Sync from another device
                 </h2>
-                <p className="font-sans text-[14px] text-[#717F9A] dark:text-[#8895AD] mb-6">
-                    On your existing device, go to Settings → Sync → Add Device, then scan the code shown there.
+                <p className="font-sans text-[14px] text-[#717F9A] dark:text-[#8895AD] mb-4">
+                    On your existing device, go to Settings → Sync → Add Device. It will appear below, or you can scan its code.
                 </p>
+
+                {nearbyDevices.length > 0 && (
+                    <div className="mb-6 space-y-2">
+                        {nearbyDevices.map(id => (
+                            <button
+                                key={id}
+                                onClick={() => handleNearbyConnect(id)}
+                                disabled={isConnecting}
+                                className="w-full flex items-center justify-between p-3 rounded-xl bg-folium-accent/10 hover:bg-folium-accent/20 border border-folium-accent/20 transition-colors text-left"
+                            >
+                                <div>
+                                    <h3 className="font-sans text-[14px] font-medium text-[#344054] dark:text-folium-dark-text">
+                                        Nearby Device
+                                    </h3>
+                                    <p className="font-sans text-[12px] text-[#717F9A] dark:text-[#8895AD]">
+                                        Tap to connect ({id.substring(0, 7)})
+                                    </p>
+                                </div>
+                                <div className="text-folium-accent dark:text-folium-dark-accent font-sans text-[13px] font-medium">
+                                    Connect
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <div className="flex gap-2 mb-6">
                     <button
                         onClick={() => setMode('manual')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-sans text-[14px] transition-colors ${
-                            mode === 'manual' 
-                                ? 'bg-folium-accent text-white' 
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-sans text-[14px] transition-colors ${mode === 'manual'
+                                ? 'bg-folium-accent text-white'
                                 : 'bg-[#F8F7F6] dark:bg-folium-dark-bg text-[#344054] dark:text-folium-dark-text'
-                        }`}
+                            }`}
                     >
                         <Keyboard className="w-4 h-4" />
                         Type Code
                     </button>
                     <button
                         onClick={() => setMode('camera')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-sans text-[14px] transition-colors ${
-                            mode === 'camera' 
-                                ? 'bg-folium-accent text-white' 
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-sans text-[14px] transition-colors ${mode === 'camera'
+                                ? 'bg-folium-accent text-white'
                                 : 'bg-[#F8F7F6] dark:bg-folium-dark-bg text-[#344054] dark:text-folium-dark-text'
-                        }`}
+                            }`}
                     >
                         <Camera className="w-4 h-4" />
                         Scan QR

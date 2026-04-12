@@ -73,9 +73,9 @@ class SyncthingDesktopManager {
         const vaultPaths = vaults.map(v => [v.path, v.name] as [string, string])
         const result = await tauriInvoke<SyncthingStartResult>('start_syncthing_sidecar', { vaultPaths })
         await waitForSyncthingReady(result.port, result.apiKey)
-        
+
         syncthingAPI.setConnectionInfo(result.port, result.apiKey)
-        
+
         return result
     }
 
@@ -106,7 +106,7 @@ class SyncthingDesktopManager {
 
     async getConnectedDevices(): Promise<SyncthingDevice[]> {
         if (!isTauri()) return []
-        
+
         try {
             return await syncthingAPI.getDevices()
         } catch {
@@ -126,7 +126,7 @@ class SyncthingDesktopManager {
 
     async waitForIncomingDevice(timeoutMs: number = 60_000): Promise<string | null> {
         const startedAt = Date.now()
-        
+
         while (Date.now() - startedAt < timeoutMs) {
             const devices = await this.getConnectedDevices()
             const newDevices = devices.filter(d => d.connected)
@@ -135,7 +135,7 @@ class SyncthingDesktopManager {
             }
             await new Promise(resolve => setTimeout(resolve, 2_000))
         }
-        
+
         return null
     }
 }
@@ -244,7 +244,7 @@ class SyncManager {
         }
 
         this.config.sync.deviceName = newName
-        
+
         const { saveConfig } = await import('../lib/config')
         await saveConfig(this.config)
     }
@@ -266,7 +266,7 @@ class SyncManager {
 
         const syncthingId = await syncthingDesktopManager.getDeviceId()
         const platform = this.getPlatform()
-        
+
         const code = generatePairingCode()
         const payloadBase = await createSignedPayload(
             deviceId,
@@ -277,12 +277,12 @@ class SyncManager {
             vaultName,
             secret
         )
-        
+
         const pairingToken = `${code}-${payloadBase}`
         const qrData = `folium://pair?code=${encodeURIComponent(pairingToken)}`
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
-        const cancel = () => {}
+        const cancel = () => { }
 
         return { code, pairingToken, qrData, expiresAt, cancel }
     }
@@ -340,11 +340,64 @@ class SyncManager {
         })
 
         this.config.sync.pairedDevices = pairedDevices
-        
+
         const { saveConfig } = await import('../lib/config')
         await saveConfig(this.config)
 
         return { status: 'paired_same_vault' }
+    }
+
+    private activeHandshakePoll: ReturnType<typeof setInterval> | null = null;
+    private onIncomingVaultFn: ((vault: { id: string; name: string }) => void) | null = null;
+
+    startHandshakePolling(onIncomingVault?: (vault: { id: string; name: string }) => void) {
+        if (this.activeHandshakePoll) this.stopHandshakePolling();
+        this.onIncomingVaultFn = onIncomingVault || null;
+        let lastEventId = 0;
+
+        this.activeHandshakePoll = setInterval(async () => {
+            if (!this.syncthingRunning) return;
+
+            try {
+                const events = await syncthingAPI.getEvents(lastEventId, 100);
+                for (const ev of events) {
+                    if (ev.id > lastEventId) lastEventId = ev.id;
+
+                    if (ev.type === 'DeviceRejected') {
+                        const deviceId = ev.data?.device;
+                        if (deviceId) {
+                            await syncthingDesktopManager.addPeerDevice(deviceId, 'Nearby Device');
+                            // If we're hosting a vault, automatically share it back
+                            if (this.initializedVaultPath) {
+                                const vaultId = await getVaultId(this.initializedVaultPath);
+                                await syncthingDesktopManager.shareFolderWithDevice(vaultId, deviceId);
+                            }
+                        }
+                    }
+
+                    if (ev.type === 'FolderRejected' && this.onIncomingVaultFn) {
+                        const folderId = ev.data?.folder;
+                        const folderLabel = ev.data?.folderLabel || 'Imported Vault';
+                        const deviceId = ev.data?.device;
+                        if (folderId && deviceId) {
+                            await syncthingDesktopManager.addPeerDevice(deviceId, 'Nearby Device');
+                            this.onIncomingVaultFn({ id: folderId, name: folderLabel });
+                            this.onIncomingVaultFn = null;
+                        }
+                    }
+                }
+            } catch (err) {
+                // Ignore errors
+            }
+        }, 1500);
+    }
+
+    stopHandshakePolling() {
+        if (this.activeHandshakePoll) {
+            clearInterval(this.activeHandshakePoll);
+            this.activeHandshakePoll = null;
+            this.onIncomingVaultFn = null;
+        }
     }
 
     async removeDevice(deviceId: string): Promise<void> {
@@ -366,7 +419,7 @@ class SyncManager {
         }
 
         this.config.sync.pairedDevices = this.config.sync.pairedDevices.filter(d => d.deviceId !== deviceId)
-        
+
         const { saveConfig } = await import('../lib/config')
         await saveConfig(this.config)
     }
@@ -477,8 +530,9 @@ class SyncManager {
         if (isTauri()) {
             try {
                 const { invoke } = await import('@tauri-apps/api/core')
-                await invoke('add_syncthing_folder', { 
-                    folderId: `vault-${vaultName.substring(0, 8)}`, 
+                const folderId = await getVaultId(vaultPath)
+                await invoke('add_syncthing_folder', {
+                    folderId,
                     folderPath: vaultPath,
                     folderLabel: vaultName
                 })

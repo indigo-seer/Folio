@@ -55,6 +55,13 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
 
         for (const [vaultName, vaultPath] of selectedVaults) {
             try {
+                try {
+                    const { mkdir } = await import('@tauri-apps/plugin-fs')
+                    await mkdir(vaultPath, { recursive: true })
+                } catch (e) {
+                    console.warn(`Could not create or verify path: ${vaultPath}`, e)
+                }
+
                 await syncManager.addVaultToSync(vaultName, vaultPath)
                 if (!config.workspaces) config.workspaces = []
                 if (!config.workspaces.find(w => w.path === vaultPath)) {
@@ -80,14 +87,26 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
 
     const chooseCustomLocations = async () => {
         const next = new Map(selectedVaults)
-        for (const vault of newVaults) {
-            if (!next.has(vault.name)) continue
-            const current = next.get(vault.name) || ''
-            const chosen = prompt(`Choose location for "${vault.name}"`, current)
-            if (chosen && chosen.trim()) {
-                next.set(vault.name, chosen.trim())
-                setCustomPaths(prev => new Map(prev).set(vault.name, true))
+        try {
+            const { open } = await import('@tauri-apps/plugin-dialog')
+            for (const vault of newVaults) {
+                if (!next.has(vault.name)) continue
+                const current = next.get(vault.name) || ''
+                const chosen = await open({
+                    directory: true,
+                    multiple: false,
+                    title: `Choose location for "${vault.name}"`,
+                    defaultPath: current
+                })
+                if (chosen && typeof chosen === 'string') {
+                    next.set(vault.name, chosen.trim())
+                    setCustomPaths(prev => new Map(prev).set(vault.name, true))
+                } else {
+                    break // User cancelled the sequence
+                }
             }
+        } catch (err) {
+            console.error('Failed to open dialog', err)
         }
         setSelectedVaults(next)
     }
@@ -147,8 +166,8 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
                                 <div
                                     key={vault.name}
                                     className={`p-4 rounded-xl border transition-colors ${isSelected
-                                            ? 'border-folium-accent dark:border-folium-dark-accent bg-folium-accent/5 dark:bg-folium-dark-accent/5'
-                                            : 'border-folium-border dark:border-folium-dark-border'
+                                        ? 'border-folium-accent dark:border-folium-dark-accent bg-folium-accent/5 dark:bg-folium-dark-accent/5'
+                                        : 'border-folium-border dark:border-folium-dark-border'
                                         }`}
                                 >
                                     <div className="flex items-center gap-3">
@@ -172,11 +191,21 @@ export function FirstSyncWizard({ newVaults, onComplete, onCancel }: FirstSyncWi
                                     {isSelected && (
                                         <div className="mt-3 ml-8">
                                             <button
-                                                onClick={() => {
-                                                    const newPath = prompt('Enter custom path for vault:', currentPath)
-                                                    if (newPath && newPath.trim()) {
-                                                        updateVaultPath(vault.name, newPath.trim())
-                                                        setCustomPaths(new Map(customPaths).set(vault.name, true))
+                                                onClick={async () => {
+                                                    try {
+                                                        const { open } = await import('@tauri-apps/plugin-dialog')
+                                                        const newPath = await open({
+                                                            directory: true,
+                                                            multiple: false,
+                                                            title: `Choose location for "${vault.name}"`,
+                                                            defaultPath: currentPath
+                                                        })
+                                                        if (newPath && typeof newPath === 'string' && newPath.trim()) {
+                                                            updateVaultPath(vault.name, newPath.trim())
+                                                            setCustomPaths(new Map(customPaths).set(vault.name, true))
+                                                        }
+                                                    } catch (err) {
+                                                        console.error('Failed to open dialog', err)
                                                     }
                                                 }}
                                                 className="font-sans text-[13px] text-folium-accent dark:text-folium-dark-accent hover:underline"

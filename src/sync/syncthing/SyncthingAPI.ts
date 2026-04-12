@@ -24,7 +24,7 @@ class SyncthingAPI {
         if (this.cachedPort && this.cachedApiKey) {
             return { port: this.cachedPort, apiKey: this.cachedApiKey }
         }
-        
+
         const connInfo = await tauriInvoke<{ port: number; apiKey: string }>('get_syncthing_connection_info')
         this.cachedPort = connInfo.port
         this.cachedApiKey = connInfo.apiKey
@@ -33,7 +33,7 @@ class SyncthingAPI {
 
     private async request<T>(endpoint: string, method: string = 'GET', body?: object): Promise<T> {
         const { port, apiKey } = await this.getPortAndKey()
-        
+
         const options: RequestInit = {
             method,
             headers: {
@@ -47,7 +47,7 @@ class SyncthingAPI {
         }
 
         const response = await fetch(`http://127.0.0.1:${port}/rest${endpoint}`, options)
-        
+
         if (!response.ok) {
             throw new Error(`Syncthing API error: ${response.status} ${response.statusText}`)
         }
@@ -57,6 +57,25 @@ class SyncthingAPI {
         }
 
         return response.json()
+    }
+
+    async getLocalDevices(): Promise<string[]> {
+        if (!isTauri()) return []
+        try {
+            const res = await this.request<Record<string, unknown>>('/system/discovery')
+            return Object.keys(res || {})
+        } catch {
+            return []
+        }
+    }
+
+    async getEvents(since: number = 0, limit: number = 100): Promise<Array<{ id: number; type: string; time: string; data: any }>> {
+        if (!isTauri()) return []
+        try {
+            return await this.request<Array<any>>(`/events?since=${since}&limit=${limit}`)
+        } catch {
+            return []
+        }
     }
 
     async getDeviceId(): Promise<string> {

@@ -44,9 +44,11 @@ export function AddDeviceModal({ onClose }: AddDeviceModalProps) {
         }
 
         startPairing()
+        syncManager.startHandshakePolling()
 
         return () => {
             mounted = false
+            syncManager.stopHandshakePolling()
             if (cancelFnRef.current) {
                 cancelFnRef.current()
             }
@@ -98,7 +100,7 @@ export function AddDeviceModal({ onClose }: AddDeviceModalProps) {
 
     return createPortal(
         <div className="fixed inset-0 z-[150] flex items-center justify-center">
-            <div 
+            <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm"
                 onClick={onClose}
             />
@@ -130,8 +132,8 @@ export function AddDeviceModal({ onClose }: AddDeviceModalProps) {
                         {qrDataUrl && (
                             <div className="flex justify-center mb-6">
                                 <div className="p-4 bg-white rounded-xl border border-folium-border dark:border-folium-dark-border">
-                                    <img 
-                                        src={qrDataUrl} 
+                                    <img
+                                        src={qrDataUrl}
                                         alt="Pairing QR Code"
                                         className="w-[200px] h-[200px]"
                                     />

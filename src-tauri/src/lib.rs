@@ -271,6 +271,7 @@ fn start_syncthing_sidecar(
         .arg(&syncthing_home)
         .arg("-no-browser")
         .arg("-no-restart")
+        .arg("--allow-newer-config")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
