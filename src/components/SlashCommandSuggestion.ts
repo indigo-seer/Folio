@@ -2,8 +2,9 @@ import { ReactRenderer } from '@tiptap/react'
 import tippy, { Instance as TippyInstance } from 'tippy.js'
 import { SuggestionOptions } from '@tiptap/suggestion'
 import { Editor, Range } from '@tiptap/core'
-import { Type, Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare, Minus, Table as TableIcon, Info, Pi, FileSymlink, AlertTriangle, Book, Lightbulb, CheckCircle, HelpCircle, XCircle, Flame, Bug, Quote, Code2 } from 'lucide-react'
+import { Type, Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare, Minus, Table as TableIcon, Info, Pi, FileSymlink, AlertTriangle, Book, Lightbulb, CheckCircle, HelpCircle, XCircle, Flame, Bug, Quote, Code2, Paperclip } from 'lucide-react'
 import { SlashCommandList, SlashCommandListRef, SlashCommandItem } from './SlashCommandList.tsx'
+import { requestOpenEmbedPicker } from '../lib/embedPickerEvent'
 
 const COMMAND_ITEMS: SlashCommandItem[] = [
     {
@@ -131,6 +132,15 @@ const COMMAND_ITEMS: SlashCommandItem[] = [
                 type: 'embed',
                 attrs: { noteName: 'Placeholder' }
             }).run()
+        },
+    },
+    {
+        title: 'Embed File',
+        shortcut: '/embed',
+        icon: Paperclip,
+        action: (editor: Editor, range: Range) => {
+            editor.chain().focus().deleteRange(range).run()
+            requestOpenEmbedPicker(editor)
         },
     },
 ]

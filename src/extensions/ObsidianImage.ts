@@ -1,15 +1,12 @@
 import { Extension } from '@tiptap/core'
-
-const IMAGE_EXTENSIONS = [
-    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'heic', 'heif', 'tiff', 'tif'
-]
+import { IMAGE_EXTENSIONS } from '../lib/constants'
 
 function isImagePath(target: string): boolean {
     const clean = target.split('#')[0].split('?')[0].toLowerCase()
     const dot = clean.lastIndexOf('.')
     if (dot === -1) return false
     const ext = clean.slice(dot + 1)
-    return IMAGE_EXTENSIONS.includes(ext)
+    return IMAGE_EXTENSIONS.has(ext)
 }
 
 function parseSizePart(sizePart: string | undefined): { width: number | null; height: number | null } {

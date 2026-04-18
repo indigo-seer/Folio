@@ -1,10 +1,12 @@
 import { useEditor, EditorContent, type Editor as TipTapEditor } from '@tiptap/react'
-import { useEffect, useRef, useContext, useMemo } from 'react'
+import { useEffect, useRef, useContext, useMemo, useState } from 'react'
 
 import { FloatingToolbar } from './FloatingToolbar'
 import { TableToolbar } from './TableToolbar'
 import { VaultContext } from '../contexts/VaultContext'
+import { useModals } from '../contexts/ModalContext'
 import { getEditorExtensions, setVaultRootPath } from '../lib/editor/extensions'
+import { OPEN_EMBED_PICKER_EVENT, type OpenEmbedPickerEventDetail } from '../lib/embedPickerEvent'
 import {
     decodeFileUrlToPath,
     getFileNameFromPath,
@@ -53,10 +55,58 @@ function insertImageNodeAtSelection(view: any, src: string, alt: string) {
     view.dispatch(tr)
 }
 
+function sanitizeAttachmentName(filename: string): string {
+    const safe = String(filename || '')
+        .trim()
+        .replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '-')
+        .replace(/\s+/g, ' ')
+        .replace(/^\.+/, '')
+    return safe || 'attachment'
+}
+
+function toUniqueAttachmentName(filename: string): string {
+    const safe = sanitizeAttachmentName(filename)
+    const dot = safe.lastIndexOf('.')
+    const hasExt = dot > 0 && dot < safe.length - 1
+    const base = hasExt ? safe.slice(0, dot) : safe
+    const ext = hasExt ? safe.slice(dot) : ''
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    return `${base}-${suffix}${ext}`
+}
+
+function extractFirstDroppedFile(dataTransfer: DataTransfer | null | undefined): File | null {
+    if (!dataTransfer) return null
+    if (dataTransfer.files && dataTransfer.files.length > 0) {
+        return dataTransfer.files[0]
+    }
+    if (!dataTransfer.items || dataTransfer.items.length === 0) return null
+    for (const item of Array.from(dataTransfer.items)) {
+        if (item.kind !== 'file') continue
+        const file = item.getAsFile()
+        if (file) return file
+    }
+    return null
+}
+
+function parentDirFromPath(path: string): string {
+    const normalized = path.replace(/[\\/]+$/, '')
+    const index = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'))
+    if (index <= 0) return normalized
+    return normalized.slice(0, index)
+}
+
 export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }: EditorProps) {
     // Context for vault state and filesystem operations
     const { notes, vault, fileSystem } = useContext(VaultContext)
-    const { ensureAttachmentFolder, writeBinaryFile, isTauriEnv } = fileSystem
+    const modals = useModals()
+    const { ensureAttachmentFolder, writeBinaryFile, readBinaryFile, isTauriEnv } = fileSystem
+    const [isEmbedPickerOpen, setIsEmbedPickerOpen] = useState(false)
+    const [isEmbedDropActive, setIsEmbedDropActive] = useState(false)
+    const [isEmbeddingFile, setIsEmbeddingFile] = useState(false)
+    const isEmbeddingFileRef = useRef(false)
+    isEmbeddingFileRef.current = isEmbeddingFile
+    const embedFileInputRef = useRef<HTMLInputElement | null>(null)
+    const embedPathHandlerRef = useRef<(path: string) => void>(() => {})
 
     // Use refs to avoid re-running effects when callbacks change
     const notesRef = useRef(notes)
@@ -239,6 +289,165 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
         },
     })
 
+    const handleEmbedFile = async (file: File) => {
+        if (!editor) return
+        if (!isTauriRef.current) {
+            modals.showToast('File embedding picker is available in the desktop app.')
+            return
+        }
+        if (!vault.rootPath) {
+            modals.showToast('Open a vault first.')
+            return
+        }
+
+        const originalName = String(file.name || '').trim()
+        if (!originalName) {
+            modals.showToast('Could not read the selected file.')
+            return
+        }
+
+        const lower = originalName.toLowerCase()
+        if (lower.endsWith('.md')) {
+            modals.showToast('Use wikilinks for Markdown notes instead of file embeds.')
+            return
+        }
+
+        isEmbeddingFileRef.current = true
+        setIsEmbeddingFile(true)
+        try {
+            const bytes = new Uint8Array(await file.arrayBuffer())
+            if (bytes.length === 0) {
+                modals.showToast('Selected file is empty.')
+                return
+            }
+
+            const attachmentDir = await ensureAttachmentFolderRef.current()
+            const { join } = await import('@tauri-apps/api/path')
+            const storedName = toUniqueAttachmentName(originalName)
+            const absolutePath = await join(attachmentDir, storedName)
+            const relativePath = `attachments/${storedName}`
+
+            await writeBinaryFileRef.current(absolutePath, bytes)
+
+            editor
+                .chain()
+                .focus()
+                .insertContent(`![[${relativePath}]]`, {
+                    parseOptions: { preserveWhitespace: 'full' },
+                    contentType: 'markdown',
+                } as any)
+                .run()
+
+            setIsEmbedPickerOpen(false)
+            setIsEmbedDropActive(false)
+            if (embedFileInputRef.current) embedFileInputRef.current.value = ''
+            modals.showToast(`Embedded ${originalName}`)
+        } catch (error) {
+            console.error('Failed to embed file:', error)
+            modals.showToast('Failed to embed file.')
+        } finally {
+            isEmbeddingFileRef.current = false
+            setIsEmbeddingFile(false)
+        }
+    }
+
+    const handleEmbedAbsolutePath = async (absolutePath: string) => {
+        if (!editor) return
+        if (!isTauriRef.current) {
+            modals.showToast('Drag and drop embedding is available in the desktop app.')
+            return
+        }
+        if (!vault.rootPath) {
+            modals.showToast('Open a vault first.')
+            return
+        }
+        if (!readBinaryFile) {
+            modals.showToast('Binary file reading is not available in this environment.')
+            return
+        }
+
+        const originalName = getFileNameFromPath(absolutePath) || 'attachment'
+        if (originalName.toLowerCase().endsWith('.md')) {
+            modals.showToast('Use wikilinks for Markdown notes instead of file embeds.')
+            return
+        }
+
+        isEmbeddingFileRef.current = true
+        setIsEmbeddingFile(true)
+        try {
+            const parentPath = parentDirFromPath(absolutePath)
+            if (parentPath) {
+                const { invoke } = await import('@tauri-apps/api/core')
+                await invoke('grant_vault_scope', { path: parentPath })
+            }
+
+            const bytes = await readBinaryFile(absolutePath)
+            if (!bytes || bytes.length === 0) {
+                modals.showToast('Dropped file is empty.')
+                return
+            }
+
+            const attachmentDir = await ensureAttachmentFolderRef.current()
+            const { join } = await import('@tauri-apps/api/path')
+            const storedName = toUniqueAttachmentName(originalName)
+            const destinationPath = await join(attachmentDir, storedName)
+            const relativePath = `attachments/${storedName}`
+
+            await writeBinaryFileRef.current(destinationPath, bytes)
+
+            editor
+                .chain()
+                .focus()
+                .insertContent(`![[${relativePath}]]`, {
+                    parseOptions: { preserveWhitespace: 'full' },
+                    contentType: 'markdown',
+                } as any)
+                .run()
+
+            setIsEmbedPickerOpen(false)
+            setIsEmbedDropActive(false)
+            modals.showToast(`Embedded ${originalName}`)
+        } catch (error) {
+            console.error('Failed to embed dropped path:', absolutePath, error)
+            modals.showToast('Failed to embed dropped file.')
+        } finally {
+            isEmbeddingFileRef.current = false
+            setIsEmbeddingFile(false)
+        }
+    }
+
+    embedPathHandlerRef.current = (path: string) => {
+        void handleEmbedAbsolutePath(path)
+    }
+
+    const handleEmbedDrop = (dataTransfer: DataTransfer | null | undefined) => {
+        if (isEmbeddingFileRef.current) return
+
+        const droppedFile = extractFirstDroppedFile(dataTransfer)
+        if (droppedFile) {
+            void handleEmbedFile(droppedFile)
+            return
+        }
+
+        modals.showToast('Drop a single file to embed.')
+    }
+
+    useEffect(() => {
+        if (!editor) return
+
+        const openPicker = (event: Event) => {
+            const detail = (event as CustomEvent<OpenEmbedPickerEventDetail>).detail
+            if (!detail || detail.editor !== editor) return
+            setIsEmbedPickerOpen(true)
+            setIsEmbedDropActive(false)
+        }
+
+        window.addEventListener(OPEN_EMBED_PICKER_EVENT, openPicker as EventListener)
+        return () => {
+            window.removeEventListener(OPEN_EMBED_PICKER_EVENT, openPicker as EventListener)
+        }
+    }, [editor])
+
     useEffect(() => {
         const unsubscribe = subscribeImageCacheUpdates((absolutePath, displayUrl) => {
             const rootElement = editor?.view?.dom
@@ -283,6 +492,68 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
         }
     }, [])
 
+    useEffect(() => {
+        if (!isEmbedPickerOpen) return
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return
+            if (isEmbeddingFile) return
+            setIsEmbedPickerOpen(false)
+            setIsEmbedDropActive(false)
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => {
+            window.removeEventListener('keydown', onKeyDown)
+        }
+    }, [isEmbedPickerOpen, isEmbeddingFile])
+
+    useEffect(() => {
+        if (!isEmbedPickerOpen || !isTauriRef.current) return
+
+        let isDisposed = false
+        let unlisten: (() => void) | null = null
+
+        ; (async () => {
+            try {
+                const { getCurrentWindow } = await import('@tauri-apps/api/window')
+                unlisten = await getCurrentWindow().onDragDropEvent((event) => {
+                    if (isDisposed) return
+                    const payload = event.payload
+
+                    if (payload.type === 'enter' || payload.type === 'over') {
+                        if (!isEmbeddingFileRef.current) {
+                            setIsEmbedDropActive(true)
+                        }
+                        return
+                    }
+
+                    if (payload.type === 'leave') {
+                        setIsEmbedDropActive(false)
+                        return
+                    }
+
+                    if (payload.type === 'drop') {
+                        setIsEmbedDropActive(false)
+                        if (isEmbeddingFileRef.current) return
+
+                        const firstPath = payload.paths?.[0]
+                        if (!firstPath) {
+                            modals.showToast('Drop a single file to embed.')
+                            return
+                        }
+                        embedPathHandlerRef.current(firstPath)
+                    }
+                })
+            } catch (error) {
+                console.warn('Failed to attach native drag-drop listener for embed picker:', error)
+            }
+        })()
+
+        return () => {
+            isDisposed = true
+            if (unlisten) unlisten()
+        }
+    }, [isEmbedPickerOpen, modals])
+
     if (!editor) return null
 
     return (
@@ -290,6 +561,122 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
             <FloatingToolbar editor={editor} />
             <TableToolbar editor={editor} />
             <EditorContent editor={editor} />
+            {isEmbedPickerOpen && (
+                <div
+                    className="fixed inset-0 z-[90] bg-black/35 backdrop-blur-[1px] flex items-center justify-center p-4"
+                    onMouseDown={() => {
+                        if (isEmbeddingFile) return
+                        setIsEmbedPickerOpen(false)
+                        setIsEmbedDropActive(false)
+                    }}
+                    onDragEnter={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        if (isEmbeddingFile) return
+                        setIsEmbedDropActive(true)
+                    }}
+                    onDragOver={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        if (isEmbeddingFile) return
+                        setIsEmbedDropActive(true)
+                    }}
+                    onDragLeave={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return
+                        setIsEmbedDropActive(false)
+                    }}
+                    onDrop={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setIsEmbedDropActive(false)
+                        handleEmbedDrop(event.dataTransfer)
+                    }}
+                >
+                    <div
+                        className="w-full max-w-md rounded-xl border border-folium-border dark:border-folium-dark-border bg-folium-bg dark:bg-folium-dark-bg shadow-2xl p-5"
+                        onMouseDown={(event) => event.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between gap-3">
+                            <h3 className="text-base font-semibold text-folium-text dark:text-folium-dark-text">Embed File</h3>
+                            <button
+                                type="button"
+                                className="px-2.5 py-1 rounded-md text-xs border border-folium-border dark:border-folium-dark-border hover:bg-folium-bg-secondary dark:hover:bg-folium-dark-bg-secondary transition-colors"
+                                onClick={() => {
+                                    if (isEmbeddingFile) return
+                                    setIsEmbedPickerOpen(false)
+                                    setIsEmbedDropActive(false)
+                                }}
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <p className="mt-2 text-sm opacity-75">
+                            Pick a file or drag it here. We will copy it into <code>attachments/</code> and embed it inline.
+                        </p>
+                        <div
+                            className={`mt-4 rounded-xl border-2 border-dashed p-8 min-h-[210px] flex flex-col items-center justify-center text-center transition-colors ${
+                                isEmbedDropActive
+                                    ? 'border-folium-accent bg-folium-accent/10'
+                                    : 'border-folium-border dark:border-folium-dark-border bg-folium-bg-secondary/40 dark:bg-folium-dark-bg-secondary/40'
+                            }`}
+                            onDragEnter={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                if (isEmbeddingFile) return
+                                setIsEmbedDropActive(true)
+                            }}
+                            onDragOver={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                if (isEmbeddingFile) return
+                                setIsEmbedDropActive(true)
+                            }}
+                            onDragLeave={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                if (event.currentTarget.contains(event.relatedTarget as Node | null)) return
+                                setIsEmbedDropActive(false)
+                            }}
+                            onDrop={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                setIsEmbedDropActive(false)
+                                handleEmbedDrop(event.dataTransfer)
+                            }}
+                        >
+                            <div className="text-sm font-medium">
+                                {isEmbeddingFile ? 'Embedding file...' : 'Drop file to embed'}
+                            </div>
+                            <div className="mt-2 text-xs opacity-70">
+                                or
+                            </div>
+                            <button
+                                type="button"
+                                disabled={isEmbeddingFile}
+                                className="mt-3 px-4 py-2 rounded-lg text-sm font-medium border border-folium-border dark:border-folium-dark-border hover:bg-folium-bg-secondary dark:hover:bg-folium-dark-bg-secondary disabled:opacity-55 disabled:cursor-not-allowed transition-colors"
+                                onClick={() => {
+                                    if (isEmbeddingFile) return
+                                    embedFileInputRef.current?.click()
+                                }}
+                            >
+                                Click Here to Browse
+                            </button>
+                        </div>
+                        <input
+                            ref={embedFileInputRef}
+                            type="file"
+                            className="hidden"
+                            onChange={(event) => {
+                                const file = event.target.files?.[0]
+                                if (!file) return
+                                void handleEmbedFile(file)
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </>
     )
 }

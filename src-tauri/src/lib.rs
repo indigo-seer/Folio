@@ -1,8 +1,45 @@
+mod bookmark_preview;
 mod image_cache;
 
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri_plugin_fs::FsExt;
+use url::Url;
+
+#[tauri::command]
+fn open_external_url(url: String) -> Result<(), String> {
+    let parsed = Url::parse(url.trim()).map_err(|_| "Invalid URL".to_string())?;
+    let scheme = parsed.scheme();
+    if scheme != "http" && scheme != "https" {
+        return Err("Only http(s) URLs can be opened".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", parsed.as_str()])
+            .spawn()
+            .map_err(|e| format!("Failed to open URL in browser: {e}"))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(parsed.as_str())
+            .spawn()
+            .map_err(|e| format!("Failed to open URL in browser: {e}"))?;
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(parsed.as_str())
+            .spawn()
+            .map_err(|e| format!("Failed to open URL in browser: {e}"))?;
+    }
+
+    Ok(())
+}
 
 #[tauri::command]
 fn grant_vault_scope(app: AppHandle, path: String) -> Result<(), String> {
@@ -37,6 +74,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             grant_vault_scope,
+            open_external_url,
+            bookmark_preview::fetch_bookmark_preview,
             image_cache::get_cached_image,
             image_cache::generate_cached_image,
             image_cache::sweep_orphaned_cache,
@@ -48,7 +87,9 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             {
                 use tauri::TitleBarStyle;
-                let window = app.get_webview_window("main").expect("main window not found");
+                let window = app
+                    .get_webview_window("main")
+                    .expect("main window not found");
                 let _ = window.set_decorations(true);
                 let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
             }

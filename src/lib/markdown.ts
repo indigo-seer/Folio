@@ -757,7 +757,7 @@ function nodeToMarkdown(node: TipTapNode): string {
         case 'embed': {
             const noteName = (node.attrs?.noteName as string) || ''
             const anchor = (node.attrs?.anchor as string) || ''
-            return `![[${noteName}${anchor}]]\n`
+            return `![[${noteName}${anchor}]]`
         }
 
         case 'frontmatter': {

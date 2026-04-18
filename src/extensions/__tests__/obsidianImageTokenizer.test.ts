@@ -72,6 +72,13 @@ describe('Obsidian image tokenizer boundaries', () => {
         expect(embedTokenize('![[IMAGE.PNG]]')).toBeUndefined()
     })
 
+    it('matches ico extension as image', () => {
+        const token = obsidianTokenize('![[favicon.ico]]')
+        expect(token?.type).toBe('obsidianImage')
+        expect(token?.src).toBe('favicon.ico')
+        expect(embedTokenize('![[favicon.ico]]')).toBeUndefined()
+    })
+
     it('does not match extensionless ![[image]] and falls through to Embed', () => {
         expect(obsidianTokenize('![[image]]')).toBeUndefined()
 
@@ -86,5 +93,12 @@ describe('Obsidian image tokenizer boundaries', () => {
         const embed = embedTokenize('![[note.md]]')
         expect(embed?.type).toBe('embed')
         expect(embed?.embedNoteName).toBe('note.md')
+    })
+
+    it('keeps URL fragments inside link-style embeds', () => {
+        const embed = embedTokenize('![[https://example.com/path#section]]')
+        expect(embed?.type).toBe('embed')
+        expect(embed?.embedNoteName).toBe('https://example.com/path#section')
+        expect(embed?.embedAnchor).toBeNull()
     })
 })
