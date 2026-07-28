@@ -4,8 +4,9 @@
   "version": "0.4.5",
   "type": "module",
   "scripts": {
-    "dev": "npx vite",
+    "dev": "vite",
     "build": "tsc -b && vite build",
+    "test": "vitest run",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:build": "tauri build",

@@ -3,6 +3,8 @@ import { useModals } from '../contexts/ModalContext';
 import { exportNoteAsPdf } from '../lib/pdfExport';
 import type { FileSystemAPI } from './useFileSystem';
 import type { TabsAPI } from './useTabs';
+import type { FileNode } from '../lib/fs';
+import { GRAPH_TAB_ID, getBasename } from '../lib/constants';
 
 interface UseFileOperationsProps {
     fileSystem: FileSystemAPI;
@@ -12,7 +14,7 @@ interface UseFileOperationsProps {
     setIsNewNote: (isNew: boolean) => void;
 }
 
-function findNotePath(tree: any[], noteName: string): string | null {
+function findNotePath(tree: FileNode[], noteName: string): string | null {
     for (const node of tree) {
         if (node.kind === 'file' && node.name === `${noteName}.md`) {
             return node.path;
@@ -54,7 +56,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
     const modals = useModals();
 
     const openPathInMainTab = useCallback((path: string) => {
-        const title = path.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
+        const title = getBasename(path).replace(/\.md$/, '') || 'Untitled';
         tabs.openTab({
             id: path,
             type: 'markdown',
@@ -64,7 +66,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
     }, [tabs]);
 
     const openPathInSplitTab = useCallback((path: string) => {
-        const title = path.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
+        const title = getBasename(path).replace(/\.md$/, '') || 'Untitled';
         tabs.openTabInSplit({
             id: path,
             type: 'markdown',
@@ -151,11 +153,11 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
 
     const handleRename = useCallback(async (newName: string) => {
         if (!activeTabId) return;
-        const tab = tabs.tabs.find((t: any) => t.id === activeTabId);
+            const tab = tabs.tabs.find(t => t.id === activeTabId);
         if (!tab || !tab.path) return;
 
         const newPath = await fileSystem.renameFile(tab.path, newName);
-        const newTitle = newPath.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
+        const newTitle = getBasename(newPath).replace(/\.md$/, '') || 'Untitled';
 
         tabs.renameTab(tab.id, newPath, newTitle);
         renderedTabIdRef.current = newPath;
@@ -167,9 +169,9 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
 
         try {
             const newPath = await fileSystem.renameFile(path, newName);
-            const newTitle = newPath.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
+            const newTitle = getBasename(newPath).replace(/\.md$/, '') || 'Untitled';
 
-            const tab = tabs.tabs.find((t: any) => t.path === path);
+            const tab = tabs.tabs.find(t => t.path === path);
             if (tab) {
                 tabs.renameTab(tab.id, newPath, newTitle);
                 if (activeTabId === tab.id) {
@@ -195,10 +197,10 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
         try {
             const newPath = await fileSystem.moveFile(oldPath, targetParentPath || undefined);
 
-            const tabsToUpdate = tabs.tabs.filter((t: any) => t.path && (t.path === oldPath || t.path.startsWith(oldPath + '/')));
+            const tabsToUpdate = tabs.tabs.filter(t => t.path && (t.path === oldPath || t.path.startsWith(oldPath + '/')));
             for (const tab of tabsToUpdate) {
                 const updatedPath = newPath + tab.path!.slice(oldPath.length);
-                const newTitle = updatedPath.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
+                const newTitle = getBasename(updatedPath).replace(/\.md$/, '') || 'Untitled';
                 tabs.renameTab(tab.id, updatedPath, newTitle);
 
                 if (activeTabId === tab.id) {
@@ -227,7 +229,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
     }, [fileSystem, handleMoveFile]);
 
     const handleDeleteFile = useCallback(async (path: string, kind: 'file' | 'directory') => {
-        const name = path.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || path;
+        const name = getBasename(path).replace(/\.md$/, '') || path;
 
         try {
             const confirmed = fileSystem.isTauriEnv
@@ -238,7 +240,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
                 await fileSystem.deleteFile(path);
 
                 const pathPrefixNorm = path.replace(/\\/g, '/') + '/';
-                const tabsToClose = tabs.tabs.filter((t: any) =>
+            const tabsToClose = tabs.tabs.filter(t =>
                     t.path === path ||
                     (kind === 'directory' && t.path && t.path.replace(/\\/g, '/').startsWith(pathPrefixNorm))
                 );
@@ -253,8 +255,8 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
     }, [tabs, fileSystem]);
 
     const handleExportNoteAsPdf = useCallback(async () => {
-        const activeTab = tabs.tabs.find((t: any) => t.id === activeTabId);
-        if (!activeTab || !activeTab.path || activeTab.id === 'folium-graph') {
+        const activeTab = tabs.tabs.find(t => t.id === activeTabId);
+        if (!activeTab || !activeTab.path || activeTab.id === GRAPH_TAB_ID) {
             modals.showToast('Open a note first to export it as PDF.');
             return;
         }
@@ -293,7 +295,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
                     : `${selectedPath}.pdf`;
 
                 await fileSystem.writeBinaryFile(targetPath, exported.bytes);
-                const targetName = targetPath.split(/[\/\\]/).pop() || exported.fileName;
+                const targetName = getBasename(targetPath) || exported.fileName;
                 modals.showToast(`Exported ${targetName}`);
             } else {
                 const blob = new Blob([exported.bytes as unknown as BlobPart], { type: 'application/pdf' });

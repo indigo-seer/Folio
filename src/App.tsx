@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo, useEffect, Dispatch, SetStateAction } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { SettingsProvider } from './hooks/useSettings';
 import { useFileSystem } from './hooks/useFileSystem';
 import { useTabs } from './hooks/useTabs';
@@ -25,6 +25,8 @@ import { useWorkspace } from './contexts/WorkspaceContext';
 import type { FileSystemAPI } from './hooks/useFileSystem';
 import type { TabsAPI } from './hooks/useTabs';
 import type { Editor as TipTapEditor } from '@tiptap/react';
+import { EditorModeProvider, useEditorMode } from './contexts/EditorModeContext';
+import { GRAPH_TAB_ID } from './lib/constants';
 
 export enum BootState {
     Initializing,
@@ -39,9 +41,6 @@ function AppContentInner() {
     const modals = useModals();
 
     const [bootState, setBootState] = useState<BootState>(BootState.Initializing);
-    const [isFocusMode, setIsFocusMode] = useState(false);
-    const [isTypewriterMode, setIsTypewriterMode] = useState(false);
-
     useEffect(() => {
         return startPerformanceAudit();
     }, []);
@@ -53,16 +52,14 @@ function AppContentInner() {
     // This is a slight adaptation from the implementation plan for React Context hierarchy.
     return (
         <WorkspaceProvider fileSystem={fileSystem} tabs={tabs} setBootState={setBootState} showToast={modals.showToast}>
-            <BootloaderWrappedContent
-                bootState={bootState}
-                setBootState={setBootState}
-                fileSystem={fileSystem}
-                tabs={tabs}
-                isFocusMode={isFocusMode}
-                setIsFocusMode={setIsFocusMode}
-                isTypewriterMode={isTypewriterMode}
-                setIsTypewriterMode={setIsTypewriterMode}
-            />
+            <EditorModeProvider>
+                <BootloaderWrappedContent
+                    bootState={bootState}
+                    setBootState={setBootState}
+                    fileSystem={fileSystem}
+                    tabs={tabs}
+                />
+            </EditorModeProvider>
         </WorkspaceProvider>
     );
 }
@@ -72,13 +69,9 @@ interface BootloaderContentProps {
     setBootState: (s: BootState) => void;
     fileSystem: FileSystemAPI;
     tabs: TabsAPI;
-    isFocusMode: boolean;
-    setIsFocusMode: Dispatch<SetStateAction<boolean>>;
-    isTypewriterMode: boolean;
-    setIsTypewriterMode: Dispatch<SetStateAction<boolean>>;
 }
 
-function BootloaderWrappedContent({ bootState, setBootState, fileSystem, tabs, isFocusMode, setIsFocusMode, isTypewriterMode, setIsTypewriterMode }: BootloaderContentProps) {
+function BootloaderWrappedContent({ bootState, setBootState, fileSystem, tabs }: BootloaderContentProps) {
     const { setWorkspaces, setActiveWorkspaceId } = useWorkspace();
 
     // Hook: App Bootloader
@@ -106,10 +99,6 @@ function BootloaderWrappedContent({ bootState, setBootState, fileSystem, tabs, i
         <VaultProviderWrapped
             fileSystem={fileSystem}
             tabs={tabs}
-            isFocusMode={isFocusMode}
-            setIsFocusMode={setIsFocusMode}
-            isTypewriterMode={isTypewriterMode}
-            setIsTypewriterMode={setIsTypewriterMode}
             isOnboardingOpen={isOnboardingOpen}
             handleOnboardingComplete={handleOnboardingComplete}
         />
@@ -119,16 +108,13 @@ function BootloaderWrappedContent({ bootState, setBootState, fileSystem, tabs, i
 interface VaultWrappedProps {
     fileSystem: FileSystemAPI;
     tabs: TabsAPI;
-    isFocusMode: boolean;
-    setIsFocusMode: Dispatch<SetStateAction<boolean>>;
-    isTypewriterMode: boolean;
-    setIsTypewriterMode: Dispatch<SetStateAction<boolean>>;
     isOnboardingOpen: boolean;
     handleOnboardingComplete: (mode: 'pick' | 'create') => Promise<void>;
 }
 
-function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, isTypewriterMode, setIsTypewriterMode, isOnboardingOpen, handleOnboardingComplete }: VaultWrappedProps) {
+function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboardingComplete }: VaultWrappedProps) {
     const modals = useModals();
+    const { setIsFocusMode, isTypewriterMode, setIsTypewriterMode } = useEditorMode();
     const [focusedPane, setFocusedPane] = useState<'main' | 'split'>('main');
 
     const {
@@ -146,7 +132,8 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
         tabs: tabs.tabs,
         fileSystem,
         isMoveModalOpen: modals.state.move.isOpen,
-        vaultRootPath: fileSystem.vault.rootPath
+        vaultRootPath: fileSystem.vault.rootPath,
+        onError: modals.showToast
     });
 
     const {
@@ -161,7 +148,8 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
         tabs: tabs.tabs,
         fileSystem,
         isMoveModalOpen: modals.state.move.isOpen,
-        vaultRootPath: fileSystem.vault.rootPath
+        vaultRootPath: fileSystem.vault.rootPath,
+        onError: modals.showToast
     })
 
     const renderedTabIdRef = useRef<string | null>(null);
@@ -215,7 +203,7 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
     // Hook: Global Shortcuts
     useGlobalShortcuts({
         setIsFocusMode: setIsFocusMode,
-        setIsTypewriterMode: toggleTypewriter as any,
+        toggleTypewriterMode: toggleTypewriter,
         setIsQuickSwitcherOpen: () => modals.openQuickSwitcher(),
         handleNewNote: () => fileOperations.handleNewNote(),
         handleExportPdf: () => fileOperations.handleExportNoteAsPdf(),
@@ -250,17 +238,13 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                 onFocusPane={setFocusedPane}
                 splitTabId={tabs.splitTabId}
                 onCloseSplit={tabs.closeSplitTab}
-                isFocusMode={isFocusMode}
-                setIsFocusMode={setIsFocusMode}
-                isTypewriterMode={isTypewriterMode}
-                setIsTypewriterMode={setIsTypewriterMode}
                 editorNode={
                     <div
                         className={`absolute inset-0 overflow-y-auto overscroll-none ${isTypewriterMode ? 'typewriter-active-container' : ''}`}
                         ref={mainEditorScrollRef}
                     >
                         <div>
-                            {tabs.activeTabId && tabs.activeTabId !== 'folium-graph' && (
+                            {tabs.activeTabId && tabs.activeTabId !== GRAPH_TAB_ID && (
                                 <>
                                     <CorruptionBanner warnings={mainCorruptionWarnings} />
                                     <CorruptionBanner
@@ -271,7 +255,7 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                                         onAction={reloadMainFromDisk}
                                     />
                                     <NoteTitle
-                                        title={tabs.tabs.find((t: any) => t.id === tabs.activeTabId)?.title || 'Folium'}
+                                        title={tabs.tabs.find(t => t.id === tabs.activeTabId)?.title || 'Folium'}
                                         onRename={fileOperations.handleRename}
                                         autoFocus={isNewNote}
                                     />
@@ -302,7 +286,7 @@ function VaultProviderWrapped({ fileSystem, tabs, isFocusMode, setIsFocusMode, i
                                 />
                                 <div className="max-w-prose-folium mx-auto px-6 pt-10 pb-2">
                                     <h1 className="note-title text-folium-text dark:text-folium-dark-text font-serif font-light m-0 pb-1 border-b-2 border-transparent">
-                                        {tabs.tabs.find((t: any) => t.id === tabs.splitTabId)?.title || 'Untitled'}
+                                        {tabs.tabs.find(t => t.id === tabs.splitTabId)?.title || 'Untitled'}
                                     </h1>
                                 </div>
                             </div>

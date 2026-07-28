@@ -88,7 +88,13 @@ The TipTap environment is augmented extensively:
 
 ### 3.3 Autosave & Serializer Path
 - Debounced functions track typed words (`performanceAudit.ts`).
-- When triggered, `tipTapToMarkdown` (`src/lib/markdown.ts`) normalizes structures like equations, embedded media, metadata objects, and callouts back perfectly to markdown.
+- When triggered, `tipTapToMarkdown` (`src/lib/markdown.ts`) normalizes structures like equations, embedded media, metadata objects, and callouts back perfe check passes: npx tsc -p tsconfig.app.json --noEmit
+Focused tests pass: 32/32
+Full Vitest run: 32 passed, 5 failed because parse.test.ts creates a TipTap editor without a browser window/DOM test environment. This appears to be test setup rather than a detected application failure.
+The Rust set_var finding is valid as a future-compatibility warning: the project is still Rust 2021, where it compiles, but Rust 2024 makes set_var unsafe and requires a safety review. Rust Edition Guide
+
+ splitting remains inconsistent despite getBasename() existing.
+Root-levectly to markdown.
 
 ---
 

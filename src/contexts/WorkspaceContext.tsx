@@ -155,8 +155,9 @@ export function WorkspaceProvider({
             await saveConfig(config);
         } catch (err) {
             console.error('Error removing workspace', err);
+            showToast('Could not remove this workspace.');
         }
-    }, [fileSystem, tabs, setBootState]);
+    }, [fileSystem, tabs, setBootState, showToast]);
 
     const handleUpdateWorkspaceName = useCallback(async (id: string, newName: string) => {
         try {
@@ -180,8 +181,9 @@ export function WorkspaceProvider({
             }
         } catch (err) {
             console.error('Error updating workspace name', err);
+            showToast('Could not rename this workspace.');
         }
-    }, []);
+    }, [showToast]);
 
     return (
         <WorkspaceContext.Provider value={{

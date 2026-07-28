@@ -11,6 +11,8 @@ import { setImageCacheVaultUid } from '../lib/imageCache';
 import type { FileSystemAPI } from '../hooks/useFileSystem';
 import type { TabsAPI } from '../hooks/useTabs';
 import type { FileOperationsAPI } from '../hooks/useFileOperations';
+import { GRAPH_TAB_ID, getBasename } from '../lib/constants';
+import { useEditorMode } from '../contexts/EditorModeContext';
 
 interface MainLayoutProps {
     fileSystem: FileSystemAPI;
@@ -23,10 +25,6 @@ interface MainLayoutProps {
     splitTabId?: string | null;
     splitEditorNode?: ReactNode;
     onCloseSplit?: () => void;
-    isFocusMode: boolean;
-    setIsFocusMode: (f: boolean) => void;
-    isTypewriterMode: boolean;
-    setIsTypewriterMode: (t: boolean) => void;
 }
 
 export function MainLayout({
@@ -40,11 +38,8 @@ export function MainLayout({
     splitTabId = null,
     splitEditorNode = null,
     onCloseSplit,
-    isFocusMode,
-    setIsFocusMode,
-    isTypewriterMode,
-    setIsTypewriterMode
 }: MainLayoutProps) {
+    const { isFocusMode, setIsFocusMode, isTypewriterMode, setIsTypewriterMode } = useEditorMode();
     const { theme, setTheme } = useSettings();
     const { workspaces, activeWorkspaceId, handleOpenWorkspace, handleSelectWorkspace, handleRemoveWorkspace } = useWorkspace();
     const modals = useModals();
@@ -188,7 +183,7 @@ export function MainLayout({
         return startAnimationAudit(label, 950);
     }, [isFocusMode, isUIVisible]);
 
-    const activeTab = tabs.tabs.find((t: any) => t.id === activeTabId);
+    const activeTab = tabs.tabs.find(t => t.id === activeTabId);
     const activeFileName = activeTab?.title || 'Folium';
 
     return (
@@ -206,11 +201,11 @@ export function MainLayout({
                     onToggle={() => setSidebarCollapsed(prev => !prev)}
                     vaultName={fileSystem.vault.rootName}
                     tree={fileSystem.vault.tree}
-                    activeFilePath={tabs.tabs.find((t: any) => t.id === activeTabId)?.path || null}
+                    activeFilePath={tabs.tabs.find(t => t.id === activeTabId)?.path || null}
                     workspaces={workspaces}
                     activeWorkspaceId={activeWorkspaceId}
                     onFileSelect={(path) => {
-                        const title = path.split(/[\/\\]/).pop()?.replace(/\.md$/, '') || 'Untitled';
+                        const title = getBasename(path).replace(/\.md$/, '') || 'Untitled';
                         tabs.openTab({ id: path, type: 'markdown', title, path });
                     }}
                     onFileContextMenu={(path, kind, x, y) => modals.openContextMenu(x, y, path, kind)}
@@ -218,7 +213,7 @@ export function MainLayout({
                     onSelectVault={handleSelectWorkspace}
                     onRemoveVault={handleRemoveWorkspace}
                     onNewNote={() => fileOperations.handleNewNote()}
-                    onOpenGraph={() => tabs.openTab({ id: 'folium-graph', type: 'graph', title: 'Graph View' })}
+                    onOpenGraph={() => tabs.openTab({ id: GRAPH_TAB_ID, type: 'graph', title: 'Graph View' })}
                     onOpenSettings={modals.openSettings}
                 />
             </div>
@@ -270,14 +265,14 @@ export function MainLayout({
                 )}
 
                 {/* Graph View */}
-                {activeTabId === 'folium-graph' && (
+                {activeTabId === GRAPH_TAB_ID && (
                     <div className="flex-1 overflow-hidden h-full">
                         <GraphView />
                     </div>
                 )}
 
                 {/* Editor Area */}
-                <div className={`flex-1 relative ${activeTabId && activeTabId !== 'folium-graph' ? 'block' : 'hidden'}`}>
+                <div className={`flex-1 relative ${activeTabId && activeTabId !== GRAPH_TAB_ID ? 'block' : 'hidden'}`}>
                     <div
                         className="absolute inset-0 flex bg-folium-bg dark:bg-folium-dark-bg"
                         ref={splitHostRef}

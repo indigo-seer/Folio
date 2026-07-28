@@ -7,13 +7,17 @@ import { RenameModal } from './RenameModal';
 import { MoveModal } from './MoveModal';
 import { SettingsModal } from './SettingsModal';
 import { Toast } from './Toast';
+import type { FileSystemAPI } from '../hooks/useFileSystem';
+import type { TabsAPI } from '../hooks/useTabs';
+import type { FileOperationsAPI } from '../hooks/useFileOperations';
+import { GRAPH_TAB_ID, getBasename } from '../lib/constants';
 
 interface ModalRootProps {
     activeTabId: string | null;
     focusedPane?: 'main' | 'split';
-    tabs: any;
-    fileSystem: any;
-    fileOperations: any;
+    tabs: TabsAPI;
+    fileSystem: FileSystemAPI;
+    fileOperations: FileOperationsAPI;
 }
 
 export function ModalRoot({
@@ -27,8 +31,8 @@ export function ModalRoot({
     const { workspaces, activeWorkspaceId, handleRemoveWorkspace, handleUpdateWorkspaceName } = useWorkspace();
 
     const quickSwitcherCommands = useMemo<QuickSwitcherCommand[]>(() => {
-        const activeTab = tabs.tabs.find((t: any) => t.id === activeTabId);
-        const hasActiveMarkdownTab = Boolean(activeTab && activeTab.path && activeTab.id !== 'folium-graph');
+        const activeTab = tabs.tabs.find(t => t.id === activeTabId);
+        const hasActiveMarkdownTab = Boolean(activeTab && activeTab.path && activeTab.id !== GRAPH_TAB_ID);
 
         const baseCommands: QuickSwitcherCommand[] = [
             { id: 'new-note', label: 'Create New Note...', icon: <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg> },
@@ -72,7 +76,7 @@ export function ModalRoot({
                     break;
                 case 'move-note':
                     if (activeTabId) {
-                        const path = tabs.tabs.find((t: any) => t.id === activeTabId)?.path;
+                        const path = tabs.tabs.find(t => t.id === activeTabId)?.path;
                         if (path) {
                             modals.openMoveModal(path, 'file');
                         }
@@ -83,7 +87,7 @@ export function ModalRoot({
                     break;
                 case 'open-current-note-in-split':
                     if (activeTabId) {
-                        const path = tabs.tabs.find((t: any) => t.id === activeTabId)?.path
+                        const path = tabs.tabs.find(t => t.id === activeTabId)?.path
                         if (path) {
                             fileOperations.handleOpenInSplit(path)
                         }
@@ -91,7 +95,7 @@ export function ModalRoot({
                     break;
                 case 'delete-note':
                     if (activeTabId) {
-                        const path = tabs.tabs.find((t: any) => t.id === activeTabId)?.path;
+                        const path = tabs.tabs.find(t => t.id === activeTabId)?.path;
                         if (path) {
                             fileOperations.handleDeleteFile(path, 'file');
                         }
@@ -155,7 +159,7 @@ export function ModalRoot({
                             {
                                 label: 'Rename',
                                 onClick: () => {
-                                    const filename = modals.state.contextMenu.path!.split(/[\/\\]/).pop() || '';
+                                    const filename = getBasename(modals.state.contextMenu.path!);
                                     modals.openRenameModal(modals.state.contextMenu.path!, filename);
                                 },
                                 disabled: !fileSystem.isTauriEnv && modals.state.contextMenu.kind === 'directory'

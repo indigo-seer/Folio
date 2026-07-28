@@ -6,7 +6,7 @@ import { useContext, useEffect, useMemo, useState } from 'react'
 import { VaultContext } from '../contexts/VaultContext'
 import { getBookmarkPreview, type BookmarkPreviewData } from '../lib/bookmarkPreview'
 import { isTauri } from '../lib/config'
-import { normalizePathSeparators } from '../lib/constants'
+import { getBasename, normalizePathSeparators } from '../lib/constants'
 
 function findNotePath(tree: any[], noteName: string): string | null {
     for (const node of tree) {
@@ -65,7 +65,7 @@ function findAttachmentPath(tree: any[], target: string, vaultRootPath: string |
     const normalizedTarget = normalizePathSeparators(rawTarget).replace(/^\.?\//, '').trim()
     if (!normalizedTarget) return null
     const normalizedTargetLower = normalizedTarget.toLowerCase()
-    const basename = normalizedTarget.split('/').pop() || normalizedTarget
+    const basename = getBasename(normalizedTarget) || normalizedTarget
     const basenameLower = basename.toLowerCase()
 
     if (isAbsolutePath(rawTarget)) {
@@ -194,7 +194,7 @@ export default function EmbedNodeView(props: any) {
     const genericFileName = useMemo(() => {
         if (embedMode !== 'file') return targetWithoutSize
         const normalized = normalizePathSeparators(targetWithoutSize)
-        return normalized.split('/').pop() || normalized
+        return getBasename(normalized) || normalized
     }, [embedMode, targetWithoutSize])
 
     const bookmarkHost = useMemo(() => {

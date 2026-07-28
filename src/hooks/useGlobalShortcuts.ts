@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 interface UseGlobalShortcutsProps {
     setIsFocusMode: React.Dispatch<React.SetStateAction<boolean>>;
-    setIsTypewriterMode: React.Dispatch<React.SetStateAction<boolean>>;
+    toggleTypewriterMode: () => void;
     setIsQuickSwitcherOpen: (isOpen: boolean) => void;
     handleNewNote: () => void;
     handleExportPdf: () => void;
@@ -12,7 +12,7 @@ interface UseGlobalShortcutsProps {
 
 export function useGlobalShortcuts({
     setIsFocusMode,
-    setIsTypewriterMode,
+    toggleTypewriterMode,
     setIsQuickSwitcherOpen,
     handleNewNote,
     handleExportPdf,
@@ -34,7 +34,7 @@ export function useGlobalShortcuts({
             }
             else if (isTypewriterModeToggle) {
                 e.preventDefault();
-                setIsTypewriterMode(prev => !prev);
+                toggleTypewriterMode();
             }
             // Cmd+K / Ctrl+K to open Quick Switcher
             else if (isCtrlOrCmd && !e.shiftKey && (e.key.toLowerCase() === 'k' || e.code === 'KeyK')) {
@@ -66,5 +66,5 @@ export function useGlobalShortcuts({
         };
         window.addEventListener('keydown', handleKeyDown, true);
         return () => window.removeEventListener('keydown', handleKeyDown, true);
-    }, [setIsFocusMode, setIsTypewriterMode, setIsQuickSwitcherOpen, handleNewNote, handleExportPdf, activeTabId, closeTab]);
+    }, [setIsFocusMode, toggleTypewriterMode, setIsQuickSwitcherOpen, handleNewNote, handleExportPdf, activeTabId, closeTab]);
 }

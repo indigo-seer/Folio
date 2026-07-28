@@ -36,27 +36,30 @@ export function useFileSystem() {
 
     const editorStates = useRef<Map<string, { scroll: number, cursor: number }>>(new Map())
 
+    const refreshVault = useCallback(async (rootPath: string, metadata?: Partial<Pick<VaultState, 'rootPath' | 'rootName'>>) => {
+        const tree = await fs.scanDirectory(rootPath)
+        const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
+        setVault(prev => ({
+            ...prev,
+            ...metadata,
+            tree: sortTree(tree),
+            notes,
+            backlinkIndex,
+        }))
+        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
+    }, [])
+
     const loadVault = useCallback(async (path: string) => {
         try {
             const { path: rootPath, name: rootName } = await fs.loadVault(path)
-            const tree = await fs.scanDirectory(rootPath)
-            const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
-
-            setVault({
-                rootPath,
-                rootName,
-                tree: sortTree(tree),
-                notes,
-                backlinkIndex,
-            })
-            setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
+            await refreshVault(rootPath, { rootPath, rootName })
 
             return { path: rootPath, name: rootName }
         } catch (err) {
             console.error('Failed to load vault deeply:', err)
             throw err
         }
-    }, [])
+    }, [refreshVault])
 
     const openVault = useCallback(async () => {
         try {
@@ -64,17 +67,7 @@ export function useFileSystem() {
             if (!result) return null
 
             const { path: rootPath, name: rootName } = result
-            const tree = await fs.scanDirectory(rootPath)
-            const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
-
-            setVault({
-                rootPath,
-                rootName,
-                tree: sortTree(tree),
-                notes,
-                backlinkIndex
-            })
-            setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
+            await refreshVault(rootPath, { rootPath, rootName })
 
             return { path: rootPath, name: rootName }
         } catch (err) {
@@ -83,7 +76,7 @@ export function useFileSystem() {
             }
             return null
         }
-    }, [])
+    }, [refreshVault])
 
     const readFile = useCallback(async (path: string): Promise<string> => {
         return fs.readFile(path)
@@ -158,30 +151,19 @@ export function useFileSystem() {
         if (!vault.rootPath) throw new Error('No vault open')
 
         const newPath = await fs.createFile(vault.rootPath, filename, parentPath)
-        const tree = await fs.scanDirectory(vault.rootPath)
-
-        const noteName = filename.endsWith('.md') ? filename.replace(/\.md$/, '') : filename
-        setVault(prev => {
-            const newNotes = new Set(prev.notes)
-            newNotes.add(noteName)
-            return { ...prev, tree: sortTree(tree), notes: newNotes }
-        })
-        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
+        await refreshVault(vault.rootPath)
 
         return newPath
-    }, [vault.rootPath])
+    }, [vault.rootPath, refreshVault])
 
     const createFolder = useCallback(async (name: string, parentPath?: string): Promise<string> => {
         if (!vault.rootPath) throw new Error('No vault open')
 
         const newPath = await fs.createFolder(vault.rootPath, name, parentPath)
-        const tree = await fs.scanDirectory(vault.rootPath)
-
-        setVault(prev => ({ ...prev, tree: sortTree(tree) }))
-        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
+        await refreshVault(vault.rootPath)
 
         return newPath
-    }, [vault.rootPath])
+    }, [vault.rootPath, refreshVault])
 
     const renameFile = useCallback(async (oldPath: string, newName: string): Promise<string> => {
         if (!vault.rootPath) throw new Error('No vault open')
@@ -228,19 +210,10 @@ export function useFileSystem() {
             }
         }
 
-        const freshTree = await fs.scanDirectory(vault.rootPath)
-        const { notes, backlinkIndex } = await buildVaultIndex(freshTree, fs.readFile)
-
-        setVault(prev => ({
-            ...prev,
-            tree: sortTree(freshTree),
-            notes,
-            backlinkIndex,
-        }))
-        setImageCacheVaultImagePaths(collectVaultImagePaths(freshTree))
+        await refreshVault(vault.rootPath)
 
         return newPath
-    }, [vault.rootPath, vault.backlinkIndex])
+    }, [vault.rootPath, vault.backlinkIndex, refreshVault])
 
     const moveFile = useCallback(async (oldPath: string, parentPath?: string): Promise<string> => {
         if (!vault.rootPath) throw new Error('No vault open')
@@ -252,13 +225,9 @@ export function useFileSystem() {
         if (isAttachmentImagePath(newPath)) {
             void warmCacheForNote([newPath])
         }
-        const tree = await fs.scanDirectory(vault.rootPath)
-        const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
-
-        setVault(prev => ({ ...prev, tree: sortTree(tree), notes, backlinkIndex }))
-        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
+        await refreshVault(vault.rootPath)
         return newPath
-    }, [vault.rootPath])
+    }, [vault.rootPath, refreshVault])
 
     const deleteFile = useCallback(async (path: string): Promise<void> => {
         if (!vault.rootPath) throw new Error('No vault open')
@@ -267,12 +236,8 @@ export function useFileSystem() {
         if (isAttachmentImagePath(path)) {
             invalidateCacheEntry(path)
         }
-        const tree = await fs.scanDirectory(vault.rootPath)
-        const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
-
-        setVault(prev => ({ ...prev, tree: sortTree(tree), notes, backlinkIndex }))
-        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
-    }, [vault.rootPath])
+        await refreshVault(vault.rootPath)
+    }, [vault.rootPath, refreshVault])
 
     const saveEditorState = useCallback((path: string, state: { scroll: number, cursor: number }) => {
         editorStates.current.set(path, state)
@@ -284,11 +249,8 @@ export function useFileSystem() {
 
     const refreshTree = useCallback(async () => {
         if (!vault.rootPath) return
-        const tree = await fs.scanDirectory(vault.rootPath)
-        const { notes, backlinkIndex } = await buildVaultIndex(tree, fs.readFile)
-        setVault(prev => ({ ...prev, tree: sortTree(tree), notes, backlinkIndex }))
-        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
-    }, [vault.rootPath])
+        await refreshVault(vault.rootPath)
+    }, [vault.rootPath, refreshVault])
 
     return useMemo(() => ({
         vault,

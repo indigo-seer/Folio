@@ -8,6 +8,7 @@ import {
 } from '../lib/markdown';
 import { fs } from '../lib/fs';
 import { updateWordCountGlobally } from './useWordCount';
+import { useEditorAutoSave } from './useEditorAutoSave';
 import { detectCorruption } from '../lib/corruptionDetector';
 import type { FileSystemAPI } from './useFileSystem';
 import type { TabData } from './useTabs';
@@ -18,6 +19,7 @@ interface UseEditorStateProps {
     fileSystem: Pick<FileSystemAPI, 'readFile' | 'writeFile' | 'getEditorState' | 'saveEditorState'>;
     isMoveModalOpen: boolean;
     vaultRootPath: string | null;
+    onError?: (message: string) => void;
 }
 
 export function useEditorState({
@@ -25,7 +27,8 @@ export function useEditorState({
     tabs,
     fileSystem,
     isMoveModalOpen,
-    vaultRootPath
+    vaultRootPath,
+    onError,
 }: UseEditorStateProps) {
     const [isNewNote, setIsNewNote] = useState(false);
     const [editorReady, setEditorReady] = useState(false);
@@ -84,7 +87,7 @@ export function useEditorState({
 
                         // Immediately flush content to disk using raw FS adapter
                         // (NOT fileSystem.writeFile which triggers setVault → re-render → loop)
-                        const prevTab = tabs.find((t: any) => t.id === renderedTabIdRef.current);
+                        const prevTab = tabs.find(t => t.id === renderedTabIdRef.current);
                         if (prevTab?.path) {
                             try {
                                 const json = editorRef.current.getJSON();
@@ -105,6 +108,7 @@ export function useEditorState({
                                 }
                             } catch (err) {
                                 console.error('[Folium Debug] Tab-switch flush FAILED:', err);
+                                onError?.('Could not save the note before switching tabs. Your changes remain in the editor.');
                             }
                         }
                     }
@@ -201,6 +205,7 @@ export function useEditorState({
                     });
                 } catch (err) {
                     console.error('Failed to load note:', err);
+                    onError?.('Could not load this note. The file may have been moved or is unreadable.');
                     if (isMounted) {
                         if (editorRef.current) {
                             const errMessage = err instanceof Error ? err.message : String(err);
@@ -225,41 +230,24 @@ export function useEditorState({
         return () => {
             isMounted = false;
         };
-    }, [activeTabId, tabs, fileSystem, editorReady, editorInstanceVersion, vaultRootPath]);
+    }, [activeTabId, tabs, fileSystem, editorReady, editorInstanceVersion, vaultRootPath, onError]);
 
-    // Auto-save: debounced write back to disk
-    const triggerAutoSave = useCallback(() => {
-        if (isMoveModalOpen) return;
-        if (isLoadingRef.current || !activeTabId || !editorRef.current) return;
-        if (renderedTabIdRef.current !== activeTabId) return;
-        if (hydratedTabIdRef.current !== activeTabId) return;
-
-        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-
-        saveTimerRef.current = setTimeout(async () => {
-            if (!editorRef.current || !activeTabId) return;
-            if (renderedTabIdRef.current !== activeTabId) return;
-            if (hydratedTabIdRef.current !== activeTabId) return;
-            const tab = tabs.find(t => t.id === activeTabId);
-            if (!tab || !tab.path) return;
-
-            try {
-                const json = editorRef.current.getJSON();
-                const rawMarkdown = tipTapToMarkdown(json);
-                const definitions = referenceStyleByPathRef.current.get(tab.path) || [];
-                const md = restoreReferenceStyleLinks(rawMarkdown, definitions);
-                const { shouldWrite } = await checkExternalChangeBeforeWrite(tab.path, md);
-                if (!shouldWrite) return;
-                if (import.meta.env.DEV) console.log('[Folium Debug] Autosave: markdown length:', md.length, 'preview:', md.substring(0, 100));
-                await fileSystem.writeFile(tab.path, md);
-                lastKnownDiskByPathRef.current.set(tab.path, md);
-                setExternalChangeWarning(null);
-                if (import.meta.env.DEV) console.log('[Folium Debug] Autosave: Write complete');
-            } catch (err) {
-                console.error('[Folium Debug] Autosave FAILED:', err);
-            }
-        }, 1000);
-    }, [activeTabId, tabs, fileSystem, isMoveModalOpen]);
+    const triggerAutoSave = useEditorAutoSave({
+        activeTabId,
+        tabs,
+        fileSystem,
+        isMoveModalOpen,
+        editorRef,
+        isLoadingRef,
+        saveTimerRef,
+        renderedTabIdRef,
+        hydratedTabIdRef,
+        referenceStyleByPathRef,
+        lastKnownDiskByPathRef,
+        checkExternalChangeBeforeWrite,
+        setExternalChangeWarning,
+        onError,
+    });
 
     // Handle editor updates: word count + auto-save
     const handleEditorUpdate = useCallback(
@@ -286,13 +274,6 @@ export function useEditorState({
             }
             setEditorReady(true);
         }
-    }, []);
-
-    // Cleanup save timer on unmount
-    useEffect(() => {
-        return () => {
-            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        };
     }, []);
 
     const reloadActiveTabFromDisk = useCallback(() => {

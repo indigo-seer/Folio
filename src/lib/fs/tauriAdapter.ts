@@ -1,4 +1,5 @@
 import { FileNode, FileSystemAdapter } from './types'
+import { getBasename } from '../constants'
 
 export const tauriFs: FileSystemAdapter = {
     openVault: async () => {
@@ -15,7 +16,7 @@ export const tauriFs: FileSystemAdapter = {
         const { exists, readDir } = await import('@tauri-apps/plugin-fs')
         if (!(await exists(path))) throw new Error(`Vault path does not exist: ${path}`)
         await readDir(path) // Verify readability
-        const rootName = path.split(/[\/\\]/).pop() || 'Vault'
+        const rootName = getBasename(path) || 'Vault'
         return { path, name: rootName }
     },
 
