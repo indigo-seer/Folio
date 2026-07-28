@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSettings } from '../hooks/useSettings'
-import { Palette, Type, Keyboard, Folder, HardDrive } from 'lucide-react'
+import { Palette, Type, Keyboard, Folder, HardDrive, Bug } from 'lucide-react'
 import { Workspace } from '../lib/config'
 import { useCacheSize } from '../hooks/useCacheSize'
 
@@ -131,6 +131,7 @@ function SettingsSidebar({ activeSection, onScrollToSection }: { activeSection: 
         { id: 'writing-modes', label: 'Writing Modes', icon: Keyboard },
         { id: 'image-cache', label: 'Image Cache', icon: HardDrive },
         { id: 'workspaces', label: 'Workspaces', icon: Folder },
+        { id: 'testing', label: 'Testing (Temp)', icon: Bug },
     ]
 
     return (
@@ -350,6 +351,36 @@ function SectionWorkspaces({
 }
 
 // ---------------------------------------------------------
+
+function SectionTesting() {
+    return (
+        <div id="settings-testing" className="flex flex-col gap-5 scroll-mt-6">
+            <div className="flex justify-between items-start pt-2">
+                <h4 className="font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-[#717F9A] dark:text-[#8895AD]">Testing & Debugging</h4>
+            </div>
+            <div className="flex items-center justify-between pb-5 border-b border-folium-border/50 dark:border-folium-dark-border/50">
+                <div className="flex flex-col">
+                    <span className="font-sans text-[15px] font-medium text-[#344054] dark:text-folium-dark-text">Restart Onboarding</span>
+                    <span className="font-sans text-[13px] text-[#8692A6] dark:text-folium-dark-text-secondary mt-0.5">Temporary button to reset onboarding state and reload the app.</span>
+                </div>
+                <button
+                    onClick={async () => {
+                        const { loadConfig, saveConfig } = await import('../lib/config');
+                        const config = await loadConfig();
+                        config.hasCompletedOnboarding = false;
+                        await saveConfig(config);
+                        window.location.reload();
+                    }}
+                    className="px-4 py-2 rounded-md text-[13px] font-medium text-white bg-folium-accent dark:bg-folium-dark-accent hover:bg-folium-accent-hover dark:hover:bg-folium-dark-accent-hover transition-colors shadow-sm"
+                >
+                    Restart Onboarding
+                </button>
+            </div>
+        </div>
+    )
+}
+
+// ---------------------------------------------------------
 // Main Modal Export
 // ---------------------------------------------------------
 
@@ -424,6 +455,7 @@ export function SettingsModal({
                                 onRemoveWorkspace={onRemoveWorkspace}
                                 onUpdateWorkspaceName={onUpdateWorkspaceName}
                             />
+                            <SectionTesting />
                         </div>
                     </div>
                 </div>

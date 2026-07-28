@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useSettings } from '../hooks/useSettings'
 import { UIConfig } from '../lib/config'
-import { Folder, FolderPlus } from 'lucide-react'
+import { Folder, FolderPlus, Search, Link } from 'lucide-react'
 
 interface OnboardingModalProps {
     onComplete: (mode: 'pick' | 'create') => void
@@ -12,7 +12,7 @@ interface OnboardingModalProps {
 // Step Components
 // ============================================================
 
-function StepWelcome({ onNext }: { onNext: () => void }) {
+function StepWelcome() {
     const [visible, setVisible] = useState(false)
 
     useEffect(() => {
@@ -36,17 +36,11 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
                 Your notes stay as plain files on disk — readable by any app, yours completely.
             </p>
 
-            <button
-                onClick={onNext}
-                className="px-8 py-3 rounded-lg font-sans text-[15px] font-medium text-white bg-folium-accent dark:bg-folium-dark-accent hover:bg-folium-accent-hover dark:hover:bg-folium-dark-accent-hover transition-colors duration-200 shadow-sm"
-            >
-                Get Started →
-            </button>
         </div>
     )
 }
 
-function StepTheme({ onNext }: { onNext: () => void }) {
+function StepTheme() {
     const { theme, setTheme } = useSettings()
     const [visible, setVisible] = useState(false)
 
@@ -118,27 +112,52 @@ function StepTheme({ onNext }: { onNext: () => void }) {
                 ))}
             </div>
 
-            <button
-                onClick={onNext}
-                className="px-8 py-3 rounded-lg font-sans text-[15px] font-medium text-white bg-folium-accent dark:bg-folium-dark-accent hover:bg-folium-accent-hover dark:hover:bg-folium-dark-accent-hover transition-colors duration-200 shadow-sm"
-            >
-                Continue →
-            </button>
         </div>
     )
 }
 
-function StepWritingModes({ onNext }: { onNext: () => void }) {
+function StepWritingModes() {
     const [focusMode, setFocusMode] = useState(false)
     const [typewriterMode, setTypewriterMode] = useState(false)
-    const [triedFocus, setTriedFocus] = useState(false)
-    const [triedTypewriter, setTriedTypewriter] = useState(false)
     const [visible, setVisible] = useState(false)
-
-    const bothTried = triedFocus && triedTypewriter
 
     useEffect(() => {
         requestAnimationFrame(() => setVisible(true))
+        
+        let isMounted = true;
+        let step = 0;
+        
+        const runAnimation = () => {
+            if (!isMounted) return;
+            
+            if (step === 0) {
+                // Start with both off
+                setFocusMode(false);
+                setTypewriterMode(false);
+                setTimeout(runAnimation, 2000);
+            } else if (step === 1) {
+                // Turn on focus mode
+                setFocusMode(true);
+                setTimeout(runAnimation, 2000);
+            } else if (step === 2) {
+                // Turn on typewriter mode
+                setTypewriterMode(true);
+                setTimeout(runAnimation, 2000);
+            } else if (step === 3) {
+                // Turn off both
+                setFocusMode(false);
+                setTypewriterMode(false);
+                setTimeout(runAnimation, 2000);
+            }
+            step = (step + 1) % 4;
+        };
+
+        const timeout = setTimeout(runAnimation, 100);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timeout);
+        };
     }, [])
 
     const sampleLines = [
@@ -156,14 +175,14 @@ function StepWritingModes({ onNext }: { onNext: () => void }) {
     return (
         <div className={`flex flex-col items-center justify-center h-full px-8 transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <h2 className="font-serif text-[28px] font-bold text-folium-text dark:text-folium-dark-text mb-2">
-                Writing modes
+                Deep Focus
             </h2>
-            <p className="font-sans text-[15px] text-folium-text-secondary dark:text-folium-dark-text-secondary mb-6">
-                Toggle the switches and watch the preview change.
+            <p className="font-sans text-[15px] text-folium-text-secondary dark:text-folium-dark-text-secondary mb-6 text-center max-w-[400px]">
+                Remove distractions with Focus Mode, and keep your eyes on the current line with Typewriter Mode. Perfect for long-form writing.
             </p>
 
             {/* Mini Editor Mockup */}
-            <div className="w-full max-w-[480px] rounded-xl border border-folium-border dark:border-folium-dark-border bg-folium-bg dark:bg-folium-dark-bg shadow-lg overflow-hidden mb-6 relative">
+            <div className="w-full max-w-[480px] rounded-xl border border-folium-border dark:border-folium-dark-border bg-folium-bg dark:bg-folium-dark-bg shadow-lg overflow-hidden mb-5 relative">
                 {/* Fake Tab Bar */}
                 <div className={`flex items-center gap-2 px-3 py-2 border-b border-folium-border dark:border-folium-dark-border bg-folium-bg-secondary dark:bg-folium-dark-bg-secondary transition-all duration-700 ${focusMode ? 'opacity-0 max-h-0 py-0 border-b-0 overflow-hidden' : 'opacity-100 max-h-12'}`}>
                     <div className="px-3 py-1 rounded text-[11px] font-sans font-medium text-folium-text dark:text-folium-dark-text bg-folium-bg dark:bg-folium-dark-bg border border-folium-border/50 dark:border-folium-dark-border">
@@ -215,57 +234,74 @@ function StepWritingModes({ onNext }: { onNext: () => void }) {
                 </div>
             </div>
 
-            {/* Toggle Controls */}
-            <div className="flex gap-6 mb-8">
-                <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <button
-                        onClick={() => {
-                            const next = !focusMode
-                            setFocusMode(next)
-                            if (next) setTriedFocus(true)
-                        }}
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-[3px] border-transparent transition-colors duration-200 ease-in-out ${focusMode ? 'bg-folium-accent dark:bg-folium-dark-accent' : 'bg-[#E5E7EB] dark:bg-folium-dark-border'}`}
-                        role="switch"
-                        aria-checked={focusMode}
-                    >
-                        <span
-                            className={`pointer-events-none inline-block h-4 w-4 mt-[1px] transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${focusMode ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
-                        />
-                    </button>
-                    <span className="font-sans text-[14px] font-medium text-folium-text dark:text-folium-dark-text">
-                        Focus Mode
-                    </span>
-                </label>
-
-                <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <button
-                        onClick={() => {
-                            const next = !typewriterMode
-                            setTypewriterMode(next)
-                            if (next) setTriedTypewriter(true)
-                        }}
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-[3px] border-transparent transition-colors duration-200 ease-in-out ${typewriterMode ? 'bg-folium-accent dark:bg-folium-dark-accent' : 'bg-[#E5E7EB] dark:bg-folium-dark-border'}`}
-                        role="switch"
-                        aria-checked={typewriterMode}
-                    >
-                        <span
-                            className={`pointer-events-none inline-block h-4 w-4 mt-[1px] transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${typewriterMode ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
-                        />
-                    </button>
-                    <span className="font-sans text-[14px] font-medium text-folium-text dark:text-folium-dark-text">
-                        Typewriter Mode
-                    </span>
-                </label>
+            {/* Animation state text */}
+            <div className="flex gap-6 mb-6 h-6 items-center">
+                <span className={`font-sans text-[14px] font-medium transition-colors duration-300 ${focusMode ? 'text-folium-accent dark:text-folium-dark-accent' : 'text-folium-text-secondary/50 dark:text-folium-dark-text-secondary/50'}`}>
+                    Focus Mode
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-folium-border dark:bg-folium-dark-border" />
+                <span className={`font-sans text-[14px] font-medium transition-colors duration-300 ${typewriterMode ? 'text-folium-accent dark:text-folium-dark-accent' : 'text-folium-text-secondary/50 dark:text-folium-dark-text-secondary/50'}`}>
+                    Typewriter Mode
+                </span>
             </div>
 
-            <div className={`transition-all duration-500 ${bothTried ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
-                <button
-                    onClick={onNext}
-                    className="px-8 py-3 rounded-lg font-sans text-[15px] font-medium text-white bg-folium-accent dark:bg-folium-dark-accent hover:bg-folium-accent-hover dark:hover:bg-folium-dark-accent-hover transition-colors duration-200 shadow-sm"
-                >
-                    Continue →
-                </button>
+        </div>
+    )
+}
+
+function StepKeyboard() {
+    const [visible, setVisible] = useState(false)
+
+    useEffect(() => {
+        requestAnimationFrame(() => setVisible(true))
+    }, [])
+
+    return (
+        <div className={`flex flex-col items-center justify-center h-full px-8 transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <h2 className="font-serif text-[28px] font-bold text-folium-text dark:text-folium-dark-text mb-2">
+                Move at the speed of thought
+            </h2>
+            <p className="font-sans text-[15px] text-folium-text-secondary dark:text-folium-dark-text-secondary text-center max-w-[400px] mb-10">
+                Folium is built for the keyboard. Keep your hands on the keys and let your ideas flow.
+            </p>
+
+            <div className="flex flex-col gap-4 w-full max-w-[420px] mb-10">
+                <div className="flex items-start gap-4 p-5 rounded-xl border border-folium-border dark:border-folium-dark-border bg-white dark:bg-folium-dark-bg-secondary">
+                    <div className="w-10 h-10 shrink-0 rounded-lg bg-folium-accent/10 dark:bg-folium-dark-accent/10 flex items-center justify-center text-folium-accent dark:text-folium-dark-accent mt-1">
+                        <Search className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                            <h3 className="font-sans text-[15px] font-semibold text-folium-text dark:text-folium-dark-text">Command Palette</h3>
+                            <div className="flex gap-1">
+                                <kbd className="px-2 py-1 rounded bg-folium-bg dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border text-[11px] font-mono font-medium text-folium-text dark:text-folium-dark-text shadow-sm">Ctrl</kbd>
+                                <kbd className="px-2 py-1 rounded bg-folium-bg dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border text-[11px] font-mono font-medium text-folium-text dark:text-folium-dark-text shadow-sm">T</kbd>
+                            </div>
+                        </div>
+                        <p className="font-sans text-[13.5px] text-folium-text-secondary dark:text-folium-dark-text-secondary leading-relaxed">
+                            Open files, run commands, and navigate your workspace instantly without reaching for the mouse.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-5 rounded-xl border border-folium-border dark:border-folium-dark-border bg-white dark:bg-folium-dark-bg-secondary">
+                    <div className="w-10 h-10 shrink-0 rounded-lg bg-folium-accent/10 dark:bg-folium-dark-accent/10 flex items-center justify-center text-folium-accent dark:text-folium-dark-accent mt-1">
+                        <Link className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                            <h3 className="font-sans text-[15px] font-semibold text-folium-text dark:text-folium-dark-text">Wiki Links</h3>
+                            <div className="flex gap-1">
+                                <kbd className="px-2 py-1 rounded bg-folium-bg dark:bg-folium-dark-bg border border-folium-border dark:border-folium-dark-border text-[11px] font-mono font-medium text-folium-text dark:text-folium-dark-text shadow-sm">[[</kbd>
+                            </div>
+                        </div>
+                        <p className="font-sans text-[13.5px] text-folium-text-secondary dark:text-folium-dark-text-secondary leading-relaxed">
+                            Type two brackets to quickly link to other notes or create new ones on the fly.
+                        </p>
+                    </div>
+                </div>
             </div>
+
         </div>
     )
 }
@@ -330,7 +366,7 @@ function StepWorkspace({ onComplete }: { onComplete: (mode: 'pick' | 'create') =
 // ============================================================
 
 export function OnboardingModal({ onComplete }: OnboardingModalProps) {
-    const [step, setStep] = useState(0) // 0=welcome, 1=theme, 2=writing, 3=workspace
+    const [step, setStep] = useState(0) // 0=welcome, 1=theme, 2=writing, 3=keyboard, 4=workspace
     const [transitioning, setTransitioning] = useState(false)
 
     const goNext = useCallback(() => {
@@ -341,7 +377,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
         }, 300)
     }, [])
 
-    const totalSteps = 4
+    const totalSteps = 5
 
     return createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-folium-bg dark:bg-folium-dark-bg transition-colors duration-200">
@@ -349,14 +385,27 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
             <div className="w-full max-w-[600px] h-[620px] flex flex-col">
                 {/* Step Content */}
                 <div className={`flex-1 min-h-0 transition-opacity duration-300 ${transitioning ? 'opacity-0' : 'opacity-100'}`}>
-                    {step === 0 && <StepWelcome onNext={goNext} />}
-                    {step === 1 && <StepTheme onNext={goNext} />}
-                    {step === 2 && <StepWritingModes onNext={goNext} />}
-                    {step === 3 && <StepWorkspace onComplete={onComplete} />}
+                    {step === 0 && <StepWelcome />}
+                    {step === 1 && <StepTheme />}
+                    {step === 2 && <StepWritingModes />}
+                    {step === 3 && <StepKeyboard />}
+                    {step === 4 && <StepWorkspace onComplete={onComplete} />}
                 </div>
 
-                {/* Progress Dots */}
-                <div className="flex items-center justify-center gap-2 pb-8">
+            </div>
+
+            {/* Global Controls - anchored to bottom of screen */}
+            <div className="absolute bottom-12 left-0 w-full flex flex-col items-center gap-6">
+                <div className={`transition-all duration-300 ${step === 4 ? 'opacity-0 pointer-events-none translate-y-2' : 'opacity-100 translate-y-0'}`}>
+                    <button
+                        onClick={goNext}
+                        className="px-8 py-3 rounded-lg font-sans text-[15px] font-medium text-white bg-folium-accent dark:bg-folium-dark-accent hover:bg-folium-accent-hover dark:hover:bg-folium-dark-accent-hover transition-colors duration-200 shadow-sm"
+                    >
+                        {step === 0 ? 'Get Started →' : 'Continue →'}
+                    </button>
+                </div>
+                
+                <div className="flex items-center justify-center gap-2">
                     {Array.from({ length: totalSteps }).map((_, i) => (
                         <div
                             key={i}

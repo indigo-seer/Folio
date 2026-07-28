@@ -1,147 +1,129 @@
-# Folium — Codebase Overview (Current)
+# Folium — Codebase Overview
 
-> Version: 0.4.5  
-> Stack: Tauri v2 + React 18 + TypeScript + TipTap 3 + Tailwind CSS 3 + Vite  
-> Key Libraries: framer-motion, react-force-graph-2d, jspdf, html2canvas, fuse.js, lowlight, katex
-> Last updated: April 10, 2026
+> Current repository release: 0.5.1
+> Package manifest version: 0.4.5 (version metadata still needs alignment)
+> Stack: Tauri v2 + React 18 + TypeScript + TipTap 3 + Tailwind CSS 3 + Vite
+> Package manager: pnpm
+> Last updated: July 28, 2026
 
----
+Folium is a local-first Markdown editor. Vaults remain ordinary files on disk, while the Tauri desktop shell provides filesystem access, image caching, PDF export, workspace management, and native desktop integrations.
 
-## 1) High-Level Architecture
+## 1. Application architecture
 
 ```text
 App
-└─ Providers
-   ├─ SettingsProvider
-   ├─ ModalProvider
-   └─ WorkspaceProvider
-      └─ Bootloader + VaultContext wiring
-         └─ VaultProviderWrapped
-            └─ MainLayout
-               ├─ Sidebar (File Tree)
-               ├─ TabBar (main + split strips in same top row)
-               ├─ Main Pane Context
-               │  ├─ Editor Component (with corruption banners, note titles)
-               │  └─ folium-graph (Graph View)
-               ├─ Split Pane Context (optional)
-               │  └─ Editor Component
-               ├─ Split drag separator (shared ratio)
-               └─ StatusBar
+└─ ErrorBoundary
+   └─ SettingsProvider
+      └─ ModalProvider
+         └─ AppContentInner
+            └─ WorkspaceProvider
+               └─ EditorModeProvider
+                  └─ BootloaderWrappedContent
+                     └─ VaultContext.Provider
+                        └─ MainLayout
+                           ├─ Sidebar / FileTree
+                           ├─ TabBar
+                           ├─ Main Editor pane
+                           ├─ Optional split Editor pane
+                           ├─ GraphView tab
+                           ├─ StatusBar
+                           └─ ModalRoot
 ```
 
-### Core Idea:
-- **Folium is an integrated editing shell** that brings powerful Obsidian Flavored Markdown (OFM) to life inside a responsive split-pane UI.
-- The app has been renamed to **Folium** from Folio, reflecting its evolution.
-- Extensive features like native Graph Views, PDF Exports, robust OFM support (Wikilinks, Math, Embeds), and smooth animations construct an integrated desktop experience.
+### Provider responsibilities
 
----
+- `SettingsProvider` loads and persists theme, font-size, and typewriter-blur preferences.
+- `ModalProvider` owns global modal, context-menu, toast, and move/rename state.
+- `WorkspaceProvider` manages recent vaults, active workspace selection, workspace identity, and boot transitions.
+- `EditorModeProvider` owns Focus Mode and Typewriter Mode so those states do not need to be drilled through the bootloader/layout hierarchy.
+- `VaultContext` exposes the active vault, note index, backlink index, filesystem API, and wikilink navigation.
 
-## 2) Runtime Layering
+## 2. Runtime and state layers
 
-### 2.1 UI and State
+### UI
 
-- `src/App.tsx`
-  - Defines Provider hierarchy.
-  - Controls initial Bootloader state (`useAppBootloader`) and Onboarding.
-  - Manages editor and split states using `BootloaderWrappedContent` and `VaultProviderWrapped`.
-  - Audits typings using `performanceAudit.ts`.
-- `src/components/MainLayout.tsx`
-  - Container layout encompassing the Sidebar, Focus Mode features, and top TabBar.
-  - Handles the split-pane logic natively and responsive active Tab mappings.
-- `src/components/GraphView.tsx`
-  - Uses `react-force-graph-2d` to visualize vault note nodes and relationships extracted via backlinks and wikilinks. Handled as a tab in MainLayout.
+- `src/App.tsx` wires providers, bootstrapping, the two editor instances, file operations, and global shortcuts.
+- `src/components/MainLayout.tsx` owns the responsive shell, sidebar, tab bar, graph tab, split-pane sizing, focus-mode visibility, and status bar.
+- `src/components/ModalRoot.tsx` renders quick switcher, context menus, rename/move/settings modals, and toasts.
+- `src/components/GraphView.tsx` renders the vault graph using `react-force-graph-2d`.
 
-### 2.2 Domain Hooks
+### Domain hooks
 
-- `src/hooks/useTabs.ts`
-  - The canonical Tab state machine: `mainTabIds`, `splitTabIds`, `activeTabId`, `splitTabId`, and `tabById`.
-  - Operations for layout logic: `openTab`, `openTabInSplit`, `setActiveTabId`, `setSplitTabId`, `closeTabInPane`.
-- `src/hooks/useFileSystem.ts`
-  - Controls vault authority: `rootPath`, vault files tree, indexed notes, and dynamic `backlinkIndex`.
-- `src/hooks/useFileOperations.ts`
-  - Provides UX actions: creating Notes, renaming, moving, deleting, creating Wikilink structures, routing, and **Exporting to PDF**.
-- `src/hooks/useEditorState.ts`
-  - Combines hydration, corruption prevention, cursor positioning logic, and the core saving debouncer hooked into markdown serialization.
+- `useTabs.ts` is the canonical tab state machine for main and split panes.
+- `useFileSystem.ts` owns vault loading, directory scanning, note/backlink indexing, file operations, editor-state persistence, and image-path registration. Its `refreshVault()` helper keeps tree/index/cache state synchronized after mutations.
+- `useFileOperations.ts` provides note/folder creation, rename, move, delete, wikilink navigation, split opening, and PDF export.
+- `useEditorState.ts` handles editor hydration, tab switching, cursor/scroll restoration, corruption detection, external-change detection, and reload behavior.
+- `useEditorAutoSave.ts` contains debounced Markdown serialization, external-change protection, and save error reporting.
+- `useAppBootloader.ts` restores the active workspace and handles first-run onboarding.
 
-### 2.3 Contexts
+### Filesystem adapters
 
-- `src/contexts/VaultContext.tsx`: Distributes access to `notes`, `backlinkIndex`, and handles file interactions inside the React tree.
-- `src/contexts/ModalContext.tsx`: Single global machine for Modals (`QuickSwitcher`, `MoveModal`, etc.).
-- `src/contexts/WorkspaceContext.tsx`: Deals with managing multiple distinct target folders that have `.folium` workspaces.
+`src/lib/fs/` provides a common adapter interface with:
 
----
+- `tauriAdapter.ts` for desktop filesystem access and dynamic Tauri scope grants.
+- `browserAdapter.ts` for browser-compatible file access.
+- `vaultIndexer.ts` for note discovery, wikilink extraction, and backlink construction.
 
-## 3) Markdown + Editor Pipeline
+## 3. Markdown and editor pipeline
 
-Folium's most crucial layer handles parsing Obsidian styling locally while editing.
+### TipTap extension registry
 
-### 3.1 Extension Registry (`src/lib/editor/extensions.ts`)
-The TipTap environment is augmented extensively:
-- **Content Blocks:** `Markdown`, `Typography`, `TaskList`, `Table` Suite (`TableRow`, `TableHeader`, `TableCell`).
-- **Obsidian Syntax Nodes:** `Wikilink`, `Callout`, `Tag`, `Frontmatter`, `Embed`, `MathBlock`, `InlineMath`.
-- **Media Customization:** `TauriImage` and `ObsidianImage` resolve local caching dynamically taking resources from `attachments/*` and fetching via caching system.
-- **UX Behaviors:** `TypewriterMode`, `SmoothCaret`, `SlashCommand`, `MarkdownPaste`, `CodeBlockCopy`, and `Highlight`.
+`src/lib/editor/extensions.ts` composes the editor from TipTap and Folium extensions:
 
-### 3.2 Parsing / Loading Path
-- Reads markdown -> `stripFrontMatter` handles legacy edge-cases.
-- `setContent(markdown)` processes node parsing. Caching functions (`imageCache.ts`) load images smoothly natively without performance penalties.
+- Markdown, tables, task lists, typography, links, code blocks, highlights, and placeholders.
+- Wikilinks, tags, callouts, frontmatter, embeds, Obsidian images, inline math, and block math.
+- Slash commands, Markdown paste, typewriter mode, smooth caret behavior, and code-copy actions.
 
-### 3.3 Autosave & Serializer Path
-- Debounced functions track typed words (`performanceAudit.ts`).
-- When triggered, `tipTapToMarkdown` (`src/lib/markdown.ts`) normalizes structures like equations, embedded media, metadata objects, and callouts back perfe check passes: npx tsc -p tsconfig.app.json --noEmit
-Focused tests pass: 32/32
-Full Vitest run: 32 passed, 5 failed because parse.test.ts creates a TipTap editor without a browser window/DOM test environment. This appears to be test setup rather than a detected application failure.
-The Rust set_var finding is valid as a future-compatibility warning: the project is still Rust 2021, where it compiles, but Rust 2024 makes set_var unsafe and requires a safety review. Rust Edition Guide
+### Loading
 
- splitting remains inconsistent despite getBasename() existing.
-Root-levectly to markdown.
+Notes are read from disk and parsed by `@tiptap/markdown` through the editor’s Markdown content type. The custom tokenizers supplied by Folium extensions are therefore part of the production loading path.
 
----
+### Saving
 
-## 4) Key Submodules & Utilities
+TipTap JSON is serialized by `tipTapToMarkdown()` in `src/lib/markdown.ts`. Reference-style link definitions are preserved and restored around serialization. Autosaves are debounced and stopped when the on-disk file changes externally.
 
-### 4.1 PDF Export (`src/lib/pdfExport.ts`)
-- Allows users to turn a single markdown document into a shareable A4-sized PDF.
-- Renders an invisible DOM with the note content, awaits font/image stabilization (`waitForImages`), and leverages `html2canvas` generating imagery mapped into a `jsPDF` component handling chunking dimensions dynamically.
+The legacy exported `markdownToTipTap()` helper remains in `src/lib/markdown.ts` for compatibility coverage, but production loading uses `@tiptap/markdown`.
 
-### 4.2 Image Caching & Processing
-- Contains a complex media proxy (`vaultImageMigration.ts`, `imageIngestion.ts`, `imageCache.ts`).
-- Images dropped/pasted are moved to an `attachments/` folder asynchronously and cached to improve initial load speed on large graph contexts. 
+When adding Markdown behavior, update both the relevant TipTap tokenizer/parser and the serializer, then add a focused test.
 
-### 4.3 Corruption Protection
-- Implemented `CorruptionBanner.tsx` and `corruptionDetector.ts` that warns users if structural breaks occur inside the markdown abstract syntax tree preventing save failures.
+## 4. Core features
 
----
+- Local Markdown vaults with nested folders and backlink indexing.
+- Main and split editor panes with persistent tabs.
+- Wikilinks, aliases, anchors, embeds, tags, callouts, frontmatter, tables, task lists, and math.
+- Graph View represented by the sentinel tab ID `GRAPH_TAB_ID`.
+- Attachment ingestion and image caching through `imageIngestion.ts` and `imageCache.ts`.
+- PDF export through `pdfExport.ts`, `html2canvas`, and `jspdf`.
+- Corruption warnings and external-file-change protection.
+- Workspace history and onboarding.
+- Focus Mode and Typewriter Mode through `EditorModeContext`.
 
-## 5) Tab and UI Ecosystem
+## 5. Sync work status
 
-- **Tab Manager**: The unified `TabBar.tsx` supports split strips gracefully, displaying names extracted accurately from `useTabs.ts` mappings.
-- **Global Modals**: `QuickSwitcher.tsx` helps rapidly navigate tags, commands, and notes. Operations are focused dynamically checking `focusedPane` state from `App.tsx`.
-- **Note Frontmatter & Callouts**: Visual interactive boxes managed by `FrontmatterNodeView.tsx` and `CalloutNodeView.tsx`.
-- **Animations:** Utilizing `framer-motion` inside Modals and smooth UI elements, including smooth responsive typing cursors using `SmoothCaret`.
+The current `Refactored-Parser` branch does not contain the sync implementation. The active sync work is preserved in the separate local/remote branch `feature/sync-yjs-core`. The obsolete sync branches without unique commits have been removed.
 
----
+## 6. Testing and build verification
 
-## 6) Testing and Quality Signals
+- Tests live primarily under `src/lib/__tests__/` and `src/extensions/__tests__/`.
+- `npm test` / `pnpm test` runs Vitest.
+- Current verification status: 37 tests passing across 3 test files.
+- TypeScript validation passes with `npx tsc -p tsconfig.app.json --noEmit`.
+- Production build passes with `npm run build` / `pnpm build`.
 
-- Test suites located in `src/lib/__tests__/`.
-- Highly targeted tests including `parse.test.ts` and `markdown.test.ts` matching TipTap serializers to exact String formats to avoid markdown drift in features like tables, equations, and tasks.
+The parser tests use `MarkdownManager` directly, avoiding a browser-DOM dependency while still exercising the production TipTap Markdown tokenizer registry.
 
----
+## 7. Repository organization
 
-## 7) Important Caveats / Technical Debt
+- `docs/archive/` contains historical PRDs, comparisons, and debugging notes.
+- `scripts/legacy/` contains retained ad-hoc diagnostic scripts.
+- `CODE_AUDIT.md` contains the code-audit findings and remediation history.
+- `pnpm-lock.yaml` is the canonical dependency lockfile; the obsolete npm lockfile has been removed.
+- `Dockerfile` remains at the repository root because its current deployment relevance has not been established.
 
-1. **Vault Duality**: Parsing and serialization have separate pipelines (`extensions.ts` vs `markdown.ts`). Changes to block representations must always modify *both* pipelines concurrently.
-2. **Graph View Size**: `react-force-graph-2d` loads in a single pass; scaling logic needs periodic observation for mega-vault geometries.
-3. **Embed Semantics**: Standard Obsidian block ID embedding (`![[note#block]]`) is parsed, but deep, nested cyclic transclusion logic handles basic cases natively for stability.
-4. **Graph Tab Hack**: `folium-graph` operates as an irregular tab identifier within standard Note layout flow triggering custom renders on switch.
+## 8. Known follow-up work
 
----
-
-## 8) Contributor Notes
-
-When adding new Markdown behaviors:
-1. Extend Tokenizer in (`src/extensions/*`).
-2. Add Serializer formatting in (`src/lib/markdown.ts`).
-3. Add respective test logic in (`src/lib/__tests__/`).
-4. Update this overview logic file if adding massive structural shifts.
+1. Remove or formally isolate the legacy `markdownToTipTap()` implementation once compatibility tests no longer require it.
+2. Continue replacing residual `any` types inside TipTap integration and node-view boundaries.
+3. Consider splitting the large presentation components, especially `SettingsModal.tsx` and `OnboardingModal.tsx`.
+4. Consider lazy-loading performance diagnostics and the graph bundle for smaller initial loads.
+5. Review `std::env::set_var` before any Rust 2024 edition migration.
