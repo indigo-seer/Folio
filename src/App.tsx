@@ -337,9 +337,15 @@ export default function App() {
         const sessionStart = Date.now();
         
         // Listen for when the Tauri window is about to close
-        const unlistenPromise = getCurrentWindow().onCloseRequested(async () => {
+        // Do not await telemetry from the close-request handler. Tauri only
+        // destroys the window after this handler resolves, so a failed or slow
+        // Aptabase request can make both the title-bar X and native close
+        // requests appear to do nothing.
+        const unlistenPromise = getCurrentWindow().onCloseRequested(() => {
             const duration_seconds = Math.round((Date.now() - sessionStart) / 1000);
-            await trackEvent('app_closed', { duration_seconds });
+            void trackEvent('app_closed', { duration_seconds }).catch(() => {
+                // Shutdown telemetry is best effort and must never block close.
+            });
         });
 
         return () => {

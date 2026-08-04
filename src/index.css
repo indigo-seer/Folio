@@ -619,6 +619,9 @@ ul[data-type="taskList"] li[data-checked="true"]>div {
   pointer-events: none;
 
   /* The blur itself */
+  /* WebKitGTK (used by Linux AppImages) only consistently applies the
+     prefixed form, while Chromium uses the unprefixed form. */
+  -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
 
   /* The gradient mask:

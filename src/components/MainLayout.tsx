@@ -40,7 +40,7 @@ export function MainLayout({
     onCloseSplit,
 }: MainLayoutProps) {
     const { isFocusMode, setIsFocusMode, isTypewriterMode, setIsTypewriterMode } = useEditorMode();
-    const { theme, setTheme } = useSettings();
+    const { theme, setTheme, typewriterBlur } = useSettings();
     const { workspaces, activeWorkspaceId, handleOpenWorkspace, handleSelectWorkspace, handleRemoveWorkspace } = useWorkspace();
     const modals = useModals();
 
@@ -321,7 +321,7 @@ export function MainLayout({
                             </div>
                         )}
                     </div>
-                    {isTypewriterMode && (
+                    {isTypewriterMode && typewriterBlur && (
                         <div className={`typewriter-blur-overlay transition-opacity duration-500 ${isTypewriterSuspended ? 'opacity-0' : 'opacity-100'}`} />
                     )}
                 </div>
