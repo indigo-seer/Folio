@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { SettingsProvider } from './hooks/useSettings';
 import { useFileSystem } from './hooks/useFileSystem';
 import { useTabs } from './hooks/useTabs';
@@ -27,6 +29,14 @@ import type { TabsAPI } from './hooks/useTabs';
 import type { Editor as TipTapEditor } from '@tiptap/react';
 import { EditorModeProvider, useEditorMode } from './contexts/EditorModeContext';
 import { GRAPH_TAB_ID } from './lib/constants';
+
+type AptabaseProps = Record<string, string | number>;
+
+// @aptabase/tauri@0.4.1 still targets Tauri v1 and calls __TAURI_IPC__.
+// Invoke the Tauri v2 plugin command directly instead.
+function trackEvent(name: string, props?: AptabaseProps): Promise<void> {
+    return invoke('plugin:aptabase|track_event', { name, props });
+}
 
 export enum BootState {
     Initializing,
@@ -319,8 +329,24 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
     );
 }
 
-
 export default function App() {
+    useEffect(() => {
+        // Log app open for Aptabase
+        trackEvent('app_opened');
+
+        const sessionStart = Date.now();
+        
+        // Listen for when the Tauri window is about to close
+        const unlistenPromise = getCurrentWindow().onCloseRequested(async () => {
+            const duration_seconds = Math.round((Date.now() - sessionStart) / 1000);
+            await trackEvent('app_closed', { duration_seconds });
+        });
+
+        return () => {
+            unlistenPromise.then(unlisten => unlisten());
+        };
+    }, []);
+
     return (
         <ErrorBoundary>
             <SettingsProvider>

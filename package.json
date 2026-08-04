@@ -14,6 +14,7 @@
     "tauri:build:linux:noappimage": "tauri build --bundles deb,rpm"
   },
   "dependencies": {
+    "@aptabase/tauri": "^0.4.1",
     "@floating-ui/dom": "^1.6.0",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-dialog": "^2.6.0",
@@ -52,8 +53,8 @@
     "tippy.js": "^6.3.7"
   },
   "devDependencies": {
-    "@types/katex": "^0.16.8",
     "@tauri-apps/cli": "^2.10.0",
+    "@types/katex": "^0.16.8",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",

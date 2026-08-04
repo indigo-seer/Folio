@@ -31,7 +31,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install Rust
@@ -48,6 +48,9 @@ jobs:
       - name: Fix node_modules binary permissions (macOS & Linux)
         if: matrix.platform != 'windows-latest'
         run: chmod -R +x node_modules/.bin/ || true
+
+      - name: Write Aptabase key
+        run: echo "APTABASE_KEY=${{ secrets.APTABASE_KEY }}" >> src-tauri/.env
 
       - name: Build and publish with Tauri
         uses: tauri-apps/tauri-action@v0.5.15
