@@ -1,5 +1,4 @@
 mod bookmark_preview;
-use dotenvy_macro::dotenv;
 mod image_cache;
 
 use tauri::AppHandle;
@@ -71,7 +70,11 @@ pub fn run() {
     configure_linux_webkit_env();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_aptabase::Builder::new(dotenv!("APTABASE_KEY")).build())
+        // The build script loads local src-tauri/.env files and forwards the
+        // value as a rustc environment variable. CI can provide the same
+        // variable directly. Unlike dotenvy_macro, this is visible to Cargo
+        // and is rebuilt when APTABASE_KEY changes.
+        .plugin(tauri_plugin_aptabase::Builder::new(env!("APTABASE_KEY")).build())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![

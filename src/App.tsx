@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { SettingsProvider } from './hooks/useSettings';
 import { useFileSystem } from './hooks/useFileSystem';
 import { useTabs } from './hooks/useTabs';
@@ -16,6 +15,7 @@ import { VaultContext } from './contexts/VaultContext';
 
 import { useAppBootloader } from './hooks/useAppBootloader';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
+import { useSettings } from './hooks/useSettings';
 import { useEditorState } from './hooks/useEditorState';
 import { useFileOperations } from './hooks/useFileOperations';
 import { recordTypingUpdate, startPerformanceAudit } from './lib/performanceAudit';
@@ -125,6 +125,7 @@ interface VaultWrappedProps {
 function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboardingComplete }: VaultWrappedProps) {
     const modals = useModals();
     const { setIsFocusMode, isTypewriterMode, setIsTypewriterMode } = useEditorMode();
+    const { typewriterBlur } = useSettings();
     const [focusedPane, setFocusedPane] = useState<'main' | 'split'>('main');
 
     const {
@@ -278,6 +279,7 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
                                 onReady={handleMainEditorReady}
                                 onFocus={() => setFocusedPane('main')}
                                 isTypewriterMode={isTypewriterMode}
+                                typewriterBlur={typewriterBlur}
                             />
                         </div>
                     </div>
@@ -306,6 +308,7 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
                                     onReady={handleSplitEditorReady}
                                     onFocus={() => setFocusedPane('split')}
                                     isTypewriterMode={isTypewriterMode}
+                                    typewriterBlur={typewriterBlur}
                                 />
                             </div>
                         </div>
@@ -332,25 +335,9 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
 export default function App() {
     useEffect(() => {
         // Log app open for Aptabase
-        trackEvent('app_opened');
-
-        const sessionStart = Date.now();
-        
-        // Listen for when the Tauri window is about to close
-        // Do not await telemetry from the close-request handler. Tauri only
-        // destroys the window after this handler resolves, so a failed or slow
-        // Aptabase request can make both the title-bar X and native close
-        // requests appear to do nothing.
-        const unlistenPromise = getCurrentWindow().onCloseRequested(() => {
-            const duration_seconds = Math.round((Date.now() - sessionStart) / 1000);
-            void trackEvent('app_closed', { duration_seconds }).catch(() => {
-                // Shutdown telemetry is best effort and must never block close.
-            });
+        void trackEvent('app_opened').catch(() => {
+            // Analytics must never affect app startup or window lifecycle.
         });
-
-        return () => {
-            unlistenPromise.then(unlisten => unlisten());
-        };
     }, []);
 
     return (

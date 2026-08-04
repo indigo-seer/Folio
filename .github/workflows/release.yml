@@ -49,13 +49,21 @@ jobs:
         if: matrix.platform != 'windows-latest'
         run: chmod -R +x node_modules/.bin/ || true
 
-      - name: Write Aptabase key
-        run: echo "APTABASE_KEY=${{ secrets.APTABASE_KEY }}" >> src-tauri/.env
+      - name: Verify Aptabase secret is configured
+        shell: bash
+        env:
+          APTABASE_KEY: ${{ secrets.APTABASE_KEY }}
+        run: |
+          if [[ -z "${APTABASE_KEY:-}" ]]; then
+            echo "APTABASE_KEY is not configured in GitHub Actions secrets."
+            exit 1
+          fi
 
       - name: Build and publish with Tauri
         uses: tauri-apps/tauri-action@v0.5.15
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APTABASE_KEY: ${{ secrets.APTABASE_KEY }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Folium ${{ github.ref_name }}"

@@ -599,6 +599,15 @@ ul[data-type="taskList"] li[data-checked="true"]>div {
   /* Padding moved to container wrapper */
 }
 
+/* Fallback for WebKitGTK AppImages where backdrop-filter is unavailable or
+   silently ignored by the production compositor. The active block is left
+   sharp by the TypewriterMode extension. */
+.ProseMirror[data-typewriter-mode="true"][data-typewriter-blur="true"] > .typewriter-blurred-block {
+  filter: blur(3px);
+  opacity: 0.55;
+  transition: filter 180ms ease, opacity 180ms ease;
+}
+
 .typewriter-active-container {
   padding-top: 45vh;
   padding-bottom: 45vh;
