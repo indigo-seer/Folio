@@ -15,7 +15,6 @@ import { VaultContext } from './contexts/VaultContext';
 
 import { useAppBootloader } from './hooks/useAppBootloader';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
-import { useSettings } from './hooks/useSettings';
 import { useEditorState } from './hooks/useEditorState';
 import { useFileOperations } from './hooks/useFileOperations';
 import { recordTypingUpdate, startPerformanceAudit } from './lib/performanceAudit';
@@ -29,6 +28,7 @@ import type { TabsAPI } from './hooks/useTabs';
 import type { Editor as TipTapEditor } from '@tiptap/react';
 import { EditorModeProvider, useEditorMode } from './contexts/EditorModeContext';
 import { GRAPH_TAB_ID } from './lib/constants';
+import { isLinux } from './lib/platform';
 
 type AptabaseProps = Record<string, string | number>;
 
@@ -125,8 +125,8 @@ interface VaultWrappedProps {
 function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboardingComplete }: VaultWrappedProps) {
     const modals = useModals();
     const { setIsFocusMode, isTypewriterMode, setIsTypewriterMode } = useEditorMode();
-    const { typewriterBlur } = useSettings();
     const [focusedPane, setFocusedPane] = useState<'main' | 'split'>('main');
+    const useLinuxTypewriterMask = isLinux();
 
     const {
         editorRef: mainEditorRef,
@@ -251,7 +251,7 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
                 onCloseSplit={tabs.closeSplitTab}
                 editorNode={
                     <div
-                        className={`absolute inset-0 overflow-y-auto overscroll-none ${isTypewriterMode ? 'typewriter-active-container' : ''}`}
+                        className={`absolute inset-0 overflow-y-auto overscroll-none ${isTypewriterMode ? `typewriter-active-container${useLinuxTypewriterMask ? ' typewriter-linux-mask' : ''}` : ''}`}
                         ref={mainEditorScrollRef}
                     >
                         <div>
@@ -279,14 +279,13 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
                                 onReady={handleMainEditorReady}
                                 onFocus={() => setFocusedPane('main')}
                                 isTypewriterMode={isTypewriterMode}
-                                typewriterBlur={typewriterBlur}
                             />
                         </div>
                     </div>
                 }
                 splitEditorNode={
                     tabs.splitTabId ? (
-                        <div className={`absolute inset-0 overflow-y-auto overscroll-none ${isTypewriterMode ? 'typewriter-active-container' : ''}`} ref={splitEditorScrollRef}>
+                        <div className={`absolute inset-0 overflow-y-auto overscroll-none ${isTypewriterMode ? `typewriter-active-container${useLinuxTypewriterMask ? ' typewriter-linux-mask' : ''}` : ''}`} ref={splitEditorScrollRef}>
                             <div>
                                 <CorruptionBanner warnings={splitCorruptionWarnings} />
                                 <CorruptionBanner
@@ -308,7 +307,6 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
                                     onReady={handleSplitEditorReady}
                                     onFocus={() => setFocusedPane('split')}
                                     isTypewriterMode={isTypewriterMode}
-                                    typewriterBlur={typewriterBlur}
                                 />
                             </div>
                         </div>

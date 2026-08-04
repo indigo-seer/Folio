@@ -43,33 +43,6 @@ export const TypewriterMode = Extension.create({
 
                     let isDragging = false
 
-                    // CSS backdrop-filter is not rendered reliably by the
-                    // WebKitGTK runtime inside production AppImages. Blur
-                    // each non-active block directly as a fallback that does
-                    // not depend on backdrop compositing.
-                    const syncBlurredBlocks = () => {
-                        const shouldBlur =
-                            view.dom.getAttribute('data-typewriter-mode') === 'true' &&
-                            view.dom.getAttribute('data-typewriter-blur') === 'true'
-
-                        let activeBlock: Element | null = null
-                        if (shouldBlur) {
-                            const positionNode = view.domAtPos(view.state.selection.head).node
-                            let candidate = positionNode.nodeType === Node.ELEMENT_NODE
-                                ? positionNode as Element
-                                : positionNode.parentElement
-
-                            while (candidate && candidate.parentElement !== view.dom) {
-                                candidate = candidate.parentElement
-                            }
-                            activeBlock = candidate
-                        }
-
-                        for (const child of Array.from(view.dom.children)) {
-                            child.classList.toggle('typewriter-blurred-block', shouldBlur && child !== activeBlock)
-                        }
-                    }
-
                     const onMouseDown = (e: MouseEvent) => {
                         if (view.dom.contains(e.target as Node)) {
                             isDragging = true
@@ -90,7 +63,6 @@ export const TypewriterMode = Extension.create({
                     document.addEventListener('mouseup', onMouseUp)
 
                     const onTypewriterToggle = () => {
-                        syncBlurredBlocks()
                         if (view.dom.getAttribute('data-typewriter-mode') === 'true') {
                             setManualScroll(false)
                             // We need to wait for the .typewriter-active-container CSS transition
@@ -103,9 +75,7 @@ export const TypewriterMode = Extension.create({
                             })
                         }
                     }
-                    const onTypewriterBlurChange = () => syncBlurredBlocks()
                     window.addEventListener('folium:typewriter-toggled', onTypewriterToggle)
-                    window.addEventListener('folium:typewriter-blur-changed', onTypewriterBlurChange)
 
                     const animateTo = (absoluteTargetY: number, isSmooth: boolean) => {
                         if (animationFrame) cancelAnimationFrame(animationFrame)
@@ -216,13 +186,12 @@ export const TypewriterMode = Extension.create({
 
                     return {
                         update: (view: EditorView, prevState: EditorState) => {
-                            syncBlurredBlocks()
+                            const docChanged = !prevState.doc.eq(view.state.doc)
+                            const selectionChanged = !prevState.selection.eq(view.state.selection)
+
                             if (view.dom.getAttribute('data-typewriter-mode') !== 'true') return
 
                             if (isDragging) return
-
-                            const docChanged = !prevState.doc.eq(view.state.doc)
-                            const selectionChanged = !prevState.selection.eq(view.state.selection)
 
                             // Resume only on typing
                             if (manualScrollActive && docChanged) {
@@ -238,16 +207,12 @@ export const TypewriterMode = Extension.create({
                         },
 
                         destroy() {
-                            for (const child of Array.from(view.dom.children)) {
-                                child.classList.remove('typewriter-blurred-block')
-                            }
                             if (scrollTarget) {
                                 scrollTarget.removeEventListener('scroll', disableTemporarily)
                             }
                             document.removeEventListener('mousedown', onMouseDown)
                             document.removeEventListener('mouseup', onMouseUp)
                             window.removeEventListener('folium:typewriter-toggled', onTypewriterToggle)
-                            window.removeEventListener('folium:typewriter-blur-changed', onTypewriterBlurChange)
                         }
                     }
                 }

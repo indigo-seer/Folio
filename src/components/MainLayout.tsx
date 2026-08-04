@@ -12,6 +12,7 @@ import type { FileSystemAPI } from '../hooks/useFileSystem';
 import type { TabsAPI } from '../hooks/useTabs';
 import type { FileOperationsAPI } from '../hooks/useFileOperations';
 import { GRAPH_TAB_ID, getBasename } from '../lib/constants';
+import { isLinux } from '../lib/platform';
 import { useEditorMode } from '../contexts/EditorModeContext';
 
 interface MainLayoutProps {
@@ -56,7 +57,6 @@ export function MainLayout({
         isUIVisibleRef.current = visible;
     };
 
-    const [isTypewriterSuspended, setIsTypewriterSuspended] = useState(false);
     const hasSplitPane = Boolean(splitTabId && splitEditorNode);
     const safeSplitRatio = Math.min(0.78, Math.max(0.22, splitRatio));
     const mainPaneWidth = `${safeSplitRatio * 100}%`;
@@ -128,16 +128,6 @@ export function MainLayout({
             window.clearTimeout(timeoutId);
         };
     }, [isFocusMode]);
-
-    // Listen for Typewriter Mode manual scroll override from the extension
-    useEffect(() => {
-        const handleTypewriterSuspend = (e: Event) => {
-            const customEvent = e as CustomEvent<boolean>;
-            setIsTypewriterSuspended(customEvent.detail);
-        };
-        window.addEventListener('folium:typewriter-manual-scroll', handleTypewriterSuspend);
-        return () => window.removeEventListener('folium:typewriter-manual-scroll', handleTypewriterSuspend);
-    }, []);
 
     useEffect(() => {
         const activeWorkspace = workspaces.find(workspace => workspace.id === activeWorkspaceId) || null
@@ -320,10 +310,10 @@ export function MainLayout({
                                 </div>
                             </div>
                         )}
+                        {isTypewriterMode && typewriterBlur && !isLinux() && (
+                            <div className="typewriter-blur-overlay" aria-hidden="true" />
+                        )}
                     </div>
-                    {isTypewriterMode && typewriterBlur && (
-                        <div className={`typewriter-blur-overlay transition-opacity duration-500 ${isTypewriterSuspended ? 'opacity-0' : 'opacity-100'}`} />
-                    )}
                 </div>
 
                 {/* Status Bar */}

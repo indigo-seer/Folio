@@ -599,44 +599,38 @@ ul[data-type="taskList"] li[data-checked="true"]>div {
   /* Padding moved to container wrapper */
 }
 
-/* Fallback for WebKitGTK AppImages where backdrop-filter is unavailable or
-   silently ignored by the production compositor. The active block is left
-   sharp by the TypewriterMode extension. */
-.ProseMirror[data-typewriter-mode="true"][data-typewriter-blur="true"] > .typewriter-blurred-block {
-  filter: blur(3px);
-  opacity: 0.55;
-  transition: filter 180ms ease, opacity 180ms ease;
-}
-
 .typewriter-active-container {
   padding-top: 45vh;
   padding-bottom: 45vh;
 }
 
-/* 
-  Force the scroll container to handle scroll anchoring instead of the browser
-  to prevent native caret visibility auto-scrolling during Typewriter animation 
-*/
-.overflow-y-auto {
-  overflow-anchor: none;
+/* Linux fallback: fade the editor's own pixels rather than placing a colour wash above
+   them. This works in WebKitGTK/AppImages without backdrop compositing. */
+.typewriter-linux-mask {
+  -webkit-mask-image: linear-gradient(to bottom,
+      transparent 0%,
+      rgb(0 0 0 / 0.18) 13%,
+      black 38%,
+      black 62%,
+      rgb(0 0 0 / 0.18) 87%,
+      transparent 100%);
+  mask-image: linear-gradient(to bottom,
+      transparent 0%,
+      rgb(0 0 0 / 0.18) 13%,
+      black 38%,
+      black 62%,
+      rgb(0 0 0 / 0.18) 87%,
+      transparent 100%);
 }
 
+/* Windows/macOS keep the original backdrop-blur implementation. */
 .typewriter-blur-overlay {
   position: absolute;
   inset: 0;
   z-index: 10;
   pointer-events: none;
-
-  /* The blur itself */
-  /* WebKitGTK (used by Linux AppImages) only consistently applies the
-     prefixed form, while Chromium uses the unprefixed form. */
   -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
-
-  /* The gradient mask:
-     - Fully opaque (blur active) at top and bottom
-     - Transparent (no blur) in the center ~120px window
-     - Soft transition between the two */
   -webkit-mask-image: linear-gradient(to bottom,
       black 0%,
       black 15%,
@@ -651,6 +645,14 @@ ul[data-type="taskList"] li[data-checked="true"]>div {
       transparent 65%,
       black 85%,
       black 100%);
+}
+
+/*
+  Force the scroll container to handle scroll anchoring instead of the browser
+  to prevent native caret visibility auto-scrolling during Typewriter animation
+*/
+.overflow-y-auto {
+  overflow-anchor: none;
 }
 
 /* Prevent text selection in the titlebar / drag region */

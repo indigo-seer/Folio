@@ -23,7 +23,6 @@ interface EditorProps {
     onReady?: (editor: ReturnType<typeof useEditor>) => void
     onFocus?: (editor: ReturnType<typeof useEditor>) => void
     isTypewriterMode?: boolean
-    typewriterBlur?: boolean
 }
 
 function extractImageFilesFromClipboard(event: ClipboardEvent): File[] {
@@ -96,7 +95,7 @@ function parentDirFromPath(path: string): string {
     return normalized.slice(0, index)
 }
 
-export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false, typewriterBlur = true }: EditorProps) {
+export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }: EditorProps) {
     // Context for vault state and filesystem operations
     const { notes, vault, fileSystem } = useContext(VaultContext)
     const modals = useModals()
@@ -481,14 +480,8 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false, t
             } else {
                 editor.view.dom.removeAttribute('data-typewriter-mode')
             }
-            if (typewriterBlur) {
-                editor.view.dom.setAttribute('data-typewriter-blur', 'true')
-            } else {
-                editor.view.dom.removeAttribute('data-typewriter-blur')
-            }
-            window.dispatchEvent(new CustomEvent('folium:typewriter-blur-changed'))
         }
-    }, [editor, isTypewriterMode, typewriterBlur])
+    }, [editor, isTypewriterMode])
 
     useEffect(() => {
         return () => {
