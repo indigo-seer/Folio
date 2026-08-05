@@ -7,7 +7,6 @@ import { getCachePathForImage, resolveAbsoluteImagePath } from '../lib/imageCach
 
 const MIN_WIDTH = 100
 const VIEWPORT_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
-const DEFAULT_IMAGE_RATIO = 16 / 10
 const imageRatioCache = new Map<string, number>()
 
 function normalizePixelDimension(value: unknown): number | null {
@@ -32,6 +31,7 @@ export default function ImageNodeView(props: NodeViewProps) {
     const [dragSize, setDragSize] = useState<{ width: number; height: number } | null>(null)
     const [hasEnteredViewport, setHasEnteredViewport] = useState(false)
     const [isImageLoaded, setIsImageLoaded] = useState(false)
+    const [naturalRatio, setNaturalRatio] = useState<number | null>(null)
 
     const src = String(node.attrs.src || '')
     const alt = String(node.attrs.alt || '')
@@ -52,22 +52,23 @@ export default function ImageNodeView(props: NodeViewProps) {
         if (displayWidth && displayHeight) {
             return Math.max(0.05, displayWidth / displayHeight)
         }
-        return imageRatioCache.get(src) || DEFAULT_IMAGE_RATIO
-    }, [displayHeight, displayWidth, src])
+        return naturalRatio
+    }, [displayHeight, displayWidth, naturalRatio])
     const isLoadingVisual = !isImageLoaded
     const imageStyle = useMemo(() => {
         if (!displayWidth && !displayHeight) {
-            return {
+            const style: CSSProperties = {
                 maxWidth: '100%',
                 height: 'auto',
-                aspectRatio: `${expectedRatio}`,
-            } as CSSProperties
+            }
+            if (expectedRatio) style.aspectRatio = `${expectedRatio}`
+            return style
         }
 
         const style: CSSProperties = {
             maxWidth: '100%',
-            aspectRatio: `${expectedRatio}`,
         }
+        if (expectedRatio) style.aspectRatio = `${expectedRatio}`
 
         if (displayWidth) {
             style.width = `${displayWidth}px`
@@ -96,6 +97,7 @@ export default function ImageNodeView(props: NodeViewProps) {
 
     useEffect(() => {
         setIsImageLoaded(false)
+        setNaturalRatio(imageRatioCache.get(src) || null)
     }, [src, resolvedSrc])
 
     useEffect(() => {
@@ -135,7 +137,9 @@ export default function ImageNodeView(props: NodeViewProps) {
 
         const imageEl = imageRef.current
         if (imageEl && imageEl.naturalWidth > 0 && imageEl.naturalHeight > 0) {
-            imageRatioCache.set(src, imageEl.naturalWidth / imageEl.naturalHeight)
+            const ratio = imageEl.naturalWidth / imageEl.naturalHeight
+            imageRatioCache.set(src, ratio)
+            setNaturalRatio(ratio)
         }
         setIsImageLoaded(true)
     }

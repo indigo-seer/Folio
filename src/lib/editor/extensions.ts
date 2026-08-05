@@ -32,13 +32,13 @@ import { CodeBlockCopy } from '../../extensions/CodeBlockCopy'
 import { createWikilinkSuggestion } from '../../components/WikilinkSuggestion'
 import { createSlashCommandSuggestion } from '../../components/SlashCommandSuggestion'
 import ImageNodeView from '../../components/ImageNodeView'
-import { getCachePathForImage, setImageCacheVaultRoot } from '../imageCache'
+import { getCachePathForImage, resolveAbsoluteImagePath, setImageCacheVaultRoot } from '../imageCache'
 
 // Create lowlight instance with common languages
 const lowlight = createLowlight(common)
 
 // Module-level vault root path — set by the Editor component so renderHTML
-// can resolve relative `attachments/` paths to absolute disk paths for Tauri.
+// can resolve vault-relative image paths to absolute disk paths for Tauri.
 let vaultRootPath: string | null = null
 export function setVaultRootPath(path: string | null) {
     vaultRootPath = path
@@ -80,9 +80,10 @@ const TauriImage = Image.extend({
         const widthValue = HTMLAttributes.width
         const styleValue = String(HTMLAttributes.style || '')
 
-        if (isTauri() && src && src.startsWith('attachments/') && vaultRootPath) {
-            // Build the absolute path: /vault/root/attachments/name.png
-            const absolutePath = `${vaultRootPath}/${src}`
+        const absolutePath = src ? resolveAbsoluteImagePath(src) : null
+        if (isTauri() && absolutePath && vaultRootPath) {
+            // Obsidian vaults commonly use folders such as `assets/`, not only
+            // Folium's own `attachments/` folder.
             resolvedSrc = getCachePathForImage(absolutePath)
             HTMLAttributes['data-folium-image-source-path'] = absolutePath
         }

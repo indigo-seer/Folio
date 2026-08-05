@@ -48,22 +48,27 @@ function toAbsolutePath(inputPath: string): string | null {
         return null
     }
 
+    // Query strings and fragments are valid in Markdown image destinations,
+    // but must not become part of the filesystem path.
+    const pathOnly = trimmed.split(/[?#]/, 1)[0]
+    if (!pathOnly) return null
+
     // Explicit vault-relative references such as "assets/img.png".
-    if ((trimmed.includes('/') || trimmed.includes('\\')) && vaultRootPath) {
-        return joinVaultPath(trimmed)
+    if ((pathOnly.includes('/') || pathOnly.includes('\\')) && vaultRootPath) {
+        return joinVaultPath(pathOnly)
     }
 
-    const normalized = normalizeLookupPath(trimmed)
+    const normalized = normalizeLookupPath(pathOnly)
     const byRelative = imagePathByRelative.get(normalized)
     if (byRelative) return byRelative
 
-    const baseName = normalizeLookupPath(normalizePathSeparators(trimmed).split('/').pop() || trimmed)
+    const baseName = normalizeLookupPath(normalizePathSeparators(pathOnly).split('/').pop() || pathOnly)
     const byBasename = imagePathByBasename.get(baseName)
     if (byBasename) return byBasename
 
     if (vaultRootPath) {
         // Last-resort guess to preserve existing behavior for uncommon layouts.
-        return joinVaultPath(trimmed)
+        return joinVaultPath(pathOnly)
     }
 
     return null
