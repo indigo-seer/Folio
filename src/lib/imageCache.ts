@@ -41,9 +41,6 @@ function toAbsolutePath(inputPath: string): string | null {
     if (!trimmed) return null
 
     if (isAbsolutePath(trimmed)) return trimmed
-    if (trimmed.startsWith('attachments/')) {
-        return joinVaultPath(trimmed)
-    }
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
         return null
     }
@@ -82,17 +79,17 @@ function toDisplayUrl(filePath: string): string {
     return convertFileSrc(filePath)
 }
 
-function toRelativeAttachmentPath(inputPath: string): string | null {
+function toRelativeVaultImagePath(inputPath: string): string | null {
     const normalizedPath = normalizePathSeparators(inputPath)
-    if (normalizedPath.startsWith('attachments/')) {
-        return normalizedPath
-    }
-
     if (!vaultRootPath) return null
     const normalizedVaultRoot = normalizePathSeparators(vaultRootPath).replace(/\/+$/, '')
-    const prefix = `${normalizedVaultRoot}/attachments/`
-    if (!normalizedPath.startsWith(prefix)) return null
-    return `attachments/${normalizedPath.slice(prefix.length)}`
+    const prefix = `${normalizedVaultRoot}/`
+    if (!normalizedPath.toLowerCase().startsWith(prefix.toLowerCase())) return null
+
+    // Cache every image stored inside the vault, including Obsidian's
+    // user-configured folders such as `assets/`.
+    const relativePath = normalizedPath.slice(prefix.length)
+    return relativePath || null
 }
 
 function getPathExtension(path: string): string {
@@ -112,7 +109,7 @@ function notifyListeners(absolutePath: string, displayUrl: string) {
 }
 
 async function resolveCachedPath(absolutePath: string): Promise<string | null> {
-    const relativePath = toRelativeAttachmentPath(absolutePath)
+    const relativePath = toRelativeVaultImagePath(absolutePath)
     if (!relativePath || !activeVaultUid) return null
 
     try {
@@ -129,7 +126,7 @@ async function resolveCachedPath(absolutePath: string): Promise<string | null> {
 }
 
 async function generateCachedPath(absolutePath: string): Promise<string | null> {
-    const relativePath = toRelativeAttachmentPath(absolutePath)
+    const relativePath = toRelativeVaultImagePath(absolutePath)
     if (!relativePath || !activeVaultUid) return null
 
     try {

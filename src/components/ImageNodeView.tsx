@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { isTauri } from '../lib/config'
-import { getCachePathForImage, resolveAbsoluteImagePath } from '../lib/imageCache'
+import { getCachePathForImage, resolveAbsoluteImagePath, subscribeImageCacheUpdates } from '../lib/imageCache'
 
 const MIN_WIDTH = 100
 const VIEWPORT_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
@@ -32,6 +32,7 @@ export default function ImageNodeView(props: NodeViewProps) {
     const [hasEnteredViewport, setHasEnteredViewport] = useState(false)
     const [isImageLoaded, setIsImageLoaded] = useState(false)
     const [naturalRatio, setNaturalRatio] = useState<number | null>(null)
+    const [cachedSrc, setCachedSrc] = useState<string | null>(null)
 
     const src = String(node.attrs.src || '')
     const alt = String(node.attrs.alt || '')
@@ -39,12 +40,13 @@ export default function ImageNodeView(props: NodeViewProps) {
     const height = normalizePixelDimension(node.attrs.height)
     const absoluteSourcePath = resolveAbsoluteImagePath(src)
     const shouldDelayOffscreenLoad = isTauri() && Boolean(absoluteSourcePath)
-    const resolvedSrc = useMemo(() => {
+    const uncachedSrc = useMemo(() => {
         if (shouldDelayOffscreenLoad && !hasEnteredViewport) {
             return VIEWPORT_PLACEHOLDER
         }
         return getCachePathForImage(src)
     }, [shouldDelayOffscreenLoad, hasEnteredViewport, src])
+    const resolvedSrc = cachedSrc || uncachedSrc
 
     const displayWidth = dragSize?.width ?? width
     const displayHeight = dragSize?.height ?? height
@@ -98,7 +100,18 @@ export default function ImageNodeView(props: NodeViewProps) {
     useEffect(() => {
         setIsImageLoaded(false)
         setNaturalRatio(imageRatioCache.get(src) || null)
-    }, [src, resolvedSrc])
+        setCachedSrc(null)
+    }, [src, absoluteSourcePath])
+
+    useEffect(() => {
+        if (!absoluteSourcePath) return
+
+        return subscribeImageCacheUpdates((updatedPath, displayUrl) => {
+            if (updatedPath === absoluteSourcePath) {
+                setCachedSrc(displayUrl)
+            }
+        })
+    }, [absoluteSourcePath])
 
     useEffect(() => {
         const wrapper = wrapperRef.current
