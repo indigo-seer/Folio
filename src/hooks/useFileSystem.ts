@@ -46,7 +46,13 @@ export function useFileSystem() {
             notes,
             backlinkIndex,
         }))
-        setImageCacheVaultImagePaths(collectVaultImagePaths(tree))
+        const scannedImagePaths = fs.scanImageFiles
+            ? await fs.scanImageFiles(rootPath)
+            : []
+        setImageCacheVaultImagePaths([
+            ...collectVaultImagePaths(tree),
+            ...scannedImagePaths,
+        ])
     }, [])
 
     const loadVault = useCallback(async (path: string) => {

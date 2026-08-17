@@ -1,5 +1,5 @@
 import { FileNode, FileSystemAdapter } from './types'
-import { getBasename } from '../constants'
+import { getBasename, IMAGE_EXTENSIONS } from '../constants'
 
 export const tauriFs: FileSystemAdapter = {
     openVault: async () => {
@@ -18,6 +18,33 @@ export const tauriFs: FileSystemAdapter = {
         await readDir(path) // Verify readability
         const rootName = getBasename(path) || 'Vault'
         return { path, name: rootName }
+    },
+
+    scanImageFiles: async (rootPath: string): Promise<string[]> => {
+        const { readDir } = await import('@tauri-apps/plugin-fs')
+        const { join } = await import('@tauri-apps/api/path')
+        const imagePaths: string[] = []
+
+        async function scan(dirPath: string): Promise<void> {
+            const entries = await readDir(dirPath)
+            for (const entry of entries) {
+                if (!entry.name || entry.name.startsWith('.')) continue
+                const entryPath = await join(dirPath, entry.name)
+
+                if ((entry as any).isDirectory) {
+                    await scan(entryPath)
+                    continue
+                }
+
+                const extension = entry.name.includes('.')
+                    ? entry.name.split('.').pop()!.toLowerCase()
+                    : ''
+                if (IMAGE_EXTENSIONS.has(extension)) imagePaths.push(entryPath)
+            }
+        }
+
+        await scan(rootPath)
+        return imagePaths
     },
 
     scanDirectory: async (dirPath: string): Promise<FileNode[]> => {

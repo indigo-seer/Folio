@@ -42,14 +42,17 @@ export const MathBlock = Node.create({
             return src.indexOf('$$')
         },
         tokenize(src: string) {
-            // Match $$ \n [content] \n $$
-            const rule = /^\$\$[\ \t]*\n([\s\S]*?)\n\$\$[\ \t]*(?:\n|$)/
+            // Support Obsidian's delimiter layouts:
+            //   $$\n formula\n $$
+            //   $$formula$$
+            //   $$formula\n $$
+            const rule = /^\$\$[ \t]*(?:\r?\n)?([\s\S]*?)(?:\r?\n)?\$\$[ \t]*(?:\r?\n|$)/
             const match = rule.exec(src)
             if (match) {
                 return {
                     type: 'mathBlock',
                     raw: match[0],
-                    text: match[1],
+                    text: match[1] || '',
                 }
             }
             return undefined

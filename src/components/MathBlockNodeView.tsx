@@ -9,13 +9,17 @@ export default function MathBlockNodeView(props: any) {
 
     // Parse the raw latex from node attributes
     const rawMath = node.attrs.latex || ''
+    // MathJax (used by Obsidian) tolerates a lone trailing backslash, which
+    // is common in pasted vault content. KaTeX treats it as an incomplete
+    // command and can fall back to showing the source instead.
+    const renderMath = rawMath.replace(/\\\s*$/, '').trim()
 
     useEffect(() => {
         if (!isEditing && contentRef.current) {
             import('katex').then((katexModule) => {
                 const katex = katexModule.default || katexModule
                 try {
-                    katex.render(rawMath, contentRef.current!, {
+                    katex.render(renderMath, contentRef.current!, {
                         displayMode: true,
                         throwOnError: false,
                     })
@@ -26,7 +30,7 @@ export default function MathBlockNodeView(props: any) {
                 contentRef.current!.innerText = rawMath
             })
         }
-    }, [isEditing, rawMath])
+    }, [isEditing, rawMath, renderMath])
 
     return (
         <NodeViewWrapper className="my-4 relative group" data-type="math-block">

@@ -36,6 +36,26 @@ describe('@tiptap/markdown parsing', () => {
         expect(json.content?.some(n => n.type === 'mathBlock')).toBeTruthy()
     })
 
+    it('parses single-line display math used by Obsidian', () => {
+        const json = parseMarkdown('$$\\begin{bmatrix} 1 & 2 \\ 3 & 4 \\end{bmatrix}$$')
+        const math = json.content?.find(n => n.type === 'mathBlock')
+
+        expect(math).toBeDefined()
+        expect((math as any)?.attrs?.latex).toContain('begin{bmatrix}')
+    })
+
+    it('parses display math with the opening formula and closing delimiter on separate lines', () => {
+        const json = parseMarkdown([
+            '$$\\begin{bmatrix} 10 & 20 & 30 \\ 40 & 50 & 60 \\end{bmatrix}\\',
+            '',
+            '$$',
+        ].join('\n'))
+        const math = json.content?.find(n => n.type === 'mathBlock')
+
+        expect(math).toBeDefined()
+        expect((math as any)?.attrs?.latex).toContain('begin{bmatrix}')
+    })
+
     it('does not parse mid-document horizontal-rule pairs as frontmatter', () => {
         const markdown = [
             '- This list',

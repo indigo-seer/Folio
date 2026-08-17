@@ -26,6 +26,16 @@ describe('vault-relative image paths', () => {
             .toBe('C:/Users/user/Vault/assets/pixel-banner-image.png')
     })
 
+    it('resolves a bare Obsidian image name from the vault-wide image index', () => {
+        setImageCacheVaultRoot('/vault/Obsidian 1.0')
+        setImageCacheVaultImagePaths([
+            '/vault/Obsidian 1.0/assets/Pasted image 20250324153757.png',
+        ])
+
+        expect(resolveAbsoluteImagePath('Pasted image 20250324153757.png'))
+            .toBe('/vault/Obsidian 1.0/assets/Pasted image 20250324153757.png')
+    })
+
     it('does not include image query strings or fragments in the path', () => {
         setImageCacheVaultRoot('/vault')
 
