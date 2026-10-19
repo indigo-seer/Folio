@@ -2,9 +2,45 @@ import { describe, it, expect } from 'vitest'
 import {
     extractReferenceStyleDefinitions,
     markdownToTipTap,
+    repairUnparsedMathInTipTapJson,
     restoreReferenceStyleLinks,
     tipTapToMarkdown,
 } from '../markdown'
+
+describe('math compatibility repair', () => {
+    it('converts literal inline math left by the Markdown parser', () => {
+        const repaired = repairUnparsedMathInTipTapJson({
+            type: 'doc',
+            content: [{
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'Sum from $1$ to $n$.' }],
+            }],
+        })
+
+        expect(repaired.content?.[0].content).toEqual([
+            { type: 'text', text: 'Sum from ' },
+            { type: 'inlineMath', attrs: { math: '1' } },
+            { type: 'text', text: ' to ' },
+            { type: 'inlineMath', attrs: { math: 'n' } },
+            { type: 'text', text: '.' },
+        ])
+    })
+
+    it('converts a literal display-math paragraph into a math block', () => {
+        const repaired = repairUnparsedMathInTipTapJson({
+            type: 'doc',
+            content: [{
+                type: 'paragraph',
+                content: [{ type: 'text', text: '$$\\text{Sum} = \\frac{n(n+1)}{2}$$' }],
+            }],
+        })
+
+        expect(repaired.content?.[0]).toEqual({
+            type: 'mathBlock',
+            attrs: { latex: '\\text{Sum} = \\frac{n(n+1)}{2}' },
+        })
+    })
+})
 
 describe('tipTapToMarkdown Custom Extensions Serialization', () => {
 

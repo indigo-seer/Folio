@@ -42,24 +42,61 @@ export const TypewriterMode = Extension.create({
                             : scrollParent
 
                     let isDragging = false
+                    let pointerMoved = false
+                    let pointerStartX = 0
+                    let pointerStartY = 0
+                    let pendingClickCenter: number | null = null
 
                     const onMouseDown = (e: MouseEvent) => {
+                        if (pendingClickCenter !== null) {
+                            window.clearTimeout(pendingClickCenter)
+                            pendingClickCenter = null
+                        }
                         if (view.dom.contains(e.target as Node)) {
                             isDragging = true
+                            pointerMoved = false
+                            pointerStartX = e.clientX
+                            pointerStartY = e.clientY
                         }
                     }
 
-                    const onMouseUp = () => {
+                    const onMouseMove = (e: MouseEvent) => {
+                        if (!isDragging || pointerMoved) return
+                        if (Math.abs(e.clientX - pointerStartX) + Math.abs(e.clientY - pointerStartY) > 4) {
+                            pointerMoved = true
+                        }
+                    }
+
+                    const onMouseUp = (e: MouseEvent) => {
                         if (!isDragging) return
                         isDragging = false
 
-                        if (!manualScrollActive &&
-                            view.dom.getAttribute('data-typewriter-mode') === 'true') {
-                            center(true)
-                        }
+                        const wasPointerSelection = pointerMoved || e.detail > 1
+                        pointerMoved = false
+
+                        // WKWebView finalizes double-click/drag selections after
+                        // mouseup. Scrolling during that window can extend the
+                        // native selection toward the viewport edge. Wait for
+                        // the committed ProseMirror selection, and only center
+                        // a collapsed caret placed by a genuine single click.
+                        if (wasPointerSelection) return
+
+                        // Delay just beyond the second-click window. A second
+                        // mousedown cancels this before WKWebView begins its
+                        // word-selection update.
+                        pendingClickCenter = window.setTimeout(() => {
+                            pendingClickCenter = null
+                            requestAnimationFrame(() => {
+                                if (!view.state.selection.empty) return
+                                if (manualScrollActive) return
+                                if (view.dom.getAttribute('data-typewriter-mode') !== 'true') return
+                                center(true)
+                            })
+                        }, 500)
                     }
 
                     document.addEventListener('mousedown', onMouseDown)
+                    document.addEventListener('mousemove', onMouseMove)
                     document.addEventListener('mouseup', onMouseUp)
 
                     const onTypewriterToggle = () => {
@@ -207,10 +244,14 @@ export const TypewriterMode = Extension.create({
                         },
 
                         destroy() {
+                            if (pendingClickCenter !== null) {
+                                window.clearTimeout(pendingClickCenter)
+                            }
                             if (scrollTarget) {
                                 scrollTarget.removeEventListener('scroll', disableTemporarily)
                             }
                             document.removeEventListener('mousedown', onMouseDown)
+                            document.removeEventListener('mousemove', onMouseMove)
                             document.removeEventListener('mouseup', onMouseUp)
                             window.removeEventListener('folium:typewriter-toggled', onTypewriterToggle)
                         }

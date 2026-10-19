@@ -25,6 +25,82 @@ interface TipTapMark {
     attrs?: Record<string, unknown>
 }
 
+function parseDisplayMathText(text: string): string | null {
+    const match = /^\$\$[ \t]*(?:\r?\n)?([\s\S]*?)(?:\r?\n)?\$\$[ \t]*$/.exec(text.trim())
+    return match ? (match[1] || '').trim() : null
+}
+
+function repairInlineMathText(node: TipTapNode): TipTapNode[] {
+    if (!node.text || !node.text.includes('$')) return [node]
+
+    const nodes: TipTapNode[] = []
+    const rule = /\$\$[\s\S]*?\$\$|\$([^$\r\n]+?)\$/g
+    let cursor = 0
+    let match: RegExpExecArray | null
+
+    while ((match = rule.exec(node.text)) !== null) {
+        if (match.index > cursor) {
+            nodes.push({ ...node, text: node.text.slice(cursor, match.index) })
+        }
+
+        // Display math is handled at block level. Preserve it as text here
+        // if it occurs inside a paragraph with surrounding content.
+        if (match[0].startsWith('$$')) {
+            nodes.push({ ...node, text: match[0] })
+        } else {
+            nodes.push({
+                type: 'inlineMath',
+                attrs: { math: match[1] || '' },
+            })
+        }
+
+        cursor = match.index + match[0].length
+    }
+
+    if (cursor === 0) return [node]
+    if (cursor < node.text.length) {
+        nodes.push({ ...node, text: node.text.slice(cursor) })
+    }
+    return nodes
+}
+
+/**
+ * Repairs math that was left as plain text by a platform-specific Markdown
+ * lexer/WebView. Native math nodes are left untouched; only literal $...$
+ * and $$...$$ text is converted.
+ */
+export function repairUnparsedMathInTipTapJson(root: TipTapNode): TipTapNode {
+    function visit(node: TipTapNode): TipTapNode {
+        if (!node.content) return node
+
+        const directText = node.type === 'paragraph'
+            && node.content.length > 0
+            && node.content.every(child => child.type === 'text')
+            ? node.content.map(child => child.text || '').join('')
+            : null
+        const displayMath = directText ? parseDisplayMathText(directText) : null
+
+        if (displayMath !== null) {
+            return {
+                type: 'mathBlock',
+                attrs: { latex: displayMath },
+            }
+        }
+
+        const visitedContent = node.content.map(visit)
+        if (node.type !== 'paragraph') {
+            return { ...node, content: visitedContent }
+        }
+
+        const repairedInline = visitedContent.flatMap(child => (
+            child.type === 'text' ? repairInlineMathText(child) : [child]
+        ))
+        return { ...node, content: repairedInline }
+    }
+
+    return visit(root)
+}
+
 export interface ReferenceStyleDefinition {
     label: string
     normalizedLabel: string

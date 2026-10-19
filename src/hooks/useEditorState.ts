@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import type { Editor as TipTapEditor } from '@tiptap/react';
 import {
     extractReferenceStyleDefinitions,
+    repairUnparsedMathInTipTapJson,
     restoreReferenceStyleLinks,
     tipTapToMarkdown,
     type ReferenceStyleDefinition,
@@ -171,6 +172,18 @@ export function useEditorState({
                         emitUpdate: false,
                         contentType: 'markdown'
                     } as any);
+
+                    // Some WebView/Marked combinations leave custom math
+                    // delimiters as ordinary text. Repair only those literal
+                    // delimiters after the native parse so every platform
+                    // produces the same TipTap document.
+                    const parsedJson = editorRef.current.getJSON() as any;
+                    const repairedJson = repairUnparsedMathInTipTapJson(parsedJson);
+                    if (JSON.stringify(parsedJson) !== JSON.stringify(repairedJson)) {
+                        editorRef.current.commands.setContent(repairedJson as any, {
+                            emitUpdate: false,
+                        } as any);
+                    }
 
                     renderedTabIdRef.current = activeTabId;
                     hydratedTabIdRef.current = activeTabId;

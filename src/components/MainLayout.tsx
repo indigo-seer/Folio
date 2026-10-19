@@ -79,53 +79,65 @@ export function MainLayout({
             return;
         }
 
-        let timeoutId: number;
-        let lastX: number | null = null;
-        let lastY: number | null = null;
-        let accumulatedDistance = 0;
+        let hideTimeoutId: number | undefined;
+        let edgeIntentTimeoutId: number | undefined;
+
+        const clearEdgeIntent = () => {
+            window.clearTimeout(edgeIntentTimeoutId);
+            edgeIntentTimeoutId = undefined;
+        };
+
+        const scheduleHide = () => {
+            window.clearTimeout(hideTimeoutId);
+            hideTimeoutId = window.setTimeout(() => {
+                updateUIVisibility(false);
+            }, 1800);
+        };
 
         const handleMouseMove = (e: MouseEvent) => {
-            // If the UI is already visible, just reset the timeout
             if (isUIVisibleRef.current) {
-                window.clearTimeout(timeoutId);
-                timeoutId = window.setTimeout(() => {
-                    updateUIVisibility(false);
-                }, 1500);
+                clearEdgeIntent();
+                scheduleHide();
                 return;
             }
 
-            // UI is hidden, calculate intentional movement stroke
-            if (lastX === null || lastY === null) {
-                lastX = e.clientX;
-                lastY = e.clientY;
+            // Revealing the sidebar should require clear intent. A short dwell
+            // at the extreme left edge is deliberate; ordinary editor mouse
+            // movement, text selection, and trackpad jitter are ignored.
+            if (e.clientX > 60) {
+                clearEdgeIntent();
                 return;
             }
 
-            const dx = Math.abs(e.clientX - lastX);
-            const dy = Math.abs(e.clientY - lastY);
-            accumulatedDistance += dx + dy;
+            if (edgeIntentTimeoutId === undefined) {
+                edgeIntentTimeoutId = window.setTimeout(() => {
+                    edgeIntentTimeoutId = undefined;
+                    if (isUIVisibleRef.current) return;
+                    if (document.documentElement.matches(':hover')) {
+                        updateUIVisibility(true);
+                        scheduleHide();
+                    }
+                }, 100);
+            }
+        };
 
-            lastX = e.clientX;
-            lastY = e.clientY;
-
-            // Require 75 pixels of continuous brushing to reveal the UI
-            if (accumulatedDistance > 75) {
+        const handleMouseLeave = () => {
+            clearEdgeIntent();
+            if (isUIVisibleRef.current) {
                 updateUIVisibility(true);
-                accumulatedDistance = 0; // reset for the next stroke
-
-                window.clearTimeout(timeoutId);
-                timeoutId = window.setTimeout(() => {
-                    updateUIVisibility(false);
-                }, 1500); // Hide after 1.5s of inactivity
+                scheduleHide();
             }
         };
 
         updateUIVisibility(false);
 
         document.addEventListener('mousemove', handleMouseMove);
+        document.documentElement.addEventListener('mouseleave', handleMouseLeave);
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
-            window.clearTimeout(timeoutId);
+            document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
+            window.clearTimeout(hideTimeoutId);
+            clearEdgeIntent();
         };
     }, [isFocusMode]);
 
