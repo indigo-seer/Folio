@@ -6,6 +6,7 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+#[cfg(all(unix, not(target_os = "macos")))]
 use std::process::Stdio;
 use std::time::Instant;
 use std::time::UNIX_EPOCH;
