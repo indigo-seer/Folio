@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { MarkdownManager } from '@tiptap/markdown'
 import { getEditorExtensions } from '../editor/extensions'
+import { repairUnparsedMathInTipTapJson, tipTapToMarkdown } from '../markdown'
 
 function parseMarkdown(markdown: string) {
     const extensions = getEditorExtensions({ current: new Set<string>() })
@@ -81,4 +82,25 @@ describe('@tiptap/markdown parsing', () => {
         expect(topLevel.filter(n => n.type === 'horizontalRule').length).toBeGreaterThanOrEqual(2)
         expect(topLevel.some(n => n.type === 'callout')).toBe(true)
     })
+})
+
+describe('production Markdown preservation', () => {
+    function roundTrip(source: string) {
+        return tipTapToMarkdown(repairUnparsedMathInTipTapJson(parseMarkdown(source) as any))
+    }
+
+    for (const [label, source] of [
+        ['inline math', 'The answer is $x+1$.'],
+        ['inline code containing dollars', '`$HOME and $PATH`'],
+        ['escaped literal emphasis', '\\*literal\\*'],
+        ['ordered list start', '7. seven\n8. eight'],
+        ['code span containing backticks', '``a`b``'],
+        ['code fence containing backticks', '````md\n```\n````'],
+        ['table pipe', '| A | B |\n| --- | --- |\n| a\\|b | c |'],
+        ['table alignment', '| A | B |\n| :--- | ---: |\n| a | b |'],
+    ] as const) {
+        it(`round-trips ${label}`, () => {
+            expect(roundTrip(source).trim()).toBe(source.trim())
+        })
+    }
 })

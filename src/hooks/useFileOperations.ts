@@ -3,8 +3,14 @@ import { useModals } from '../contexts/ModalContext';
 import { exportNoteAsPdf } from '../lib/pdfExport';
 import type { FileSystemAPI } from './useFileSystem';
 import type { TabsAPI } from './useTabs';
-import type { FileNode } from '../lib/fs';
+import { findNotePath } from '../lib/fs';
 import { GRAPH_TAB_ID, getBasename } from '../lib/constants';
+import {
+    flushAllDocumentSessions,
+    remapDocumentSessions,
+    removeDocumentSessions,
+} from '../lib/documentSessions';
+import { EntryExistsError } from '../lib/fs/pathSafety';
 
 interface UseFileOperationsProps {
     fileSystem: FileSystemAPI;
@@ -12,19 +18,6 @@ interface UseFileOperationsProps {
     activeTabId: string | null;
     renderedTabIdRef: React.MutableRefObject<string | null>;
     setIsNewNote: (isNew: boolean) => void;
-}
-
-function findNotePath(tree: FileNode[], noteName: string): string | null {
-    for (const node of tree) {
-        if (node.kind === 'file' && node.name === `${noteName}.md`) {
-            return node.path;
-        }
-        if (node.kind === 'directory' && node.children) {
-            const found = findNotePath(node.children, noteName);
-            if (found) return found;
-        }
-    }
-    return null;
 }
 
 /**
@@ -55,6 +48,13 @@ function scrollToAnchor(anchor: string) {
 export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabIdRef, setIsNewNote }: UseFileOperationsProps) {
     const modals = useModals();
 
+    const flushAllBeforeMutation = useCallback(async () => {
+        const results = await flushAllDocumentSessions(fileSystem);
+        const failed = results.find(result => result.status === 'conflict' || result.status === 'error');
+        if (failed?.status === 'conflict') throw new Error('A note changed outside Folium. Resolve it before changing files.');
+        if (failed?.status === 'error') throw failed.error;
+    }, [fileSystem]);
+
     const openPathInMainTab = useCallback((path: string) => {
         const title = getBasename(path).replace(/\.md$/, '') || 'Untitled';
         tabs.openTab({
@@ -77,11 +77,21 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
 
     const handleNewNote = useCallback(async (parentPath?: string) => {
         try {
-            const path = await fileSystem.createFile('Untitled', parentPath);
+            let path: string | null = null;
+            for (let suffix = 1; suffix <= 1000; suffix += 1) {
+                const candidate = suffix === 1 ? 'Untitled' : `Untitled ${suffix}`;
+                try {
+                    path = await fileSystem.createFile(candidate, parentPath);
+                    break;
+                } catch (error) {
+                    if (!(error instanceof EntryExistsError)) throw error;
+                }
+            }
+            if (!path) throw new Error('Could not allocate a unique note name.');
             tabs.openTab({
                 id: path,
                 type: 'markdown',
-                title: 'Untitled',
+                title: getBasename(path).replace(/\.md$/i, ''),
                 path
             });
             setIsNewNote(true);
@@ -153,51 +163,69 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
 
     const handleRename = useCallback(async (newName: string) => {
         if (!activeTabId) return;
-            const tab = tabs.tabs.find(t => t.id === activeTabId);
+        const tab = tabs.tabs.find(t => t.id === activeTabId);
         if (!tab || !tab.path) return;
 
-        const newPath = await fileSystem.renameFile(tab.path, newName);
-        const newTitle = getBasename(newPath).replace(/\.md$/, '') || 'Untitled';
+        try {
+            await flushAllBeforeMutation();
+            const newPath = await fileSystem.renameFile(tab.path, newName);
+            remapDocumentSessions(tab.path, newPath);
+            const newTitle = getBasename(newPath).replace(/\.md$/, '') || 'Untitled';
 
-        tabs.renameTab(tab.id, newPath, newTitle);
-        renderedTabIdRef.current = newPath;
-    }, [activeTabId, tabs, fileSystem, renderedTabIdRef]);
+            tabs.renameTab(tab.id, newPath, newTitle);
+            renderedTabIdRef.current = newPath;
+        } catch (err) {
+            console.error('Failed to rename file:', err);
+            modals.showToast(err instanceof Error ? err.message : 'Failed to rename file.');
+        }
+    }, [activeTabId, tabs, fileSystem, renderedTabIdRef, flushAllBeforeMutation, modals]);
 
     const handleSidebarRename = useCallback(async (newName: string) => {
         if (!modals.state.rename.path) return;
         const path = modals.state.rename.path;
 
         try {
+            await flushAllBeforeMutation();
             const newPath = await fileSystem.renameFile(path, newName);
-            const newTitle = getBasename(newPath).replace(/\.md$/, '') || 'Untitled';
-
-            const tab = tabs.tabs.find(t => t.path === path);
-            if (tab) {
-                tabs.renameTab(tab.id, newPath, newTitle);
-                if (activeTabId === tab.id) {
-                    renderedTabIdRef.current = newPath;
-                }
+            remapDocumentSessions(path, newPath);
+            const normalizedPrefix = `${path.replace(/\\/g, '/').replace(/\/$/, '')}/`;
+            const affectedTabs = tabs.tabs.filter(tab => {
+                const normalized = tab.path?.replace(/\\/g, '/');
+                return tab.path === path || Boolean(normalized?.startsWith(normalizedPrefix));
+            });
+            for (const tab of affectedTabs) {
+                const updatedPath = `${newPath}${tab.path!.slice(path.length)}`;
+                const newTitle = getBasename(updatedPath).replace(/\.md$/, '') || 'Untitled';
+                tabs.renameTab(tab.id, updatedPath, newTitle);
+                if (activeTabId === tab.id) renderedTabIdRef.current = updatedPath;
             }
         } catch (err) {
             console.error('Failed to rename file:', err);
             modals.showToast('Failed to rename file.');
         }
-    }, [modals.state.rename.path, tabs, activeTabId, fileSystem, renderedTabIdRef]);
+    }, [modals, tabs, activeTabId, fileSystem, renderedTabIdRef, flushAllBeforeMutation]);
 
     const handleMoveFile = useCallback(async (targetParentPath: string | null) => {
         if (!modals.state.move.sourcePath || !modals.state.move.sourceKind) return;
         const oldPath = modals.state.move.sourcePath;
 
-        if (targetParentPath && (targetParentPath === oldPath || targetParentPath.startsWith(oldPath + '/'))) {
+        const normalizedOldPath = oldPath.replace(/\\/g, '/').replace(/\/$/, '');
+        const normalizedTargetParent = targetParentPath?.replace(/\\/g, '/').replace(/\/$/, '');
+        if (normalizedTargetParent && (normalizedTargetParent === normalizedOldPath || normalizedTargetParent.startsWith(`${normalizedOldPath}/`))) {
             modals.closeMoveModal();
             console.warn('Cannot move a folder into itself or its own subfolder');
             return;
         }
 
         try {
+            await flushAllBeforeMutation();
             const newPath = await fileSystem.moveFile(oldPath, targetParentPath || undefined);
+            remapDocumentSessions(oldPath, newPath);
 
-            const tabsToUpdate = tabs.tabs.filter(t => t.path && (t.path === oldPath || t.path.startsWith(oldPath + '/')));
+            const tabsToUpdate = tabs.tabs.filter(t => {
+                const normalized = t.path?.replace(/\\/g, '/');
+                return t.path === oldPath || Boolean(normalized?.startsWith(`${normalizedOldPath}/`));
+            });
             for (const tab of tabsToUpdate) {
                 const updatedPath = newPath + tab.path!.slice(oldPath.length);
                 const newTitle = getBasename(updatedPath).replace(/\.md$/, '') || 'Untitled';
@@ -213,7 +241,7 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
             console.error('Failed to move file/folder:', err);
             modals.showToast('Failed to move file or folder.');
         }
-    }, [modals, tabs, activeTabId, fileSystem, renderedTabIdRef]);
+    }, [modals, tabs, activeTabId, fileSystem, renderedTabIdRef, flushAllBeforeMutation]);
 
     const handleCreateAndMove = useCallback(async (folderName: string) => {
         const sanitized = folderName.trim().replace(/[*"\\/<>:|?]/g, '');
@@ -237,10 +265,12 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
                 : window.confirm(`Delete "${name}"? This cannot be undone.`);
 
             if (confirmed) {
+                await flushAllBeforeMutation();
                 await fileSystem.deleteFile(path);
+                removeDocumentSessions(path);
 
                 const pathPrefixNorm = path.replace(/\\/g, '/') + '/';
-            const tabsToClose = tabs.tabs.filter(t =>
+                const tabsToClose = tabs.tabs.filter(t =>
                     t.path === path ||
                     (kind === 'directory' && t.path && t.path.replace(/\\/g, '/').startsWith(pathPrefixNorm))
                 );
@@ -252,16 +282,17 @@ export function useFileOperations({ fileSystem, tabs, activeTabId, renderedTabId
             console.error('Failed to delete file/folder:', err);
             modals.showToast('Failed to delete file or folder.');
         }
-    }, [tabs, fileSystem]);
+    }, [tabs, fileSystem, flushAllBeforeMutation, modals]);
 
-    const handleExportNoteAsPdf = useCallback(async () => {
-        const activeTab = tabs.tabs.find(t => t.id === activeTabId);
+    const handleExportNoteAsPdf = useCallback(async (requestedTabId?: string | null, requestedEditorElement?: HTMLElement | null) => {
+        const exportTabId = requestedTabId || activeTabId;
+        const activeTab = tabs.tabs.find(t => t.id === exportTabId);
         if (!activeTab || !activeTab.path || activeTab.id === GRAPH_TAB_ID) {
             modals.showToast('Open a note first to export it as PDF.');
             return;
         }
 
-        const editorElement = document.querySelector('.ProseMirror');
+        const editorElement = requestedEditorElement || document.querySelector('.ProseMirror');
         if (!(editorElement instanceof HTMLElement)) {
             modals.showToast('Editor is still loading. Please try again.');
             return;

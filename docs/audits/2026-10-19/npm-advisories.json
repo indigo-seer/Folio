@@ -1,0 +1,970 @@
+{
+  "audited_commit": "7182b84",
+  "audit_date": "2026-10-19",
+  "command": "pnpm audit --json",
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 8,
+      "moderate": 22,
+      "high": 15,
+      "critical": 0
+    },
+    "dependencies": 160,
+    "devDependencies": 211,
+    "optionalDependencies": 76,
+    "totalDependencies": 384
+  },
+  "advisories": [
+    {
+      "module_name": "vite",
+      "title": "Vite Vulnerable to Path Traversal in Optimized Deps `.map` Handling",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-4w7w-66w2-5vf9",
+      "url": "https://github.com/advisories/GHSA-4w7w-66w2-5vf9",
+      "vulnerable_versions": "<=6.4.1",
+      "patched_versions": ">=6.4.2",
+      "findings": [
+        {
+          "version": "6.4.1",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 4,
+          "example_paths": [
+            ".>@vitejs/plugin-react>vite",
+            ".>vitest>@vitest/mocker>vite",
+            ".>vitest>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vite",
+      "title": "Vite Vulnerable to Arbitrary File Read via Vite Dev Server WebSocket",
+      "severity": "high",
+      "github_advisory_id": "GHSA-p9ff-h696-f583",
+      "url": "https://github.com/advisories/GHSA-p9ff-h696-f583",
+      "vulnerable_versions": ">=6.0.0 <=6.4.1",
+      "patched_versions": ">=6.4.2",
+      "findings": [
+        {
+          "version": "6.4.1",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 4,
+          "example_paths": [
+            ".>@vitejs/plugin-react>vite",
+            ".>vitest>@vitest/mocker>vite",
+            ".>vitest>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "postcss",
+      "title": "PostCSS has XSS via Unescaped </style> in its CSS Stringify Output",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-qx2v-qp2m-jg93",
+      "url": "https://github.com/advisories/GHSA-qx2v-qp2m-jg93",
+      "vulnerable_versions": "<8.5.10",
+      "patched_versions": ">=8.5.10",
+      "findings": [
+        {
+          "version": "8.5.8",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 11,
+          "example_paths": [
+            ".>postcss",
+            ".>@vitejs/plugin-react>vite>postcss",
+            ".>vitest>@vitest/mocker>vite>postcss"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: FORBID_TAGS bypassed by function-based ADD_TAGS predicate (asymmetry with FORBID_ATTR fix)",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-h7mw-gpvr-xq4m",
+      "url": "https://github.com/advisories/GHSA-h7mw-gpvr-xq4m",
+      "vulnerable_versions": "<3.4.0",
+      "patched_versions": ">=3.4.0",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify has a SAFE_FOR_TEMPLATES bypass in RETURN_DOM mode",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-crv5-9vww-q3g8",
+      "url": "https://github.com/advisories/GHSA-crv5-9vww-q3g8",
+      "vulnerable_versions": ">=1.0.10 <3.4.0",
+      "patched_versions": ">=3.4.0",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: Prototype Pollution to XSS Bypass via CUSTOM_ELEMENT_HANDLING Fallback",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-v9jr-rg53-9pgp",
+      "url": "https://github.com/advisories/GHSA-v9jr-rg53-9pgp",
+      "vulnerable_versions": ">=3.0.1 <3.4.0",
+      "patched_versions": ">=3.4.0",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vite",
+      "title": "launch-editor: NTLMv2 hash disclosure via UNC path handling on Windows",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-v6wh-96g9-6wx3",
+      "url": "https://github.com/advisories/GHSA-v6wh-96g9-6wx3",
+      "vulnerable_versions": "<=6.4.2",
+      "patched_versions": ">=6.4.3",
+      "findings": [
+        {
+          "version": "6.4.1",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 4,
+          "example_paths": [
+            ".>@vitejs/plugin-react>vite",
+            ".>vitest>@vitest/mocker>vite",
+            ".>vitest>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: Cross-realm IN_PLACE sanitization leaves executable markup intact via realm-bound `instanceof` checks",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-hpcv-96wg-7vj8",
+      "url": "https://github.com/advisories/GHSA-hpcv-96wg-7vj8",
+      "vulnerable_versions": "<=3.4.5",
+      "patched_versions": ">=3.4.6",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: IN_PLACE mode preserves attributes of a clobbered root element, allowing XSS via attacker-controlled root DOM",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-r47g-fvhr-h676",
+      "url": "https://github.com/advisories/GHSA-r47g-fvhr-h676",
+      "vulnerable_versions": "<=3.4.5",
+      "patched_versions": ">=3.4.6",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify IN_PLACE Sanitization Bypass via Attached Shadow Root Inside <template>.content",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-rp9w-3fw7-7cwq",
+      "url": "https://github.com/advisories/GHSA-rp9w-3fw7-7cwq",
+      "vulnerable_versions": "<=3.4.6",
+      "patched_versions": ">=3.4.7",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "markdown-it",
+      "title": "markdown-it: Quadratic complexity DoS in smartquotes rule via replaceAt string operations",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-6v5v-wf23-fmfq",
+      "url": "https://github.com/advisories/GHSA-6v5v-wf23-fmfq",
+      "vulnerable_versions": "<=14.1.1",
+      "patched_versions": ">=14.2.0",
+      "findings": [
+        {
+          "version": "14.1.1",
+          "dev": false,
+          "optional": false,
+          "dependency_path_count": 72,
+          "example_paths": [
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/core>@tiptap/pm>prosemirror-markdown>markdown-it",
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/pm>prosemirror-markdown>markdown-it",
+            ".>@tiptap/extension-placeholder>@tiptap/extensions>@tiptap/pm>prosemirror-markdown>markdown-it"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "linkify-it",
+      "title": "LinkifyIt#match scan loop has quadratic algorithmic complexity",
+      "severity": "high",
+      "github_advisory_id": "GHSA-22p9-wv53-3rq4",
+      "url": "https://github.com/advisories/GHSA-22p9-wv53-3rq4",
+      "vulnerable_versions": "<=5.0.0",
+      "patched_versions": ">=5.0.1",
+      "findings": [
+        {
+          "version": "5.0.0",
+          "dev": false,
+          "optional": false,
+          "dependency_path_count": 72,
+          "example_paths": [
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/core>@tiptap/pm>prosemirror-markdown>markdown-it>linkify-it",
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/pm>prosemirror-markdown>markdown-it>linkify-it",
+            ".>@tiptap/extension-placeholder>@tiptap/extensions>@tiptap/pm>prosemirror-markdown>markdown-it>linkify-it"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vite",
+      "title": "vite: `server.fs.deny` bypass on Windows alternate paths",
+      "severity": "high",
+      "github_advisory_id": "GHSA-fx2h-pf6j-xcff",
+      "url": "https://github.com/advisories/GHSA-fx2h-pf6j-xcff",
+      "vulnerable_versions": "<=6.4.2",
+      "patched_versions": ">=6.4.3",
+      "findings": [
+        {
+          "version": "6.4.1",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 4,
+          "example_paths": [
+            ".>@vitejs/plugin-react>vite",
+            ".>vitest>@vitest/mocker>vite",
+            ".>vitest>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "@babel/core",
+      "title": "@babel/core: Arbitrary File Read via sourceMappingURL Comment",
+      "severity": "low",
+      "github_advisory_id": "GHSA-4x5r-pxfx-6jf8",
+      "url": "https://github.com/advisories/GHSA-4x5r-pxfx-6jf8",
+      "vulnerable_versions": "<=7.29.0",
+      "patched_versions": ">=7.29.6",
+      "findings": [
+        {
+          "version": "7.29.0",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 3,
+          "example_paths": [
+            ".>@vitejs/plugin-react>@babel/plugin-transform-react-jsx-self>@babel/core",
+            ".>@vitejs/plugin-react>@babel/core",
+            ".>@vitejs/plugin-react>@babel/plugin-transform-react-jsx-source>@babel/core"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "linkify-it",
+      "title": "linkify-it: Quadratic-complexity DoS via the `mailto:` validator scan-loop on attacker text",
+      "severity": "high",
+      "github_advisory_id": "GHSA-v245-v573-v5vm",
+      "url": "https://github.com/advisories/GHSA-v245-v573-v5vm",
+      "vulnerable_versions": "<=5.0.1",
+      "patched_versions": ">=5.0.2",
+      "findings": [
+        {
+          "version": "5.0.0",
+          "dev": false,
+          "optional": false,
+          "dependency_path_count": 72,
+          "example_paths": [
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/core>@tiptap/pm>prosemirror-markdown>markdown-it>linkify-it",
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/pm>prosemirror-markdown>markdown-it>linkify-it",
+            ".>@tiptap/extension-placeholder>@tiptap/extensions>@tiptap/pm>prosemirror-markdown>markdown-it>linkify-it"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: Permanent `ALLOWED_ATTR` pollution via `setConfig()` bypassing the hook clone-guard (incomplete fix of the 3.4.7 hook-pollution patch)",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-cmwh-pvxp-8882",
+      "url": "https://github.com/advisories/GHSA-cmwh-pvxp-8882",
+      "vulnerable_versions": "<=3.4.10",
+      "patched_versions": ">=3.4.11",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: Trusted Types policy survives `clearConfig()` and can poison later `RETURN_TRUSTED_TYPE` output",
+      "severity": "low",
+      "github_advisory_id": "GHSA-vxr8-fq34-vvx9",
+      "url": "https://github.com/advisories/GHSA-vxr8-fq34-vvx9",
+      "vulnerable_versions": "<3.4.9",
+      "patched_versions": ">=3.4.9",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: SAFE_FOR_TEMPLATES bypass - template expressions survive sanitization inside <template> content when using DOM output modes",
+      "severity": "low",
+      "github_advisory_id": "GHSA-gvmj-g25r-r7wr",
+      "url": "https://github.com/advisories/GHSA-gvmj-g25r-r7wr",
+      "vulnerable_versions": ">=3.0.0 <=3.4.7",
+      "patched_versions": ">=3.4.8",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: `IN_PLACE` mode trusts attacker-controlled `nodeName` on live non-form nodes, allowing script retention and XSS via attacker-supplied DOM objects",
+      "severity": "low",
+      "github_advisory_id": "GHSA-x4vx-rjvf-j5p4",
+      "url": "https://github.com/advisories/GHSA-x4vx-rjvf-j5p4",
+      "vulnerable_versions": "<=3.4.6",
+      "patched_versions": ">=3.4.7",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: Hook mutation of `data.allowedTags` / `data.allowedAttributes` permanently pollutes `DEFAULT_ALLOWED_TAGS` / `DEFAULT_ALLOWED_ATTR`",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-76mc-f452-cxcm",
+      "url": "https://github.com/advisories/GHSA-76mc-f452-cxcm",
+      "vulnerable_versions": "<3.4.7",
+      "patched_versions": ">=3.4.7",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify's ADD_TAGS function form bypasses FORBID_TAGS due to short-circuit evaluation",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-39q2-94rc-95cp",
+      "url": "https://github.com/advisories/GHSA-39q2-94rc-95cp",
+      "vulnerable_versions": "<=3.3.3",
+      "patched_versions": ">=3.4.0",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "postcss",
+      "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+      "severity": "high",
+      "github_advisory_id": "GHSA-6g55-p6wh-862q",
+      "url": "https://github.com/advisories/GHSA-6g55-p6wh-862q",
+      "vulnerable_versions": "<=8.5.11",
+      "patched_versions": ">=8.5.12",
+      "findings": [
+        {
+          "version": "8.5.8",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 11,
+          "example_paths": [
+            ".>postcss",
+            ".>@vitejs/plugin-react>vite>postcss",
+            ".>vitest>@vitest/mocker>vite>postcss"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "postcss",
+      "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q \u2014 attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-fxqj-rqcc-2cmp",
+      "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+      "vulnerable_versions": "<=8.5.22",
+      "patched_versions": ">=8.5.23",
+      "findings": [
+        {
+          "version": "8.5.8",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 11,
+          "example_paths": [
+            ".>postcss",
+            ".>@vitejs/plugin-react>vite>postcss",
+            ".>vitest>@vitest/mocker>vite>postcss"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: IN_PLACE hook removal leaves a detached subtree executable, causing XSS",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-55q2-fjhq-7xh7",
+      "url": "https://github.com/advisories/GHSA-55q2-fjhq-7xh7",
+      "vulnerable_versions": "<=3.4.12",
+      "patched_versions": ">=3.4.13",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "nanoid",
+      "title": "nanoid: non-secure generators can loop indefinitely with negative size",
+      "severity": "high",
+      "github_advisory_id": "GHSA-28wg-ghj8-5hjv",
+      "url": "https://github.com/advisories/GHSA-28wg-ghj8-5hjv",
+      "vulnerable_versions": "<3.3.16",
+      "patched_versions": ">=3.3.16",
+      "findings": [
+        {
+          "version": "3.3.11",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 11,
+          "example_paths": [
+            ".>postcss>nanoid",
+            ".>@vitejs/plugin-react>vite>postcss>nanoid",
+            ".>vitest>@vitest/mocker>vite>postcss>nanoid"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "nanoid",
+      "title": "nanoid: custom generators can loop indefinitely when size is zero",
+      "severity": "high",
+      "github_advisory_id": "GHSA-2v37-7h3g-55p8",
+      "url": "https://github.com/advisories/GHSA-2v37-7h3g-55p8",
+      "vulnerable_versions": "<3.3.18",
+      "patched_versions": ">=3.3.18",
+      "findings": [
+        {
+          "version": "3.3.11",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 11,
+          "example_paths": [
+            ".>postcss>nanoid",
+            ".>@vitejs/plugin-react>vite>postcss>nanoid",
+            ".>vitest>@vitest/mocker>vite>postcss>nanoid"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "postcss",
+      "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+      "severity": "high",
+      "github_advisory_id": "GHSA-r28c-9q8g-f849",
+      "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+      "vulnerable_versions": "<=8.5.17",
+      "patched_versions": ">=8.5.18",
+      "findings": [
+        {
+          "version": "8.5.8",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 11,
+          "example_paths": [
+            ".>postcss",
+            ".>@vitejs/plugin-react>vite>postcss",
+            ".>vitest>@vitest/mocker>vite>postcss"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "postcss-selector-parser",
+      "title": "postcss-selector-parser allows denial of service through uncontrolled AST recursion",
+      "severity": "low",
+      "github_advisory_id": "GHSA-w9m9-85wc-3x92",
+      "url": "https://github.com/advisories/GHSA-w9m9-85wc-3x92",
+      "vulnerable_versions": ">=6.1.0 <6.1.3",
+      "patched_versions": ">=6.1.3",
+      "findings": [
+        {
+          "version": "6.1.2",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 2,
+          "example_paths": [
+            ".>tailwindcss>postcss-selector-parser",
+            ".>tailwindcss>postcss-nested>postcss-selector-parser"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "browserslist",
+      "title": "Browserslist: Unbounded memory growth (no cache eviction) via distinct query results, leading to eventual OOM",
+      "severity": "high",
+      "github_advisory_id": "GHSA-c83g-rgw3-j3cx",
+      "url": "https://github.com/advisories/GHSA-c83g-rgw3-j3cx",
+      "vulnerable_versions": "<=4.28.6",
+      "patched_versions": ">=4.28.7",
+      "findings": [
+        {
+          "version": "4.28.2",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 4,
+          "example_paths": [
+            ".>@vitejs/plugin-react>@babel/plugin-transform-react-jsx-self>@babel/core>@babel/helper-compilation-targets>browserslist",
+            ".>@vitejs/plugin-react>@babel/core>@babel/helper-compilation-targets>browserslist",
+            ".>@vitejs/plugin-react>@babel/plugin-transform-react-jsx-source>@babel/core>@babel/helper-compilation-targets>browserslist"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "browserslist",
+      "title": "Browserslist: Uncaught crash / prototype write via untrusted browserslist-stats.json custom stats (normalizeStats)",
+      "severity": "high",
+      "github_advisory_id": "GHSA-73wf-gq98-2v4g",
+      "url": "https://github.com/advisories/GHSA-73wf-gq98-2v4g",
+      "vulnerable_versions": "<=4.28.6",
+      "patched_versions": ">=4.28.7",
+      "findings": [
+        {
+          "version": "4.28.2",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 4,
+          "example_paths": [
+            ".>@vitejs/plugin-react>@babel/plugin-transform-react-jsx-self>@babel/core>@babel/helper-compilation-targets>browserslist",
+            ".>@vitejs/plugin-react>@babel/core>@babel/helper-compilation-targets>browserslist",
+            ".>@vitejs/plugin-react>@babel/plugin-transform-react-jsx-source>@babel/core>@babel/helper-compilation-targets>browserslist"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "nanoid",
+      "title": "nanoid: Integer Overflow or Wraparound",
+      "severity": "high",
+      "github_advisory_id": "GHSA-xwg4-73v4-xw9w",
+      "url": "https://github.com/advisories/GHSA-xwg4-73v4-xw9w",
+      "vulnerable_versions": "<3.3.12",
+      "patched_versions": ">=3.3.12",
+      "findings": [
+        {
+          "version": "3.3.11",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 11,
+          "example_paths": [
+            ".>postcss>nanoid",
+            ".>@vitejs/plugin-react>vite>postcss>nanoid",
+            ".>vitest>@vitest/mocker>vite>postcss>nanoid"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "@tiptap/core",
+      "title": "Tiptap: mergeAttributes() turns an own __proto__ key into inherited executable DOM attributes",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-cp6q-959q-f8rh",
+      "url": "https://github.com/advisories/GHSA-cp6q-959q-f8rh",
+      "vulnerable_versions": ">=2.0.0-alpha.0 <3.30.4",
+      "patched_versions": ">=3.30.4",
+      "findings": [
+        {
+          "version": "3.22.1",
+          "dev": false,
+          "optional": false,
+          "dependency_path_count": 43,
+          "example_paths": [
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/core",
+            ".>@tiptap/extension-placeholder>@tiptap/extensions>@tiptap/core",
+            ".>@tiptap/starter-kit>@tiptap/extension-horizontal-rule>@tiptap/core"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "fflate",
+      "title": "fflate unzipSync can enter an infinite loop when parsing malformed ZIP64 archives",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-px8p-9vwx-vf98",
+      "url": "https://github.com/advisories/GHSA-px8p-9vwx-vf98",
+      "vulnerable_versions": ">=0.8.0 <0.8.3",
+      "patched_versions": ">=0.8.3",
+      "findings": [
+        {
+          "version": "0.8.2",
+          "dev": false,
+          "optional": false,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>fflate"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vitest",
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-82fw-gwwq-j7x9",
+      "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+      "vulnerable_versions": ">=2.1.0 <4.1.11",
+      "patched_versions": ">=4.1.11",
+      "findings": [
+        {
+          "version": "4.1.2",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>vitest"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "@vitest/mocker",
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-82fw-gwwq-j7x9",
+      "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+      "vulnerable_versions": ">=2.1.0 <4.1.11",
+      "patched_versions": ">=4.1.11",
+      "findings": [
+        {
+          "version": "4.1.2",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>vitest>@vitest/mocker"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "baseline-browser-mapping",
+      "title": "baseline-browser-mapping process termination on invalid input causes denial of service",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-w5vr-8v7q-w6rv",
+      "url": "https://github.com/advisories/GHSA-w5vr-8v7q-w6rv",
+      "vulnerable_versions": ">=2.0.0 <2.11.0",
+      "patched_versions": ">=2.11.0",
+      "findings": [
+        {
+          "version": "2.10.14",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 4,
+          "example_paths": [
+            ".>@vitejs/plugin-react>@babel/plugin-transform-react-jsx-self>@babel/core>@babel/helper-compilation-targets>browserslist>baseline-browser-mapping",
+            ".>@vitejs/plugin-react>@babel/core>@babel/helper-compilation-targets>browserslist>baseline-browser-mapping",
+            ".>@vitejs/plugin-react>@babel/plugin-transform-react-jsx-source>@babel/core>@babel/helper-compilation-targets>browserslist>baseline-browser-mapping"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "@tiptap/core",
+      "title": "Tiptap: Quadratic ReDoS in block and inline Markdown attribute parsing",
+      "severity": "high",
+      "github_advisory_id": "GHSA-j95f-988m-3j2f",
+      "url": "https://github.com/advisories/GHSA-j95f-988m-3j2f",
+      "vulnerable_versions": ">=3.7.0 <3.30.5",
+      "patched_versions": ">=3.30.5",
+      "findings": [
+        {
+          "version": "3.22.1",
+          "dev": false,
+          "optional": false,
+          "dependency_path_count": 43,
+          "example_paths": [
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/core",
+            ".>@tiptap/extension-placeholder>@tiptap/extensions>@tiptap/core",
+            ".>@tiptap/starter-kit>@tiptap/extension-horizontal-rule>@tiptap/core"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "markdown-it",
+      "title": "markdown-it linkify: true has two quadratic paths, so a few hundred KB of markdown blocks the event loop for tens of seconds",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-253c-mchw-3w2r",
+      "url": "https://github.com/advisories/GHSA-253c-mchw-3w2r",
+      "vulnerable_versions": "<14.3.1",
+      "patched_versions": ">=14.3.1",
+      "findings": [
+        {
+          "version": "14.1.1",
+          "dev": false,
+          "optional": false,
+          "dependency_path_count": 72,
+          "example_paths": [
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/core>@tiptap/pm>prosemirror-markdown>markdown-it",
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/pm>prosemirror-markdown>markdown-it",
+            ".>@tiptap/extension-placeholder>@tiptap/extensions>@tiptap/pm>prosemirror-markdown>markdown-it"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: `CUSTOM_ELEMENT_HANDLING` bypasses `afterSanitizeElements` for allowed custom elements.",
+      "severity": "low",
+      "github_advisory_id": "GHSA-c2j3-45gr-mqc4",
+      "url": "https://github.com/advisories/GHSA-c2j3-45gr-mqc4",
+      "vulnerable_versions": "<=3.4.11",
+      "patched_versions": ">=3.4.12",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "braces",
+      "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+      "severity": "high",
+      "github_advisory_id": "GHSA-vfj7-8cjw-p6xm",
+      "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "vulnerable_versions": "<=3.0.3",
+      "patched_versions": null,
+      "findings": [
+        {
+          "version": "3.0.3",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 3,
+          "example_paths": [
+            ".>tailwindcss>chokidar>braces",
+            ".>tailwindcss>fast-glob>micromatch>braces",
+            ".>tailwindcss>micromatch>braces"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "dompurify",
+      "title": "DOMPurify: IN_PLACE returns a force-removed rawtext root whose text carries attacker markup \u2014 pure HTML reparse executes",
+      "severity": "low",
+      "github_advisory_id": "GHSA-6688-9rhm-gjv2",
+      "url": "https://github.com/advisories/GHSA-6688-9rhm-gjv2",
+      "vulnerable_versions": "<=3.4.15",
+      "patched_versions": ">=3.4.16",
+      "findings": [
+        {
+          "version": "3.3.3",
+          "dev": false,
+          "optional": true,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>jspdf>dompurify"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "katex",
+      "title": "KaTeX: Existing prototype pollution can bypass trust restrictions",
+      "severity": "low",
+      "github_advisory_id": "GHSA-238p-pmpm-9mq7",
+      "url": "https://github.com/advisories/GHSA-238p-pmpm-9mq7",
+      "vulnerable_versions": ">=0.11.0 <0.18.2",
+      "patched_versions": ">=0.18.2",
+      "findings": [
+        {
+          "version": "0.16.44",
+          "dev": false,
+          "optional": false,
+          "dependency_path_count": 1,
+          "example_paths": [
+            ".>katex"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "source-map-js",
+      "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets",
+      "severity": "high",
+      "github_advisory_id": "GHSA-68fv-2mgg-jv7q",
+      "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+      "vulnerable_versions": ">=1.0.0 <1.2.2",
+      "patched_versions": ">=1.2.2",
+      "findings": [
+        {
+          "version": "1.2.1",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 11,
+          "example_paths": [
+            ".>postcss>source-map-js",
+            ".>@vitejs/plugin-react>vite>postcss>source-map-js",
+            ".>vitest>@vitest/mocker>vite>postcss>source-map-js"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "postcss-selector-parser",
+      "title": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion",
+      "severity": "moderate",
+      "github_advisory_id": "GHSA-rj75-hqrm-r3gf",
+      "url": "https://github.com/advisories/GHSA-rj75-hqrm-r3gf",
+      "vulnerable_versions": "<7.1.6",
+      "patched_versions": ">=7.1.6",
+      "findings": [
+        {
+          "version": "6.1.2",
+          "dev": true,
+          "optional": false,
+          "dependency_path_count": 2,
+          "example_paths": [
+            ".>tailwindcss>postcss-selector-parser",
+            ".>tailwindcss>postcss-nested>postcss-selector-parser"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "prosemirror-view",
+      "title": "ProseMirror has a XSS vulnerability in prosemirror-view's paste handling",
+      "severity": "high",
+      "github_advisory_id": "GHSA-c8x8-7fp4-3x9w",
+      "url": "https://github.com/advisories/GHSA-c8x8-7fp4-3x9w",
+      "vulnerable_versions": "<1.42.3",
+      "patched_versions": ">=1.42.3",
+      "findings": [
+        {
+          "version": "1.41.8",
+          "dev": false,
+          "optional": false,
+          "dependency_path_count": 100,
+          "example_paths": [
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/core>@tiptap/pm>prosemirror-tables>prosemirror-view",
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/core>@tiptap/pm>prosemirror-tables>prosemirror-keymap>prosemirror-state>prosemirror-view",
+            ".>@tiptap/extension-table-cell>@tiptap/extension-table>@tiptap/core>@tiptap/pm>prosemirror-tables>prosemirror-state>prosemirror-view"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -51,7 +51,7 @@ async function ensureVaultScope(vaultPath: string): Promise<void> {
     if (!isTauri()) return
     try {
         const { invoke } = await import('@tauri-apps/api/core')
-        await invoke('grant_vault_scope', { path: vaultPath })
+        await invoke('restore_vault_scope', { path: vaultPath })
     } catch (err) {
         console.warn('[Folium Vault Identity] Failed to grant vault scope for UID access:', vaultPath, err)
     }

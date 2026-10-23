@@ -34,12 +34,6 @@
         },
         {
           "path": "$APPCONFIG"
-        },
-        {
-          "path": "$DOCUMENT/**"
-        },
-        {
-          "path": "$DESKTOP/**"
         }
       ]
     }

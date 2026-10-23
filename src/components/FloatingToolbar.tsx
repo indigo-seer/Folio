@@ -1,6 +1,6 @@
 import { type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
-import { NodeSelection } from 'prosemirror-state'
+import { NodeSelection } from '@tiptap/pm/state'
 
 interface FloatingToolbarProps {
     editor: Editor

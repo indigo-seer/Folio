@@ -3,6 +3,8 @@
 > Audited: April 11, 2026  
 > Scope: Full frontend (React/TS), backend (Rust/Tauri), and project config
 
+> **Historical report.** The [October 19, 2026 project and safety audit](docs/PROJECT_AUDIT_2026-10-19.md) verifies all 24 findings against the current code, records new data-preservation/security findings, and provides the current remediation plan. The original findings below are preserved for reference; their severity and completion status should not be treated as current.
+
 ---
 
 ## Executive Summary

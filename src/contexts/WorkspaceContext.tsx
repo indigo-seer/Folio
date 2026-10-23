@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { loadConfig, saveConfig, Workspace } from '../lib/config';
 import { BootState } from '../App';
-import { runVaultImageMigrationInBackground } from '../lib/vaultImageMigration';
 import { getOrCreateVaultUid, resolveWorkspaceIdentity } from '../lib/vaultIdentity';
+import { flushAllDocumentSessions } from '../lib/documentSessions';
 import type { FileSystemAPI } from '../hooks/useFileSystem';
 import type { TabsAPI } from '../hooks/useTabs';
 
@@ -35,7 +35,21 @@ export function WorkspaceProvider({
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
     const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
 
+    const flushBeforeWorkspaceChange = useCallback(async () => {
+        const results = await flushAllDocumentSessions(fileSystem);
+        const failed = results.find(result => result.status === 'conflict' || result.status === 'error');
+        if (failed?.status === 'conflict') {
+            showToast('A note changed outside Folium. Resolve it before switching vaults.');
+            throw new Error('A note changed outside Folium. Resolve it before switching vaults.');
+        }
+        if (failed?.status === 'error') {
+            showToast('Could not save every note. Your recovery drafts were kept.');
+            throw failed.error;
+        }
+    }, [fileSystem, showToast]);
+
     const handleOpenWorkspace = useCallback(async (isLeavingOnboarding?: boolean) => {
+        await flushBeforeWorkspaceChange();
         const result = await fileSystem.openVault();
         if (result) {
             tabs.clearTabs();
@@ -85,13 +99,12 @@ export function WorkspaceProvider({
 
             await saveConfig(config);
             setBootState(BootState.ReadyWithWorkspace);
-            void runVaultImageMigrationInBackground(result.path, id);
 
             if (isLeavingOnboarding) {
                 showToast('Getting Started notes are still in your Documents folder if you ever want them.');
             }
         }
-    }, [fileSystem, tabs, setBootState, showToast]);
+    }, [fileSystem, tabs, setBootState, showToast, flushBeforeWorkspaceChange]);
 
     const handleSelectWorkspace = useCallback(async (id: string) => {
         try {
@@ -99,6 +112,7 @@ export function WorkspaceProvider({
             const targetWorkspace = config.workspaces.find(w => w.id === id);
             if (!targetWorkspace) return;
 
+            await flushBeforeWorkspaceChange();
             tabs.clearTabs();
             // Always route through loadVault() so dynamic fs scope is granted
             // before any read checks are performed by the adapter.
@@ -118,12 +132,11 @@ export function WorkspaceProvider({
             setActiveWorkspaceId(targetWorkspace.id);
             await saveConfig(config);
             setBootState(BootState.ReadyWithWorkspace);
-            void runVaultImageMigrationInBackground(targetWorkspace.path, targetWorkspace.id);
         } catch (err) {
             console.error('Error switching workspace', err);
             showToast('Could not open this vault path. Check that the drive is mounted and try again.');
         }
-    }, [fileSystem, tabs, setBootState, showToast]);
+    }, [fileSystem, tabs, setBootState, showToast, flushBeforeWorkspaceChange]);
 
     const handleRemoveWorkspace = useCallback(async (id: string) => {
         try {
@@ -133,6 +146,7 @@ export function WorkspaceProvider({
             config.workspaces = updatedWorkspaces;
 
             if (config.activeWorkspaceId === id) {
+                await flushBeforeWorkspaceChange();
                 if (updatedWorkspaces.length > 0) {
                     const sortedRemaining = [...updatedWorkspaces].sort((a, b) => b.lastOpened - a.lastOpened);
                     const nextWorkspace = sortedRemaining[0];
@@ -142,7 +156,6 @@ export function WorkspaceProvider({
                     await fileSystem.loadVault(nextWorkspace.path);
                     setActiveWorkspaceId(nextWorkspace.id);
                     setBootState(BootState.ReadyWithWorkspace);
-                    void runVaultImageMigrationInBackground(nextWorkspace.path, nextWorkspace.id);
                 } else {
                     config.activeWorkspaceId = null;
                     setActiveWorkspaceId(null);
@@ -157,7 +170,7 @@ export function WorkspaceProvider({
             console.error('Error removing workspace', err);
             showToast('Could not remove this workspace.');
         }
-    }, [fileSystem, tabs, setBootState, showToast]);
+    }, [fileSystem, tabs, setBootState, showToast, flushBeforeWorkspaceChange]);
 
     const handleUpdateWorkspaceName = useCallback(async (id: string, newName: string) => {
         try {

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { useSettings } from '../hooks/useSettings'
 
 interface EditorModeContextValue {
     isFocusMode: boolean
@@ -12,6 +13,15 @@ const EditorModeContext = createContext<EditorModeContextValue | null>(null)
 export function EditorModeProvider({ children }: { children: ReactNode }) {
     const [isFocusMode, setIsFocusMode] = useState(false)
     const [isTypewriterMode, setIsTypewriterMode] = useState(false)
+    const { focusModeDefault, typewriterModeDefault, isLoaded } = useSettings()
+    const initializedRef = useRef(false)
+
+    useEffect(() => {
+        if (!isLoaded || initializedRef.current) return
+        initializedRef.current = true
+        setIsFocusMode(focusModeDefault)
+        setIsTypewriterMode(typewriterModeDefault)
+    }, [focusModeDefault, typewriterModeDefault, isLoaded])
 
     return (
         <EditorModeContext.Provider value={{ isFocusMode, setIsFocusMode, isTypewriterMode, setIsTypewriterMode }}>

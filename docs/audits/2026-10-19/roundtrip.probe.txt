@@ -1,0 +1,41 @@
+// Audit snapshot: copy to audit-roundtrip.probe.test.ts at the repository root to run.
+import { describe, it, expect } from 'vitest'
+import { MarkdownManager } from '@tiptap/markdown'
+import { getEditorExtensions } from './src/lib/editor/extensions'
+import { repairUnparsedMathInTipTapJson, tipTapToMarkdown } from './src/lib/markdown'
+import { extractWikilinks, buildVaultIndex } from './src/lib/fs/vaultIndexer'
+
+const manager = new MarkdownManager({ extensions: getEditorExtensions({ current: new Set() }) })
+function roundtrip(source: string) {
+    return tipTapToMarkdown(repairUnparsedMathInTipTapJson(manager.parse(source) as any))
+}
+
+describe('temporary audit probes: intended preservation guarantees', () => {
+    for (const [label, source] of [
+        ['inline math', 'The answer is $x+1$.'],
+        ['inline code containing dollars', '`$HOME and $PATH`'],
+        ['escaped literal emphasis', '\\*literal\\*'],
+        ['ordered list start', '7. seven\n8. eight'],
+        ['code span containing backticks', '``a`b``'],
+        ['code fence containing backticks', '````md\n```\n````'],
+        ['table pipe', '| A | B |\n| --- | --- |\n| a\\|b | c |'],
+        ['table alignment', '| A | B |\n| :--- | ---: |\n| a | b |'],
+        ['underline', '<u>underlined</u>'],
+    ]) {
+        it(label, () => {
+            const actual = roundtrip(source)
+            console.log(JSON.stringify({label, source, actual}))
+            expect(actual.trim()).toBe(source.trim())
+        })
+    }
+    it('normalizes backlink targets and ignores code', () => {
+        expect(extractWikilinks('[[Target|alias]] [[Target#Heading]] `[[NotALink]]`')).toEqual(['Target', 'Target'])
+    })
+    it('distinguishes same-basename notes', async () => {
+        const result = await buildVaultIndex([
+            {name:'Note.md', path:'/vault/a/Note.md', kind:'file'},
+            {name:'Note.md', path:'/vault/b/Note.md', kind:'file'},
+        ], async () => '')
+        expect(result.notes.size).toBe(2)
+    })
+})

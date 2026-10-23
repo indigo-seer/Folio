@@ -88,13 +88,6 @@ function extractFirstDroppedFile(dataTransfer: DataTransfer | null | undefined):
     return null
 }
 
-function parentDirFromPath(path: string): string {
-    const normalized = path.replace(/[\\/]+$/, '')
-    const index = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'))
-    if (index <= 0) return normalized
-    return normalized.slice(0, index)
-}
-
 export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }: EditorProps) {
     // Context for vault state and filesystem operations
     const { notes, vault, fileSystem } = useContext(VaultContext)
@@ -375,13 +368,10 @@ export function Editor({ onUpdate, onReady, onFocus, isTypewriterMode = false }:
         isEmbeddingFileRef.current = true
         setIsEmbeddingFile(true)
         try {
-            const parentPath = parentDirFromPath(absolutePath)
-            if (parentPath) {
-                const { invoke } = await import('@tauri-apps/api/core')
-                await invoke('grant_vault_scope', { path: parentPath })
-            }
+            const { invoke } = await import('@tauri-apps/api/core')
+            const approvedPath = await invoke<string>('grant_import_file_scope', { path: absolutePath })
 
-            const bytes = await readBinaryFile(absolutePath)
+            const bytes = await readBinaryFile(approvedPath)
             if (!bytes || bytes.length === 0) {
                 modals.showToast('Dropped file is empty.')
                 return

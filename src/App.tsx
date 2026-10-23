@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { SettingsProvider } from './hooks/useSettings';
 import { useFileSystem } from './hooks/useFileSystem';
 import { useTabs } from './hooks/useTabs';
@@ -29,6 +30,8 @@ import type { Editor as TipTapEditor } from '@tiptap/react';
 import { EditorModeProvider, useEditorMode } from './contexts/EditorModeContext';
 import { GRAPH_TAB_ID } from './lib/constants';
 import { isLinux } from './lib/platform';
+import { flushAllDocumentSessions } from './lib/documentSessions';
+import { isTauri } from './lib/config';
 
 type AptabaseProps = Record<string, string | number>;
 
@@ -137,7 +140,8 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
         externalChangeWarning: mainExternalChangeWarning,
         reloadActiveTabFromDisk: reloadMainFromDisk,
         handleEditorUpdate: handleMainEditorUpdate,
-        handleEditorReady: handleMainEditorReady
+        handleEditorReady: handleMainEditorReady,
+        flushCurrentDocument: flushMainDocument
     } = useEditorState({
         activeTabId: tabs.activeTabId,
         tabs: tabs.tabs,
@@ -148,12 +152,14 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
     });
 
     const {
+        editorRef: splitEditorRef,
         editorScrollRef: splitEditorScrollRef,
         corruptionWarnings: splitCorruptionWarnings,
         externalChangeWarning: splitExternalChangeWarning,
         reloadActiveTabFromDisk: reloadSplitFromDisk,
         handleEditorUpdate: handleSplitEditorUpdate,
-        handleEditorReady: handleSplitEditorReady
+        handleEditorReady: handleSplitEditorReady,
+        flushCurrentDocument: flushSplitDocument
     } = useEditorState({
         activeTabId: tabs.splitTabId || null,
         tabs: tabs.tabs,
@@ -182,6 +188,24 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
             setFocusedPane('main');
         }
     }, [tabs.splitTabId]);
+
+    useEffect(() => {
+        if (!isTauri()) return;
+        let destroying = false;
+        const unlisten = getCurrentWindow().onCloseRequested(async event => {
+            if (destroying) return;
+            event.preventDefault();
+            const results = await flushAllDocumentSessions(fileSystem);
+            const failed = results.some(result => result.status === 'conflict' || result.status === 'error');
+            if (failed) {
+                modals.showToast('Folium kept an unsaved recovery draft. Resolve the save error before closing.');
+                return;
+            }
+            destroying = true;
+            await getCurrentWindow().destroy();
+        });
+        return () => { void unlisten.then(stop => stop()); };
+    }, [fileSystem, modals]);
 
     // Hook: File Operations
     const fileOperations = useFileOperations({
@@ -217,16 +241,25 @@ function VaultProviderWrapped({ fileSystem, tabs, isOnboardingOpen, handleOnboar
         toggleTypewriterMode: toggleTypewriter,
         setIsQuickSwitcherOpen: () => modals.openQuickSwitcher(),
         handleNewNote: () => fileOperations.handleNewNote(),
-        handleExportPdf: () => fileOperations.handleExportNoteAsPdf(),
+        handleExportPdf: () => fileOperations.handleExportNoteAsPdf(
+            focusedTabId,
+            focusedPane === 'split' ? splitEditorRef.current?.view.dom : mainEditorRef.current?.view.dom,
+        ),
         activeTabId: focusedTabId,
         closeTab: (id: string) => {
-            if (focusedPane === 'split' && tabs.splitTabId === id && tabs.closeTabInPane) {
-                tabs.closeTabInPane('split', id)
-            } else if (tabs.closeTabInPane) {
-                tabs.closeTabInPane('main', id)
-            } else {
-                tabs.closeTab(id)
-            }
+            void (async () => {
+                const result = focusedPane === 'split' && tabs.splitTabId === id
+                    ? await flushSplitDocument()
+                    : await flushMainDocument();
+                if (result?.status === 'conflict' || result?.status === 'error') return;
+                if (focusedPane === 'split' && tabs.splitTabId === id && tabs.closeTabInPane) {
+                    tabs.closeTabInPane('split', id)
+                } else if (tabs.closeTabInPane) {
+                    tabs.closeTabInPane('main', id)
+                } else {
+                    tabs.closeTab(id)
+                }
+            })();
         }
     });
 

@@ -1,4 +1,5 @@
 import { FileNode, FileSystemAdapter } from './types'
+import { EntryExistsError, markdownFilename, validateEntryName } from './pathSafety'
 
 declare global {
     interface Window {
@@ -26,6 +27,13 @@ declare global {
 
 let browserRootHandle: FileSystemDirectoryHandle | null = null
 const browserHandleCache = new Map<string, FileSystemFileHandle>()
+let browserCreateQueue: Promise<void> = Promise.resolve()
+
+function queueBrowserCreate<T>(create: () => Promise<T>): Promise<T> {
+    const next = browserCreateQueue.then(create, create)
+    browserCreateQueue = next.then(() => undefined, () => undefined)
+    return next
+}
 
 async function browserGetDirHandle(dirPath: string): Promise<FileSystemDirectoryHandle> {
     if (!browserRootHandle) throw new Error('No vault open')
@@ -48,6 +56,20 @@ async function browserGetParentHandle(path: string): Promise<FileSystemDirectory
     return current
 }
 
+async function browserEntryExists(parent: FileSystemDirectoryHandle, name: string): Promise<boolean> {
+    try {
+        await parent.getFileHandle(name)
+        return true
+    } catch {
+        try {
+            await parent.getDirectoryHandle(name)
+            return true
+        } catch {
+            return false
+        }
+    }
+}
+
 export const browserFs: FileSystemAdapter = {
     openVault: async () => {
         if (!window.showDirectoryPicker) {
@@ -67,11 +89,13 @@ export const browserFs: FileSystemAdapter = {
     scanDirectory: async function scan(path: string, dirHandle?: FileSystemDirectoryHandle): Promise<FileNode[]> {
         const handleToScan = dirHandle || browserRootHandle
         if (!handleToScan) throw new Error('No vault open')
+        // The browser root name is a display label, not a traversable child.
+        const relativePath = !dirHandle && path === browserRootHandle?.name ? '' : path
 
         const nodes: FileNode[] = []
         for await (const entry of handleToScan.values()) {
             if (entry.name.startsWith('.')) continue
-            const entryPath = path ? `${path}/${entry.name}` : entry.name
+            const entryPath = relativePath ? `${relativePath}/${entry.name}` : entry.name
 
             if (entry.kind === 'file') {
                 if (!entry.name.endsWith('.md')) continue
@@ -100,24 +124,31 @@ export const browserFs: FileSystemAdapter = {
         await writable.close()
     },
 
-    createFile: async (_rootPath: string, name: string, parentPath?: string) => {
+    createFile: (_rootPath: string, name: string, parentPath?: string) => queueBrowserCreate(async () => {
         if (!browserRootHandle) throw new Error('No vault open')
-        const filename = name.endsWith('.md') ? name : `${name}.md`
+        const filename = markdownFilename(name)
         const newPath = parentPath ? `${parentPath}/${filename}` : filename
         const parentHandle = parentPath ? await browserGetDirHandle(parentPath) : browserRootHandle
+        if (await browserEntryExists(parentHandle, filename)) {
+            throw new EntryExistsError(`A file named "${filename}" already exists.`)
+        }
         const handle = await parentHandle.getFileHandle(filename, { create: true })
         const writable = await handle.createWritable()
         await writable.write('')
         await writable.close()
         browserHandleCache.set(newPath, handle)
         return newPath
-    },
+    }),
 
     createFolder: async (_rootPath: string, name: string, parentPath?: string) => {
         if (!browserRootHandle) throw new Error('No vault open')
-        const newPath = parentPath ? `${parentPath}/${name}` : name
+        const validName = validateEntryName(name)
+        const newPath = parentPath ? `${parentPath}/${validName}` : validName
         const parentHandle = parentPath ? await browserGetDirHandle(parentPath) : browserRootHandle
-        await parentHandle.getDirectoryHandle(name, { create: true })
+        if (await browserEntryExists(parentHandle, validName)) {
+            throw new EntryExistsError(`An entry named "${validName}" already exists.`)
+        }
+        await parentHandle.getDirectoryHandle(validName, { create: true })
         return newPath
     },
 
@@ -128,8 +159,13 @@ export const browserFs: FileSystemAdapter = {
         parts.pop()
 
         const isFile = oldPath.endsWith('.md')
-        const finalName = isFile ? (newFilename.endsWith('.md') ? newFilename : `${newFilename}.md`) : newFilename
+        const finalName = isFile ? markdownFilename(newFilename) : validateEntryName(newFilename)
         const newPath = parts.length > 0 ? `${parts.join('/')}/${finalName}` : finalName
+
+        if (newPath === oldPath) return oldPath
+        if (await browserEntryExists(parentHandle, finalName)) {
+            throw new EntryExistsError(`An entry named "${finalName}" already exists.`)
+        }
 
         const oldHandle = browserHandleCache.get(oldPath)
         if (!oldHandle) throw new Error(`Browser: handle not found for ${oldPath}`)
@@ -160,6 +196,10 @@ export const browserFs: FileSystemAdapter = {
         const content = await file.text()
 
         const newParentHandle = parentPath ? await browserGetDirHandle(parentPath) : browserRootHandle!
+        if (newPath === oldPath) return oldPath
+        if (await browserEntryExists(newParentHandle, filename)) {
+            throw new EntryExistsError(`A file named "${filename}" already exists at the destination.`)
+        }
         const newHandle = await newParentHandle.getFileHandle(filename, { create: true })
         const writable = await newHandle.createWritable()
         await writable.write(content)

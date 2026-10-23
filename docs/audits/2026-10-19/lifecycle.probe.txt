@@ -1,0 +1,109 @@
+// Audit snapshot: copy to audit-lifecycle.probe.test.ts at the repository root to run.
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Minimal hook scheduler to exercise the actual save/hydration callbacks without a DOM.
+const h = vi.hoisted(() => ({ slots: [] as any[], cursor: 0, pending: [] as (() => void)[], writes: [] as any[] }))
+vi.mock('react', () => ({
+    useRef: (initial: any) => {
+        const i = h.cursor++
+        return h.slots[i] ??= { current: initial }
+    },
+    useState: (initial: any) => {
+        const i = h.cursor++
+        h.slots[i] ??= { value: initial }
+        return [h.slots[i].value, (next: any) => { h.slots[i].value = typeof next === 'function' ? next(h.slots[i].value) : next }]
+    },
+    useCallback: (callback: any) => callback,
+    useEffect: (callback: any, deps: any[]) => {
+        const i = h.cursor++
+        const prior = h.slots[i]
+        if (prior && deps.every((d, j) => Object.is(d, prior.deps[j]))) return
+        h.pending.push(() => {
+            prior?.cleanup?.()
+            h.slots[i] = { deps, cleanup: callback() }
+        })
+    },
+}))
+vi.mock('./src/lib/fs', () => ({ fs: { writeFile: async (...args: any[]) => { h.writes.push(args) } } }))
+vi.mock('./src/hooks/useWordCount', () => ({ updateWordCountGlobally: vi.fn() }))
+vi.mock('./src/lib/markdown', () => ({
+    extractReferenceStyleDefinitions: () => [],
+    repairUnparsedMathInTipTapJson: (json: any) => json,
+    restoreReferenceStyleLinks: (md: string) => md,
+    tipTapToMarkdown: (json: any) => json.text,
+}))
+import { useEditorState } from './src/hooks/useEditorState'
+
+async function settle() { for (let i = 0; i < 20; i++) await Promise.resolve() }
+function render(props: any) {
+    h.cursor = 0
+    const result = useEditorState(props)
+    h.pending.splice(0).forEach(fn => fn())
+    return result
+}
+async function setup() {
+    const disk: Record<string, string> = { A: 'original A', B: 'original B' }
+    let content = ''
+    const editor = {
+        getJSON: () => ({text: content}),
+        commands: {
+            setContent: (value: any) => { content = typeof value === 'string' ? value : value.text },
+            focus: vi.fn(), setTextSelection: vi.fn(),
+        },
+    }
+    const tabs = [{id:'A',path:'A',type:'markdown'}, {id:'B',path:'B',type:'markdown'}]
+    const props = {
+        activeTabId:'A', tabs, isMoveModalOpen:false, vaultRootPath:'/vault', onError:vi.fn(),
+        fileSystem: {readFile: async (path: string) => disk[path], writeFile:vi.fn(), saveEditorState:vi.fn(), getEditorState: () => ({scroll:0,cursor:1})},
+    }
+    const hook = render(props)
+    hook.handleEditorReady(editor as any)
+    render(props)
+    await settle()
+    expect(content).toBe('original A')
+    return { props, disk, editor, getContent: () => content, edit: (value: string) => { content = value } }
+}
+beforeEach(() => {
+    h.slots = []; h.cursor = 0; h.pending = []; h.writes = []
+    vi.stubGlobal('requestAnimationFrame', (fn: () => void) => { fn(); return 1 })
+})
+describe('temporary lifecycle audit probes', () => {
+    it('saves edits when closing the only reference to the active tab', async () => {
+        const s = await setup(); s.edit('unsaved A')
+        render({...s.props, activeTabId:'B', tabs:s.props.tabs.filter(t => t.id !== 'A')})
+        await settle()
+        expect(h.writes).toContainEqual(['A', 'unsaved A'])
+    })
+    it('retains the local draft when external changes block a tab-switch save', async () => {
+        const s = await setup(); s.edit('unsaved A'); s.disk.A = 'external A'
+        render({...s.props, activeTabId:'B'})
+        await settle()
+        expect(s.getContent()).toBe('unsaved A')
+    })
+    it('does not write a note that was only viewed', async () => {
+        const s = await setup()
+        render({...s.props, activeTabId:'B'})
+        await settle()
+        expect(h.writes).toEqual([])
+    })
+    it('retains unsaved content through a tab path rename', async () => {
+        const s = await setup(); s.edit('unsaved A'); s.disk.Renamed = s.disk.A; delete s.disk.A
+        render({...s.props, activeTabId:'Renamed', tabs:[{id:'Renamed',path:'Renamed',type:'markdown'},s.props.tabs[1]]})
+        await settle()
+        expect(s.getContent()).toBe('unsaved A')
+    })
+    it('finishes hydration after a dependency changes while reading', async () => {
+        const s = await setup()
+        let finish!: (text: string) => void
+        const deferred = new Promise<string>(resolve => { finish = resolve })
+        const nextProps = {...s.props, activeTabId:'B', fileSystem:{...s.props.fileSystem,
+            readFile: async (path: string) => path === 'B' ? deferred : s.disk[path],
+        }}
+        render(nextProps)
+        await settle()
+        render({...nextProps,onError:vi.fn()})
+        finish('original B')
+        await settle()
+        expect(s.getContent()).toBe('original B')
+    })
+})

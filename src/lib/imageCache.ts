@@ -2,9 +2,11 @@ import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 
 import { isTauri } from './config'
 import { RASTER_CACHE_EXTENSIONS, IMAGE_EXTENSIONS as ATTACHMENT_IMAGE_EXTENSIONS, normalizePathSeparators } from './constants'
+import { isLinux } from './platform'
 
 
 const MAX_CONCURRENT_CACHE_JOBS = 1
+export const IMAGE_LOADING_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
 
 let vaultRootPath: string | null = null
 let activeVaultUid: string | null = null
@@ -16,6 +18,7 @@ const inflightGenerations = new Set<string>()
 const pendingQueue: string[] = []
 const queuedPaths = new Set<string>()
 let activeWorkers = 0
+let cacheSession = 0
 
 type CacheUpdateListener = (absolutePath: string, displayUrl: string) => void
 const listeners = new Set<CacheUpdateListener>()
@@ -77,6 +80,50 @@ export function resolveAbsoluteImagePath(sourcePath: string): string | null {
 
 function toDisplayUrl(filePath: string): string {
     return convertFileSrc(filePath)
+}
+
+function imageMimeType(filePath: string): string {
+    switch (getPathExtension(filePath)) {
+        case 'png': return 'image/png'
+        case 'jpg':
+        case 'jpeg': return 'image/jpeg'
+        case 'gif': return 'image/gif'
+        case 'webp': return 'image/webp'
+        case 'bmp': return 'image/bmp'
+        case 'svg': return 'image/svg+xml'
+        case 'avif': return 'image/avif'
+        case 'tif':
+        case 'tiff': return 'image/tiff'
+        case 'ico': return 'image/x-icon'
+        case 'heic': return 'image/heic'
+        case 'heif': return 'image/heif'
+        default: return 'application/octet-stream'
+    }
+}
+
+function rawResponseToArrayBuffer(response: ArrayBuffer | number[]): ArrayBuffer {
+    if (response instanceof ArrayBuffer) return response
+    return Uint8Array.from(response).buffer
+}
+
+async function displayUrlForPath(filePath: string): Promise<string> {
+    if (!isLinux()) return toDisplayUrl(filePath)
+
+    const response = await invoke<ArrayBuffer | number[]>('read_image_for_display', { path: filePath })
+    const blob = new Blob([rawResponseToArrayBuffer(response)], { type: imageMimeType(filePath) })
+    return URL.createObjectURL(blob)
+}
+
+function revokeDisplayUrl(displayUrl: string | undefined) {
+    if (displayUrl?.startsWith('blob:')) URL.revokeObjectURL(displayUrl)
+}
+
+function resetDisplayUrls() {
+    cacheSession += 1
+    for (const displayUrl of resolvedDisplayUrls.values()) revokeDisplayUrl(displayUrl)
+    resolvedDisplayUrls.clear()
+    pendingQueue.length = 0
+    queuedPaths.clear()
 }
 
 function toRelativeVaultImagePath(inputPath: string): string | null {
@@ -142,38 +189,54 @@ async function generateCachedPath(absolutePath: string): Promise<string | null> 
     }
 }
 
-function rememberAndNotify(absolutePath: string, cachePath: string) {
-    const displayUrl = toDisplayUrl(cachePath)
+async function rememberAndNotify(absolutePath: string, imagePath: string, session: number) {
+    const displayUrl = await displayUrlForPath(imagePath)
+    if (session !== cacheSession) {
+        revokeDisplayUrl(displayUrl)
+        return
+    }
+
+    revokeDisplayUrl(resolvedDisplayUrls.get(absolutePath))
     resolvedDisplayUrls.set(absolutePath, displayUrl)
     notifyListeners(absolutePath, displayUrl)
 }
 
 async function lookupOrGenerateInBackground(absolutePath: string): Promise<void> {
     if (!isTauri()) return
+    const session = cacheSession
 
-    const cached = await resolveCachedPath(absolutePath)
-    if (cached) {
-        rememberAndNotify(absolutePath, cached)
-        return
-    }
-
-    if (inflightGenerations.has(absolutePath)) return
-    inflightGenerations.add(absolutePath)
-
-    try {
-        const generated = await generateCachedPath(absolutePath)
-        if (generated) {
-            rememberAndNotify(absolutePath, generated)
+    if (activeVaultUid && canGenerateRasterCache(absolutePath)) {
+        const cached = await resolveCachedPath(absolutePath)
+        if (cached) {
+            await rememberAndNotify(absolutePath, cached, session)
+            return
         }
-    } finally {
-        inflightGenerations.delete(absolutePath)
     }
+
+    if (activeVaultUid && canGenerateRasterCache(absolutePath)) {
+        if (inflightGenerations.has(absolutePath)) return
+        inflightGenerations.add(absolutePath)
+
+        try {
+            const generated = await generateCachedPath(absolutePath)
+            if (generated) {
+                await rememberAndNotify(absolutePath, generated, session)
+                return
+            }
+        } finally {
+            inflightGenerations.delete(absolutePath)
+        }
+    }
+
+    // Linux loads the original through a scoped native read when no WebP is
+    // available (including formats such as SVG that are not cache-generated).
+    if (isLinux()) await rememberAndNotify(absolutePath, absolutePath, session)
 }
 
 function ensureLookupScheduled(absolutePath: string) {
     if (!isTauri()) return
     if (resolvedDisplayUrls.has(absolutePath)) return
-    if (!canGenerateRasterCache(absolutePath)) return
+    if (!isLinux() && !canGenerateRasterCache(absolutePath)) return
 
     const existing = inflightLookups.get(absolutePath)
     if (existing) return
@@ -206,6 +269,7 @@ function pumpQueue() {
 }
 
 export function setImageCacheVaultRoot(path: string | null) {
+    if (path !== vaultRootPath) resetDisplayUrls()
     vaultRootPath = path
     if (!path) {
         imagePathByRelative.clear()
@@ -272,10 +336,16 @@ export function getCachePathForImage(sourcePath: string): string {
 
     const absolutePath = toAbsolutePath(sourcePath)
     if (!absolutePath) return sourcePath
-    if (!activeVaultUid) return toDisplayUrl(absolutePath)
 
     const cachedDisplay = resolvedDisplayUrls.get(absolutePath)
     if (cachedDisplay) return cachedDisplay
+
+    if (isLinux()) {
+        ensureLookupScheduled(absolutePath)
+        return IMAGE_LOADING_PLACEHOLDER
+    }
+
+    if (!activeVaultUid) return toDisplayUrl(absolutePath)
 
     ensureLookupScheduled(absolutePath)
     return toDisplayUrl(absolutePath)
@@ -306,6 +376,7 @@ export function invalidateCacheEntry(sourcePath: string): void {
     const absolutePath = toAbsolutePath(sourcePath)
     if (!absolutePath) return
 
+    revokeDisplayUrl(resolvedDisplayUrls.get(absolutePath))
     resolvedDisplayUrls.delete(absolutePath)
     inflightLookups.delete(absolutePath)
     inflightGenerations.delete(absolutePath)

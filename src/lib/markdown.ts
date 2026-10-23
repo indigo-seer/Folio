@@ -31,6 +31,9 @@ function parseDisplayMathText(text: string): string | null {
 }
 
 function repairInlineMathText(node: TipTapNode): TipTapNode[] {
+    // Dollar signs inside code spans are literal. Treating them as math drops
+    // shell variables such as `$HOME` during the next serialization pass.
+    if (node.marks?.some(mark => mark.type === 'code')) return [node]
     if (!node.text || !node.text.includes('$')) return [node]
 
     const nodes: TipTapNode[] = []
@@ -778,10 +781,12 @@ function nodeToMarkdown(node: TipTapNode): string {
                 .map(item => nodeToMarkdownItem(item, '- '))
                 .join('\n')
 
-        case 'orderedList':
+        case 'orderedList': {
+            const start = Number(node.attrs?.start) || 1
             return (node.content || [])
-                .map((item, idx) => nodeToMarkdownItem(item, `${idx + 1}. `))
+                .map((item, idx) => nodeToMarkdownItem(item, `${start + idx}. `))
                 .join('\n')
+        }
 
         case 'listItem':
             return nodeToMarkdownItem(node, '')
@@ -825,7 +830,9 @@ function nodeToMarkdown(node: TipTapNode): string {
         case 'codeBlock': {
             const lang = (node.attrs?.language as string) || ''
             const code = node.content ? node.content.map(c => c.text || '').join('') : ''
-            return `\`\`\`${lang}\n${code}\n\`\`\``
+            const longestFence = Math.max(0, ...Array.from(code.matchAll(/`+/g), match => match[0].length))
+            const fence = '`'.repeat(Math.max(3, longestFence + 1))
+            return `${fence}${lang}\n${code}\n${fence}`
         }
 
 
@@ -861,14 +868,20 @@ function nodeToMarkdown(node: TipTapNode): string {
                             .replace(/\n\n/g, '<br>')
                             .replace(/\n/g, ' ')
                     }
-                    return ` ${cellText.trim()} `
+                    return ` ${cellText.trim().replace(/\|/g, '\\|')} `
                 }).join('|')
 
                 md += `|${rowMd}|\n`
 
                 // Markdown requires a divider row after the header
                 if (rowIndex === 0) {
-                    const divider = cells.map(() => ' --- ').join('|')
+                    const divider = cells.map(cell => {
+                        const align = String(cell.attrs?.align || '')
+                        if (align === 'left') return ' :--- '
+                        if (align === 'right') return ' ---: '
+                        if (align === 'center') return ' :---: '
+                        return ' --- '
+                    }).join('|')
                     md += `|${divider}|\n`
                 }
             })
@@ -908,9 +921,25 @@ function inlineToMarkdown(content?: TipTapNode[]): string {
             return `#${node.attrs?.text || ''}`
         }
 
+        if (node.type === 'inlineMath') {
+            return `$${node.attrs?.math || ''}$`
+        }
+
         if (!node.text) return ''
 
-        let text = node.text
+        const codeMark = node.marks?.find(mark => mark.type === 'code')
+        if (codeMark) {
+            const longestRun = Math.max(0, ...Array.from(node.text.matchAll(/`+/g), match => match[0].length))
+            const delimiter = '`'.repeat(Math.max(1, longestRun + 1))
+            const needsPadding = /^`|`$|^\s|\s$/.test(node.text)
+            const code = needsPadding ? ` ${node.text} ` : node.text
+            return `${delimiter}${code}${delimiter}`
+        }
+
+        // Text nodes carry semantic text, not the Markdown escapes that made
+        // it literal. Restore escapes so punctuation remains literal after a
+        // view/edit/save cycle.
+        let text = node.text.replace(/([\\*_[\]])/g, '\\$1')
         if (node.marks) {
             for (const mark of node.marks) {
                 switch (mark.type) {
@@ -922,9 +951,6 @@ function inlineToMarkdown(content?: TipTapNode[]): string {
                         break
                     case 'highlight':
                         text = `==${text}==`
-                        break
-                    case 'code':
-                        text = `\`${text}\``
                         break
                     case 'strike':
                         text = `~~${text}~~`

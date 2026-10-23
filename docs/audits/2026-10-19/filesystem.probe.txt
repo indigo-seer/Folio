@@ -1,0 +1,38 @@
+// Audit snapshot: copy to audit-filesystem.probe.test.ts at the repository root to run.
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+const disk = vi.hoisted(() => new Map<string, string>())
+vi.mock('@tauri-apps/api/path', () => ({sep: () => '/'}))
+vi.mock('@tauri-apps/plugin-fs', () => ({
+    writeTextFile: async (path: string, text: string) => {disk.set(path,text)},
+    rename: async (from: string,to: string) => {disk.set(to,disk.get(from)!);disk.delete(from)},
+}))
+import { tauriFs } from './src/lib/fs/tauriAdapter'
+import { browserFs } from './src/lib/fs/browserAdapter'
+
+beforeEach(() => disk.clear())
+describe('temporary filesystem audit probes', () => {
+    it('does not truncate an existing Untitled note', async () => {
+        disk.set('/vault/Untitled.md','valuable text')
+        await tauriFs.createFile('/vault','Untitled')
+        expect(disk.get('/vault/Untitled.md')).toBe('valuable text')
+    })
+    it('rejects names escaping the selected vault', async () => {
+        await expect(tauriFs.createFile('/vault','../outside')).rejects.toThrow()
+    })
+    it('does not overwrite a rename destination', async () => {
+        disk.set('/vault/A.md','A');disk.set('/vault/B.md','B')
+        await tauriFs.renameFile('/vault/A.md','B')
+        expect(disk.get('/vault/B.md')).toBe('B')
+    })
+    it('browser scan paths can be used for subsequent filesystem operations', async () => {
+        const root = {
+            name:'Vault',
+            async *values() {yield {kind:'file',name:'A.md'}},
+            getDirectoryHandle: async (name: string) => {throw new Error('No such subfolder: '+name)},
+        }
+        vi.stubGlobal('window',{showDirectoryPicker: async () => root})
+        const selected = await browserFs.openVault()
+        const tree = await browserFs.scanDirectory(selected!.path)
+        await expect(browserFs.deleteFile(tree[0].path)).resolves.toBeUndefined()
+    })
+})

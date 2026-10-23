@@ -1,0 +1,254 @@
+
+ RUN  v4.1.2 /mnt/storage/Projects/Development/Folio-main
+
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+stdout | audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > inline math
+{"label":"inline math","source":"The answer is $x+1$.","actual":"The answer is ."}
+
+stdout | audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > inline code containing dollars
+{"label":"inline code containing dollars","source":"`$HOME and $PATH`","actual":"`PATH`"}
+
+stdout | audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > escaped literal emphasis
+{"label":"escaped literal emphasis","source":"\\*literal\\*","actual":"literal"}
+
+stdout | audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > ordered list start
+{"label":"ordered list start","source":"7. seven\n8. eight","actual":"1. seven\n2. eight"}
+
+stdout | audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > code span containing backticks
+{"label":"code span containing backticks","source":"``a`b``","actual":"`a`b`"}
+
+stdout | audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > code fence containing backticks
+{"label":"code fence containing backticks","source":"````md\n```\n````","actual":"```md\n```\n```"}
+
+stdout | audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > table pipe
+{"label":"table pipe","source":"| A | B |\n| --- | --- |\n| a\\|b | c |","actual":"| A | B |\n| --- | --- |\n| a|b | c |\n\n"}
+
+stdout | audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > table alignment
+{"label":"table alignment","source":"| A | B |\n| :--- | ---: |\n| a | b |","actual":"| A | B |\n| --- | --- |\n| a | b |\n\n"}
+
+stdout | audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > underline
+{"label":"underline","source":"<u>underlined</u>","actual":"<u>underlined</u>"}
+
+ × audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > inline math 33ms
+   → expected 'The answer is .' to be 'The answer is $x+1$.' // Object.is equality
+ × audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > inline code containing dollars 10ms
+   → expected '`PATH`' to be '`$HOME and $PATH`' // Object.is equality
+ × audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > escaped literal emphasis 3ms
+   → expected 'literal' to be '\*literal\*' // Object.is equality
+ × audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > ordered list start 5ms
+   → expected '1. seven\n2. eight' to be '7. seven\n8. eight' // Object.is equality
+ × audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > code span containing backticks 2ms
+   → expected '`a`b`' to be '``a`b``' // Object.is equality
+ × audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > code fence containing backticks 2ms
+   → expected '```md\n```\n```' to be '````md\n```\n````' // Object.is equality
+ × audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > table pipe 3ms
+   → expected '| A | B |\n| --- | --- |\n| a|b | c |' to be '| A | B |\n| --- | --- |\n| a\|b | c |' // Object.is equality
+ × audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > table alignment 2ms
+   → expected '| A | B |\n| --- | --- |\n| a | b |' to be '| A | B |\n| :--- | ---: |\n| a | b |' // Object.is equality
+ ✓ audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > underline 2ms
+ × audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > normalizes backlink targets and ignores code 7ms
+   → expected [ 'Target|alias', …(2) ] to deeply equal [ 'Target', 'Target' ]
+ × audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > distinguishes same-basename notes 3ms
+   → expected 1 to be 2 // Object.is equality
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > inline math
+AssertionError: expected 'The answer is .' to be 'The answer is $x+1$.' // Object.is equality
+
+Expected: "The answer is $x+1$."
+Received: "The answer is ."
+
+ ❯ audit-roundtrip.probe.test.ts:27:35
+     25|             const actual = roundtrip(source)
+     26|             console.log(JSON.stringify({label, source, actual}))
+     27|             expect(actual.trim()).toBe(source.trim())
+       |                                   ^
+     28|         })
+     29|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > inline code containing dollars
+AssertionError: expected '`PATH`' to be '`$HOME and $PATH`' // Object.is equality
+
+Expected: "`$HOME and $PATH`"
+Received: "`PATH`"
+
+ ❯ audit-roundtrip.probe.test.ts:27:35
+     25|             const actual = roundtrip(source)
+     26|             console.log(JSON.stringify({label, source, actual}))
+     27|             expect(actual.trim()).toBe(source.trim())
+       |                                   ^
+     28|         })
+     29|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > escaped literal emphasis
+AssertionError: expected 'literal' to be '\*literal\*' // Object.is equality
+
+Expected: "\*literal\*"
+Received: "literal"
+
+ ❯ audit-roundtrip.probe.test.ts:27:35
+     25|             const actual = roundtrip(source)
+     26|             console.log(JSON.stringify({label, source, actual}))
+     27|             expect(actual.trim()).toBe(source.trim())
+       |                                   ^
+     28|         })
+     29|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > ordered list start
+AssertionError: expected '1. seven\n2. eight' to be '7. seven\n8. eight' // Object.is equality
+
+- Expected
++ Received
+
+- 7. seven
++ 1. seven
+- 8. eight
++ 2. eight
+
+ ❯ audit-roundtrip.probe.test.ts:27:35
+     25|             const actual = roundtrip(source)
+     26|             console.log(JSON.stringify({label, source, actual}))
+     27|             expect(actual.trim()).toBe(source.trim())
+       |                                   ^
+     28|         })
+     29|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > code span containing backticks
+AssertionError: expected '`a`b`' to be '``a`b``' // Object.is equality
+
+Expected: "``a`b``"
+Received: "`a`b`"
+
+ ❯ audit-roundtrip.probe.test.ts:27:35
+     25|             const actual = roundtrip(source)
+     26|             console.log(JSON.stringify({label, source, actual}))
+     27|             expect(actual.trim()).toBe(source.trim())
+       |                                   ^
+     28|         })
+     29|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > code fence containing backticks
+AssertionError: expected '```md\n```\n```' to be '````md\n```\n````' // Object.is equality
+
+- Expected
++ Received
+
+- ````md
++ ```md
+  ```
+- ````
++ ```
+
+ ❯ audit-roundtrip.probe.test.ts:27:35
+     25|             const actual = roundtrip(source)
+     26|             console.log(JSON.stringify({label, source, actual}))
+     27|             expect(actual.trim()).toBe(source.trim())
+       |                                   ^
+     28|         })
+     29|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > table pipe
+AssertionError: expected '| A | B |\n| --- | --- |\n| a|b | c |' to be '| A | B |\n| --- | --- |\n| a\|b | c |' // Object.is equality
+
+- Expected
++ Received
+
+  | A | B |
+  | --- | --- |
+- | a\|b | c |
++ | a|b | c |
+
+ ❯ audit-roundtrip.probe.test.ts:27:35
+     25|             const actual = roundtrip(source)
+     26|             console.log(JSON.stringify({label, source, actual}))
+     27|             expect(actual.trim()).toBe(source.trim())
+       |                                   ^
+     28|         })
+     29|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > table alignment
+AssertionError: expected '| A | B |\n| --- | --- |\n| a | b |' to be '| A | B |\n| :--- | ---: |\n| a | b |' // Object.is equality
+
+- Expected
++ Received
+
+  | A | B |
+- | :--- | ---: |
++ | --- | --- |
+  | a | b |
+
+ ❯ audit-roundtrip.probe.test.ts:27:35
+     25|             const actual = roundtrip(source)
+     26|             console.log(JSON.stringify({label, source, actual}))
+     27|             expect(actual.trim()).toBe(source.trim())
+       |                                   ^
+     28|         })
+     29|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > normalizes backlink targets and ignores code
+AssertionError: expected [ 'Target|alias', …(2) ] to deeply equal [ 'Target', 'Target' ]
+
+- Expected
++ Received
+
+  [
+-   "Target",
+-   "Target",
++   "Target|alias",
++   "Target#Heading",
++   "NotALink",
+  ]
+
+ ❯ audit-roundtrip.probe.test.ts:31:88
+     29|     }
+     30|     it('normalizes backlink targets and ignores code', () => {
+     31|         expect(extractWikilinks('[[Target|alias]] [[Target#Heading]] `…
+       |                                                                                        ^
+     32|     })
+     33|     it('distinguishes same-basename notes', async () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  audit-roundtrip.probe.test.ts > temporary audit probes: intended preservation guarantees > distinguishes same-basename notes
+AssertionError: expected 1 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ ❯ audit-roundtrip.probe.test.ts:38:35
+     36|             {name:'Note.md', path:'/vault/b/Note.md', kind:'file'},
+     37|         ], async () => '')
+     38|         expect(result.notes.size).toBe(2)
+       |                                   ^
+     39|     })
+     40| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  10 failed | 1 passed (11)
+   Start at  13:16:34
+   Duration  3.28s (transform 1.11s, setup 0ms, import 2.68s, tests 76ms, environment 0ms)

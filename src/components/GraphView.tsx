@@ -5,7 +5,7 @@ import { useSettings } from '../hooks/useSettings'
 
 export function GraphView() {
     const { notes, backlinkIndex, onWikilinkClick } = useContext(VaultContext)
-    const { theme } = useSettings()
+    const { isDark } = useSettings()
     const containerRef = useRef<HTMLDivElement>(null)
     const fgRef = useRef<ForceGraphMethods>()
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
@@ -64,7 +64,6 @@ export function GraphView() {
     const isEmpty = graphData.nodes.length === 0
 
     // Obsidian-like Theme Colors
-    const isDark = theme === 'dark'
     const colors = {
         bg: isDark ? '#1E1E1E' : '#FFFFFF',
         nodeActive: isDark ? '#8A5AFA' : '#7341D8', // Hover purple

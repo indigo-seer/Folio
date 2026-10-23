@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react'
 import { isTauri } from '../lib/config'
-import { fs, sortTree, buildVaultIndex, extractWikilinks, VaultState, FileNode } from '../lib/fs'
+import { fs, sortTree, buildVaultIndex, extractWikilinks, getNoteTargetForPath, rewriteWikilinkTargets, VaultState, FileNode } from '../lib/fs'
 import { invalidateCacheEntry, isAttachmentImagePath, setImageCacheVaultImagePaths, warmCacheForNote } from '../lib/imageCache'
 import { IMAGE_EXTENSIONS, getBasename } from '../lib/constants'
 
@@ -98,7 +98,7 @@ export function useFileSystem() {
 
         // Update backlink index incrementally
         setVault(prev => {
-            const noteName = getBasename(path).replace(/\.md$/, '')
+            const noteName = getNoteTargetForPath(prev.tree, path) || getBasename(path).replace(/\.md$/, '')
             if (!noteName) return prev
             const newIndex = new Map(prev.backlinkIndex)
             // Remove stale outgoing links from this note
@@ -174,10 +174,39 @@ export function useFileSystem() {
     const renameFile = useCallback(async (oldPath: string, newName: string): Promise<string> => {
         if (!vault.rootPath) throw new Error('No vault open')
         const oldFilename = getBasename(oldPath)
-        const isFile = oldFilename.endsWith('.md')
+        const isFile = /\.md$/i.test(oldFilename)
 
-        const oldNoteName = oldFilename.replace(/\.md$/, '')
-        const newNoteName = isFile && newName.endsWith('.md') ? newName.replace(/\.md$/, '') : newName
+        const oldNoteName = oldFilename.replace(/\.md$/i, '')
+        const newNoteName = isFile && /\.md$/i.test(newName) ? newName.replace(/\.md$/i, '') : newName
+        const oldNoteTarget = getNoteTargetForPath(vault.tree, oldPath) || oldNoteName
+        const targetParts = oldNoteTarget.split('/')
+        targetParts[targetParts.length - 1] = newNoteName
+        const newNoteTarget = targetParts.join('/')
+
+        const backlinkUpdates: Array<{ path: string; original: string; rewritten: string }> = []
+        const sourcesToUpdate = new Set<string>()
+        if (isFile) {
+            const matchingTargets = new Set([oldNoteTarget.toLowerCase(), oldNoteName.toLowerCase()])
+            for (const [target, sources] of vault.backlinkIndex) {
+                if (!matchingTargets.has(target.toLowerCase())) continue
+                for (const source of sources) sourcesToUpdate.add(source)
+            }
+        }
+        if (sourcesToUpdate.size > 0) {
+            const { fileMap } = await buildVaultIndex(vault.tree, fs.readFile)
+            for (const sourceNoteName of sourcesToUpdate) {
+                const sourcePath = [...fileMap.entries()].find(([, note]) => note === sourceNoteName)?.[0]
+                if (!sourcePath) continue
+                const original = await fs.readFile(sourcePath)
+                const rewritten = rewriteWikilinkTargets(original, oldNoteTarget, newNoteTarget)
+                if (rewritten !== original) backlinkUpdates.push({ path: sourcePath, original, rewritten })
+            }
+            for (const update of backlinkUpdates) {
+                if (await fs.readFile(update.path) !== update.original) {
+                    throw new Error(`Backlink source changed while preparing rename: ${update.path}`)
+                }
+            }
+        }
 
         const newPath = await fs.renameFile(oldPath, newName)
         if (isAttachmentImagePath(oldPath)) {
@@ -187,39 +216,25 @@ export function useFileSystem() {
             void warmCacheForNote([newPath])
         }
 
-        // Update backlinks in other files
-        const sourcesToUpdate = vault.backlinkIndex.get(oldNoteName) || new Set<string>()
-        if (sourcesToUpdate.size > 0) {
-            const tree = await fs.scanDirectory(vault.rootPath)
-            const { fileMap } = await buildVaultIndex(tree, fs.readFile)
-
-            for (const sourceNoteName of sourcesToUpdate) {
-                for (const [path, note] of fileMap.entries()) {
-                    if (note === sourceNoteName) {
-                        let content = await fs.readFile(path)
-                        // Simple naive replace, escape RegExp not strictly needed for this pass
-                        // since we moved the utility to indexer, but keeping logic consistent
-                        //.replace(new RegExp(...) ...)
-                        // Refined to string replaceAll for simplicity unless regex escape was ported
-                        // To keep it clean, relying on basic replace logic for now or porting escapeRegExp back
-
-                        const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-                        content = content.replace(
-                            new RegExp(`\\[\\[${escapeRegExp(oldNoteName)}\\]\\]`, 'g'),
-                            `[[${newNoteName}]]`
-                        )
-                        await fs.writeFile(path, content)
-                        break
-                    }
-                }
+        const completedUpdates: typeof backlinkUpdates = []
+        try {
+            for (const update of backlinkUpdates) {
+                const writePath = update.path === oldPath ? newPath : update.path
+                await fs.writeFile(writePath, update.rewritten)
+                completedUpdates.push({ ...update, path: writePath })
             }
+        } catch (error) {
+            for (const update of completedUpdates.reverse()) {
+                try { await fs.writeFile(update.path, update.original) } catch { /* retain primary error */ }
+            }
+            try { await fs.renameFile(newPath, oldFilename) } catch { /* surfaced through refresh/recovery */ }
+            throw error
         }
 
         await refreshVault(vault.rootPath)
 
         return newPath
-    }, [vault.rootPath, vault.backlinkIndex, refreshVault])
+    }, [vault.rootPath, vault.tree, vault.backlinkIndex, refreshVault])
 
     const moveFile = useCallback(async (oldPath: string, parentPath?: string): Promise<string> => {
         if (!vault.rootPath) throw new Error('No vault open')

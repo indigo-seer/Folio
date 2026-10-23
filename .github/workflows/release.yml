@@ -26,7 +26,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 12.14.0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -37,13 +37,19 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: 1.88.0
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
 
+      - name: Rust dependency audit
+        uses: pirafrank/audit-check-action@v1
+        with:
+          working-directory: src-tauri
+
       - name: Install frontend dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Fix node_modules binary permissions (macOS & Linux)
         if: matrix.platform != 'windows-latest'
@@ -58,6 +64,19 @@ jobs:
             echo "APTABASE_KEY is not configured in GitHub Actions secrets."
             exit 1
           fi
+
+      - name: Verify source before packaging
+        env:
+          APTABASE_KEY: ${{ secrets.APTABASE_KEY }}
+        run: |
+          pnpm test
+          pnpm run build
+          pnpm audit --prod
+          cd src-tauri
+          cargo fmt --check
+          cargo check --locked
+          cargo test --locked
+          cargo clippy --locked --all-targets --all-features -- -D warnings
 
       - name: Build and publish with Tauri
         uses: tauri-apps/tauri-action@v0.5.15

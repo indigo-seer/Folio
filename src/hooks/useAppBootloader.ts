@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { BootState } from '../App';
 import { loadConfig, saveConfig, Workspace, isTauri } from '../lib/config';
 import { createStarterNote, createDefaultVault } from '../lib/onboarding';
-import { runVaultImageMigrationInBackground } from '../lib/vaultImageMigration';
 import { sweepOrphanedCache } from '../lib/imageCache';
 import { getOrCreateVaultUid, resolveWorkspaceIdentity } from '../lib/vaultIdentity';
 import type { FileSystemAPI } from './useFileSystem';
@@ -53,7 +52,6 @@ export function useAppBootloader(
                                 hasSweptImageCache.current = true;
                                 void sweepOrphanedCache();
                             }
-                            void runVaultImageMigrationInBackground(activeWorkspace.path, activeWorkspace.id);
                             return;
                         } catch (e) {
                             // Keep the stored active workspace so removable/mounted
@@ -132,7 +130,6 @@ export function useAppBootloader(
                 hasSweptImageCache.current = true;
                 void sweepOrphanedCache();
             }
-            void runVaultImageMigrationInBackground(vaultPath, id);
         } catch (err) {
             console.error('Onboarding completion failed:', err);
             const config = await loadConfig();

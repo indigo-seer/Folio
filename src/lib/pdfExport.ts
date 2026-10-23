@@ -38,14 +38,17 @@ async function waitForImages(root: HTMLElement): Promise<void> {
 
     await Promise.all(images.map(async (img) => {
         if (img.complete) return
-        try {
-            await img.decode()
-        } catch {
-            await new Promise<void>((resolve) => {
+        await Promise.race([
+            img.decode().catch(() => new Promise<void>((resolve) => {
+                if (img.complete) {
+                    resolve()
+                    return
+                }
                 img.addEventListener('load', () => resolve(), { once: true })
                 img.addEventListener('error', () => resolve(), { once: true })
-            })
-        }
+            })),
+            new Promise<void>(resolve => setTimeout(resolve, 5_000)),
+        ])
     }))
 }
 
@@ -104,7 +107,7 @@ export async function exportNoteAsPdf({ noteTitle, noteHtml, isDarkMode }: Expor
         const maxRenderedPixels = 35_000_000
         const estimatedPixels = contentWidthPx * contentHeightPx * scale * scale
         if (estimatedPixels > maxRenderedPixels) {
-            scale = Math.max(1, Math.sqrt(maxRenderedPixels / (contentWidthPx * contentHeightPx)))
+            scale = Math.max(0.25, Math.sqrt(maxRenderedPixels / (contentWidthPx * contentHeightPx)))
         }
 
         const bgColor = getComputedStyle(shell).backgroundColor || '#ffffff'

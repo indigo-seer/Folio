@@ -1,3 +1,4 @@
+use crate::VaultScopeState;
 use image::imageops::FilterType;
 use image::GenericImageView;
 use serde::{Deserialize, Serialize};
@@ -12,6 +13,11 @@ use tauri::{AppHandle, Manager};
 
 const MAX_LONGEST_EDGE: u32 = 2048;
 const WEBP_QUALITY: f32 = 85.0;
+const MAX_SOURCE_BYTES: u64 = 25 * 1024 * 1024;
+const MAX_DECODED_PIXELS: u64 = 100_000_000;
+const DISPLAY_IMAGE_EXTENSIONS: &[&str] = &[
+    "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "avif", "tif", "tiff", "ico", "heic", "heif",
+];
 
 #[derive(Serialize, Deserialize)]
 struct CacheSourceMetadata {
@@ -75,6 +81,64 @@ fn cache_webp_path(cache_dir: &Path, cache_key: &str) -> PathBuf {
     cache_dir.join(format!("{cache_key}.webp"))
 }
 
+fn canonical_display_image(
+    requested_path: &Path,
+    active_vault_root: Option<&Path>,
+    cache_root: &Path,
+) -> Result<PathBuf, String> {
+    let canonical = fs::canonicalize(requested_path)
+        .map_err(|e| format!("Failed resolving image {}: {e}", requested_path.display()))?;
+    if !canonical.is_file() {
+        return Err("Requested image is not a file".to_string());
+    }
+
+    let inside_vault = active_vault_root.is_some_and(|root| canonical.starts_with(root));
+    let inside_cache = canonical.starts_with(cache_root);
+    if !inside_vault && !inside_cache {
+        return Err("Requested image is outside the active vault and image cache".to_string());
+    }
+
+    let extension = canonical
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(str::to_ascii_lowercase)
+        .ok_or_else(|| "Requested image has no supported extension".to_string())?;
+    if !DISPLAY_IMAGE_EXTENSIONS.contains(&extension.as_str()) {
+        return Err("Requested file type is not supported for image display".to_string());
+    }
+
+    let size = fs::metadata(&canonical)
+        .map_err(|e| format!("Failed reading image metadata {}: {e}", canonical.display()))?
+        .len();
+    if size > MAX_SOURCE_BYTES {
+        return Err("Image exceeds the 25 MB display limit".to_string());
+    }
+
+    Ok(canonical)
+}
+
+/// Returns raw image bytes for WebKitGTK, where custom `asset://` URLs can be
+/// rejected as cross-origin even after Tauri grants the directory. The path is
+/// independently constrained to the active vault or Folium's image cache.
+#[tauri::command]
+pub fn read_image_for_display(
+    app: AppHandle,
+    state: tauri::State<'_, VaultScopeState>,
+    path: String,
+) -> Result<tauri::ipc::Response, String> {
+    let cache_root = fs::canonicalize(cache_images_dir(&app)?)
+        .map_err(|e| format!("Failed resolving image cache directory: {e}"))?;
+    let active_vault_root = state.active_root()?;
+    let canonical =
+        canonical_display_image(Path::new(&path), active_vault_root.as_deref(), &cache_root)?;
+    let bytes = fs::read(&canonical)
+        .map_err(|e| format!("Failed reading image {}: {e}", canonical.display()))?;
+    if bytes.len() as u64 > MAX_SOURCE_BYTES {
+        return Err("Image exceeds the 25 MB display limit".to_string());
+    }
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
 fn allow_asset_file(app: &AppHandle, file_path: &Path) -> Result<(), String> {
     app.asset_protocol_scope()
         .allow_file(file_path)
@@ -118,11 +182,12 @@ fn write_cache_metadata(
 #[tauri::command]
 pub fn get_cached_image(
     app: AppHandle,
+    state: tauri::State<'_, VaultScopeState>,
     source_path: String,
     vault_uid: String,
     relative_path: String,
 ) -> Result<Option<String>, String> {
-    let source = PathBuf::from(source_path);
+    let source = state.canonical_vault_file(source_path)?;
     if !source.exists() {
         println!(
             "[Folium Image Cache] MISS_SOURCE_NOT_FOUND | source={} | relative={}",
@@ -165,12 +230,13 @@ pub fn get_cached_image(
 #[tauri::command]
 pub fn generate_cached_image(
     app: AppHandle,
+    state: tauri::State<'_, VaultScopeState>,
     source_path: String,
     vault_uid: String,
     relative_path: String,
 ) -> Result<String, String> {
     let generation_started_at = Instant::now();
-    let source = PathBuf::from(source_path);
+    let source = state.canonical_vault_file(source_path)?;
     if !source.exists() {
         return Err(format!("Source image does not exist: {}", source.display()));
     }
@@ -195,6 +261,20 @@ pub fn generate_cached_image(
             elapsed_ms
         );
         return Ok(webp_path.to_string_lossy().to_string());
+    }
+
+    let source_size = fs::metadata(&source).map_err(|e| e.to_string())?.len();
+    if source_size > MAX_SOURCE_BYTES {
+        return Err("Source image exceeds the 25 MB cache limit".to_string());
+    }
+    let dimensions = image::ImageReader::open(&source)
+        .map_err(|e| format!("Failed opening source image {}: {e}", source.display()))?
+        .with_guessed_format()
+        .map_err(|e| format!("Failed detecting source image format: {e}"))?
+        .into_dimensions()
+        .map_err(|e| format!("Failed reading source image dimensions: {e}"))?;
+    if u64::from(dimensions.0) * u64::from(dimensions.1) > MAX_DECODED_PIXELS {
+        return Err("Source image exceeds the 100 megapixel decode limit".to_string());
     }
 
     let image = image::open(&source)
@@ -421,4 +501,85 @@ pub fn open_cache_folder(app: AppHandle) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::canonical_display_image;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn test_directory() -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after the epoch")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "folium-display-image-test-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&directory).expect("test directory should be created");
+        directory
+    }
+
+    #[test]
+    fn display_reads_are_limited_to_the_active_vault_or_cache() {
+        let root = test_directory();
+        let vault = root.join("vault");
+        let cache = root.join("cache");
+        let outside = root.join("outside");
+        fs::create_dir_all(&vault).unwrap();
+        fs::create_dir_all(&cache).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+
+        let vault_image = vault.join("note.png");
+        let cache_image = cache.join("cached.webp");
+        let outside_image = outside.join("private.png");
+        fs::write(&vault_image, b"vault").unwrap();
+        fs::write(&cache_image, b"cache").unwrap();
+        fs::write(&outside_image, b"outside").unwrap();
+
+        let canonical_vault = fs::canonicalize(&vault).unwrap();
+        let canonical_cache = fs::canonicalize(&cache).unwrap();
+        assert!(
+            canonical_display_image(&vault_image, Some(&canonical_vault), &canonical_cache,)
+                .is_ok()
+        );
+        assert!(
+            canonical_display_image(&cache_image, Some(&canonical_vault), &canonical_cache,)
+                .is_ok()
+        );
+        assert!(
+            canonical_display_image(&outside_image, Some(&canonical_vault), &canonical_cache,)
+                .is_err()
+        );
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn display_reads_reject_symlinks_that_escape_the_vault() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_directory();
+        let vault = root.join("vault");
+        let cache = root.join("cache");
+        let outside_image = root.join("outside.png");
+        fs::create_dir_all(&vault).unwrap();
+        fs::create_dir_all(&cache).unwrap();
+        fs::write(&outside_image, b"outside").unwrap();
+        let linked_image = vault.join("linked.png");
+        symlink(&outside_image, &linked_image).unwrap();
+
+        let canonical_vault = fs::canonicalize(&vault).unwrap();
+        let canonical_cache = fs::canonicalize(&cache).unwrap();
+        assert!(
+            canonical_display_image(&linked_image, Some(&canonical_vault), &canonical_cache,)
+                .is_err()
+        );
+
+        fs::remove_dir_all(root).unwrap();
+    }
 }

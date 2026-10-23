@@ -3,10 +3,9 @@ import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { isTauri } from '../lib/config'
-import { getCachePathForImage, resolveAbsoluteImagePath, subscribeImageCacheUpdates } from '../lib/imageCache'
+import { getCachePathForImage, IMAGE_LOADING_PLACEHOLDER, resolveAbsoluteImagePath, subscribeImageCacheUpdates } from '../lib/imageCache'
 
 const MIN_WIDTH = 100
-const VIEWPORT_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
 const imageRatioCache = new Map<string, number>()
 
 function normalizePixelDimension(value: unknown): number | null {
@@ -42,7 +41,7 @@ export default function ImageNodeView(props: NodeViewProps) {
     const shouldDelayOffscreenLoad = isTauri() && Boolean(absoluteSourcePath)
     const uncachedSrc = useMemo(() => {
         if (shouldDelayOffscreenLoad && !hasEnteredViewport) {
-            return VIEWPORT_PLACEHOLDER
+            return IMAGE_LOADING_PLACEHOLDER
         }
         return getCachePathForImage(src)
     }, [shouldDelayOffscreenLoad, hasEnteredViewport, src])
@@ -146,7 +145,7 @@ export default function ImageNodeView(props: NodeViewProps) {
     }, [hasEnteredViewport, shouldDelayOffscreenLoad])
 
     const handleImageLoaded = () => {
-        if (resolvedSrc === VIEWPORT_PLACEHOLDER) return
+        if (resolvedSrc === IMAGE_LOADING_PLACEHOLDER) return
 
         const imageEl = imageRef.current
         if (imageEl && imageEl.naturalWidth > 0 && imageEl.naturalHeight > 0) {

@@ -9,6 +9,59 @@ export interface IngestedImage {
     extension: string
 }
 
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'tif', 'tiff', 'ico', 'heic', 'heif'])
+
+async function readBoundedResponse(response: Response): Promise<Uint8Array> {
+    const declaredLength = Number(response.headers.get('content-length') || 0)
+    if (declaredLength > MAX_IMAGE_BYTES) throw new Error('Image exceeds the 25 MB import limit')
+    if (!response.body) {
+        const bytes = new Uint8Array(await response.arrayBuffer())
+        if (bytes.length > MAX_IMAGE_BYTES) throw new Error('Image exceeds the 25 MB import limit')
+        return bytes
+    }
+
+    const reader = response.body.getReader()
+    const chunks: Uint8Array[] = []
+    let length = 0
+    try {
+        while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            length += value.length
+            if (length > MAX_IMAGE_BYTES) throw new Error('Image exceeds the 25 MB import limit')
+            chunks.push(value)
+        }
+    } finally {
+        reader.releaseLock()
+    }
+    const bytes = new Uint8Array(length)
+    let offset = 0
+    for (const chunk of chunks) {
+        bytes.set(chunk, offset)
+        offset += chunk.length
+    }
+    return bytes
+}
+
+function validateImageBytes(bytes: Uint8Array, extension: string): void {
+    if (bytes.length === 0) throw new Error('Image is empty')
+    const ext = extension.toLowerCase()
+    if (!ALLOWED_IMAGE_EXTENSIONS.has(ext)) throw new Error(`Unsupported image type: ${ext}`)
+    const ascii = new TextDecoder().decode(bytes.slice(0, 256)).trimStart().toLowerCase()
+    const valid =
+        (ext === 'png' && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) ||
+        ((ext === 'jpg' || ext === 'jpeg') && bytes[0] === 0xff && bytes[1] === 0xd8) ||
+        (ext === 'gif' && ascii.startsWith('gif8')) ||
+        (ext === 'webp' && ascii.startsWith('riff') && ascii.slice(8, 12) === 'webp') ||
+        (ext === 'bmp' && ascii.startsWith('bm')) ||
+        (ext === 'svg' && (ascii.startsWith('<svg') || (ascii.startsWith('<?xml') && ascii.includes('<svg')))) ||
+        ((ext === 'tif' || ext === 'tiff') && ((bytes[0] === 0x49 && bytes[1] === 0x49) || (bytes[0] === 0x4d && bytes[1] === 0x4d))) ||
+        (ext === 'ico' && bytes[0] === 0 && bytes[1] === 0 && bytes[2] === 1 && bytes[3] === 0) ||
+        ((ext === 'avif' || ext === 'heic' || ext === 'heif') && ascii.includes('ftyp'))
+    if (!valid) throw new Error(`File contents do not match the expected ${ext} image format`)
+}
+
 export function normalizeAttachmentProxySrc(src: string): string | null {
     if (!src) return null
     if (src.startsWith('attachments/')) return src
@@ -115,30 +168,36 @@ export function shouldIngestImageSource(src: string): boolean {
 
 export async function readImageSource(src: string): Promise<IngestedImage> {
     if (src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
-        const response = await fetch(src)
+        const response = await fetch(src, { signal: AbortSignal.timeout(10_000), credentials: 'omit', referrerPolicy: 'no-referrer' })
         if (!response.ok && !src.startsWith('data:') && !src.startsWith('blob:')) {
             throw new Error(`Failed to fetch image source: ${response.status} ${response.statusText}`)
         }
-        const blob = await response.blob()
-        const bytes = new Uint8Array(await blob.arrayBuffer())
+        const contentType = response.headers.get('content-type') || ''
+        if (contentType && !contentType.toLowerCase().startsWith('image/')) {
+            throw new Error(`Remote source is not an image (${contentType})`)
+        }
+        const extension = resolveImageExtension(contentType, src)
+        const bytes = await readBoundedResponse(response)
+        validateImageBytes(bytes, extension)
         return {
             bytes,
-            extension: resolveImageExtension(blob.type || '', src),
+            extension,
         }
     }
 
     const decodedFilePath = decodeFileUrlToPath(src)
     const localPath = decodedFilePath || src
-    const parentPath = getParentDirectory(localPath)
-
     const { invoke } = await import('@tauri-apps/api/core')
-    await invoke('grant_vault_scope', { path: parentPath })
+    const approvedPath = await invoke<string>('grant_import_file_scope', { path: localPath })
     const { readFile } = await import('@tauri-apps/plugin-fs')
-    const bytes = await readFile(localPath)
+    const bytes = await readFile(approvedPath)
+    if (bytes.length > MAX_IMAGE_BYTES) throw new Error('Image exceeds the 25 MB import limit')
+    const extension = resolveImageExtension('', approvedPath)
+    validateImageBytes(bytes, extension)
 
     return {
         bytes,
-        extension: resolveImageExtension('', localPath),
+        extension,
     }
 }
 

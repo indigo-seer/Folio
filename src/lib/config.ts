@@ -73,9 +73,28 @@ export async function hashPath(path: string): Promise<string> {
 }
 
 async function migrateParsedConfig(parsed: any): Promise<FoliumConfig> {
-    if (!parsed.version) throw new Error('Invalid config format (no version)')
+    if (!parsed || typeof parsed !== 'object' || !Number.isInteger(parsed.version)) {
+        throw new Error('Invalid config format (no supported version)')
+    }
+    if (parsed.version > DEFAULT_CONFIG.version) {
+        throw new Error(`Config version ${parsed.version} is newer than this Folium build supports`)
+    }
+    if (parsed.workspaces !== undefined && !Array.isArray(parsed.workspaces)) {
+        throw new Error('Invalid config format (workspaces must be an array)')
+    }
+    if (parsed.ui !== undefined && (typeof parsed.ui !== 'object' || Array.isArray(parsed.ui))) {
+        throw new Error('Invalid config format (ui must be an object)')
+    }
 
-    const workspaces: Workspace[] = parsed.workspaces || []
+    const workspaces: Workspace[] = (parsed.workspaces || []).filter((workspace: unknown): workspace is Workspace => {
+        if (!workspace || typeof workspace !== 'object') return false
+        const value = workspace as Record<string, unknown>
+        return typeof value.id === 'string'
+            && typeof value.path === 'string'
+            && typeof value.displayName === 'string'
+            && typeof value.lastOpened === 'number'
+            && typeof value.createdAt === 'number'
+    })
     let activeWorkspaceId = parsed.activeWorkspaceId !== undefined ? parsed.activeWorkspaceId : null
 
     // V1 alpha migration from `vault` object to `workspaces` array
@@ -136,60 +155,122 @@ async function getConfigPath(): Promise<string> {
     return await join(configDir, 'folium.json')
 }
 
-/**
- * Load configuration from disk. Generates default if missing or corrupt.
- */
-export async function loadConfig(): Promise<FoliumConfig> {
-    try {
-        if (!isTauri()) {
-            const raw = localStorage.getItem('folium_config')
-            if (!raw) {
-                localStorage.setItem('folium_config', JSON.stringify(DEFAULT_CONFIG))
-                return DEFAULT_CONFIG
-            }
-            return await migrateParsedConfig(JSON.parse(raw))
+type ConfigUpdater = (current: FoliumConfig) => FoliumConfig | void | Promise<FoliumConfig | void>
+
+let configOperationQueue: Promise<unknown> = Promise.resolve()
+const loadedSnapshots = new WeakMap<FoliumConfig, FoliumConfig>()
+
+function cloneConfig(config: FoliumConfig): FoliumConfig {
+    return JSON.parse(JSON.stringify(config)) as FoliumConfig
+}
+
+function enqueueConfigOperation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = configOperationQueue.then(operation, operation)
+    configOperationQueue = result.then(() => undefined, () => undefined)
+    return result
+}
+
+async function writeConfigStorage(config: FoliumConfig): Promise<void> {
+    const serialized = JSON.stringify(config, null, 2)
+    if (!isTauri()) {
+        localStorage.setItem('folium_config', serialized)
+        return
+    }
+    const { invoke } = await import('@tauri-apps/api/core')
+    await invoke('write_text_file_atomic', { path: await getConfigPath(), content: serialized })
+}
+
+async function preserveCorruptConfig(raw: string, configPath?: string): Promise<void> {
+    if (!isTauri()) {
+        localStorage.setItem(`folium_config_corrupt_${Date.now()}`, raw)
+        return
+    }
+    if (!configPath) return
+    const { rename } = await import('@tauri-apps/plugin-fs')
+    await rename(configPath, `${configPath}.corrupt-${Date.now()}`)
+}
+
+async function readConfigStorage(): Promise<FoliumConfig> {
+    if (!isTauri()) {
+        const raw = localStorage.getItem('folium_config')
+        if (!raw) {
+            const initial = cloneConfig(DEFAULT_CONFIG)
+            await writeConfigStorage(initial)
+            return initial
         }
-
-        const { readTextFile, writeTextFile, exists } = await import('@tauri-apps/plugin-fs')
-        const configPath = await getConfigPath()
-
-        if (!(await exists(configPath))) {
-            await writeTextFile(configPath, JSON.stringify(DEFAULT_CONFIG, null, 2))
-            return DEFAULT_CONFIG
-        }
-
-        const raw = await readTextFile(configPath)
-        return await migrateParsedConfig(JSON.parse(raw))
-    } catch (err) {
-        console.warn('Failed to load folium.json, falling back to default', err)
         try {
-            if (!isTauri()) {
-                localStorage.setItem('folium_config', JSON.stringify(DEFAULT_CONFIG))
-            } else {
-                const { writeTextFile } = await import('@tauri-apps/plugin-fs')
-                const configPath = await getConfigPath()
-                await writeTextFile(configPath, JSON.stringify(DEFAULT_CONFIG, null, 2))
-            }
-        } catch (writeErr) {
-            console.error('Failed to write default config', writeErr)
+            return await migrateParsedConfig(JSON.parse(raw))
+        } catch (error) {
+            await preserveCorruptConfig(raw)
+            const initial = cloneConfig(DEFAULT_CONFIG)
+            await writeConfigStorage(initial)
+            console.warn('Preserved corrupt browser configuration and created a new default.', error)
+            return initial
         }
-        return DEFAULT_CONFIG
+    }
+
+    const { readTextFile, exists } = await import('@tauri-apps/plugin-fs')
+    const configPath = await getConfigPath()
+    if (!(await exists(configPath))) {
+        const initial = cloneConfig(DEFAULT_CONFIG)
+        await writeConfigStorage(initial)
+        return initial
+    }
+
+    const raw = await readTextFile(configPath)
+    try {
+        return await migrateParsedConfig(JSON.parse(raw))
+    } catch (error) {
+        await preserveCorruptConfig(raw, configPath)
+        const initial = cloneConfig(DEFAULT_CONFIG)
+        await writeConfigStorage(initial)
+        console.warn('Preserved corrupt folium.json and created a new default.', error)
+        return initial
     }
 }
 
+/** Load a consistent configuration snapshot. Mutating callers can still use
+ * saveConfig; it applies only fields changed from this snapshot. */
+export function loadConfig(): Promise<FoliumConfig> {
+    return enqueueConfigOperation(async () => {
+        const config = cloneConfig(await readConfigStorage())
+        loadedSnapshots.set(config, cloneConfig(config))
+        return config
+    })
+}
+
+/** Serialize a field-level configuration transaction with every other update. */
+export function updateConfig(updater: ConfigUpdater): Promise<FoliumConfig> {
+    return enqueueConfigOperation(async () => {
+        const current = cloneConfig(await readConfigStorage())
+        const updated = await updater(current)
+        const next = cloneConfig(updated || current)
+        await writeConfigStorage(next)
+        const result = cloneConfig(next)
+        loadedSnapshots.set(result, cloneConfig(result))
+        return result
+    })
+}
+
 /**
- * Save configuration to disk.
+ * Save fields changed from a loadConfig snapshot without overwriting unrelated
+ * concurrent settings, workspace, or migration updates.
  */
 export async function saveConfig(config: FoliumConfig): Promise<void> {
-    try {
-        if (!isTauri()) {
-            localStorage.setItem('folium_config', JSON.stringify(config))
-            return
+    const original = loadedSnapshots.get(config)
+    await updateConfig(current => {
+        if (!original) return cloneConfig(config)
+        const next = cloneConfig(current)
+        for (const key of Object.keys(config) as (keyof FoliumConfig)[]) {
+            if (JSON.stringify(config[key]) !== JSON.stringify(original[key])) {
+                ;(next as any)[key] = cloneConfigValue(config[key])
+            }
         }
-        const { writeTextFile } = await import('@tauri-apps/plugin-fs')
-        const configPath = await getConfigPath()
-        await writeTextFile(configPath, JSON.stringify(config, null, 2))
-    } catch (err) {
-        console.error('Failed to save config:', err)
-    }
+        return next
+    })
+    loadedSnapshots.set(config, cloneConfig(config))
+}
+
+function cloneConfigValue<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value)) as T
 }

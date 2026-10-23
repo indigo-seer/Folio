@@ -34,9 +34,9 @@ export function WindowControls() {
     }
 
     const handleClose = async () => {
-        // Bypass close-request listeners for the explicit title-bar button.
-        // This guarantees the custom X cannot be held open by shutdown work.
-        await getCurrentWindow().destroy()
+        // The close-request listener flushes dirty documents before allowing
+        // the window to be destroyed.
+        await getCurrentWindow().close()
     }
 
     return (

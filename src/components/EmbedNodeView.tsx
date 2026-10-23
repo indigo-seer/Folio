@@ -7,19 +7,7 @@ import { VaultContext } from '../contexts/VaultContext'
 import { getBookmarkPreview, type BookmarkPreviewData } from '../lib/bookmarkPreview'
 import { isTauri } from '../lib/config'
 import { getBasename, normalizePathSeparators } from '../lib/constants'
-
-function findNotePath(tree: any[], noteName: string): string | null {
-    for (const node of tree) {
-        if (node.kind === 'file' && node.name === `${noteName}.md`) {
-            return node.path
-        }
-        if (node.kind === 'directory' && node.children) {
-            const found = findNotePath(node.children, noteName)
-            if (found) return found
-        }
-    }
-    return null
-}
+import { findNotePath } from '../lib/fs'
 
 function toPreviewText(markdown: string): string {
     const normalized = markdown.replace(/\r/g, '')

@@ -19,16 +19,16 @@ RUN apt-get update && apt-get install -y \
     libfuse2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+# Install the same supported Rust toolchain used by CI.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.88.0
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Tauri CLI (this was missing!)
-RUN cargo install tauri-cli
+RUN cargo install tauri-cli --version 2.10.0 --locked
 
 # Install Node + pnpm
-RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
-    npm install -g pnpm
+    npm install -g pnpm@12.14.0
 
 WORKDIR /app

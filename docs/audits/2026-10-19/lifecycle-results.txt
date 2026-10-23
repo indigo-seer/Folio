@@ -1,0 +1,124 @@
+
+ RUN  v4.1.2 /mnt/storage/Projects/Development/Folio-main
+
+stderr | audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > retains the local draft when external changes block a tab-switch save
+[Folium Debug] Tab-switch flush blocked by external file change: A
+
+stdout | audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > does not write a note that was only viewed
+[Folium Debug] Tab-switch flush: A length: 10
+
+stdout | audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > finishes hydration after a dependency changes while reading
+[Folium Debug] Tab-switch flush: A length: 10
+
+ × audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > saves edits when closing the only reference to the active tab 22ms
+   → expected [] to deep equally contain [ 'A', 'unsaved A' ]
+ × audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > retains the local draft when external changes block a tab-switch save 9ms
+   → expected 'original B' to be 'unsaved A' // Object.is equality
+ × audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > does not write a note that was only viewed 6ms
+   → expected [ [ 'A', 'original A' ] ] to deeply equal []
+ × audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > retains unsaved content through a tab path rename 3ms
+   → expected 'original A' to be 'unsaved A' // Object.is equality
+ × audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > finishes hydration after a dependency changes while reading 3ms
+   → expected 'original A' to be 'original B' // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > saves edits when closing the only reference to the active tab
+AssertionError: expected [] to deep equally contain [ 'A', 'unsaved A' ]
+
+- Expected
++ Received
+
+- [
+-   "A",
+-   "unsaved A",
+- ]
++ []
+
+ ❯ audit-lifecycle.probe.test.ts:74:26
+     72|         render({...s.props, activeTabId:'B', tabs:s.props.tabs.filter(…
+     73|         await settle()
+     74|         expect(h.writes).toContainEqual(['A', 'unsaved A'])
+       |                          ^
+     75|     })
+     76|     it('retains the local draft when external changes block a tab-swit…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > retains the local draft when external changes block a tab-switch save
+AssertionError: expected 'original B' to be 'unsaved A' // Object.is equality
+
+Expected: "unsaved A"
+Received: "original B"
+
+ ❯ audit-lifecycle.probe.test.ts:80:32
+     78|         render({...s.props, activeTabId:'B'})
+     79|         await settle()
+     80|         expect(s.getContent()).toBe('unsaved A')
+       |                                ^
+     81|     })
+     82|     it('does not write a note that was only viewed', async () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > does not write a note that was only viewed
+AssertionError: expected [ [ 'A', 'original A' ] ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   [
++     "A",
++     "original A",
++   ],
++ ]
+
+ ❯ audit-lifecycle.probe.test.ts:86:26
+     84|         render({...s.props, activeTabId:'B'})
+     85|         await settle()
+     86|         expect(h.writes).toEqual([])
+       |                          ^
+     87|     })
+     88|     it('retains unsaved content through a tab path rename', async () =…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > retains unsaved content through a tab path rename
+AssertionError: expected 'original A' to be 'unsaved A' // Object.is equality
+
+Expected: "unsaved A"
+Received: "original A"
+
+ ❯ audit-lifecycle.probe.test.ts:92:32
+     90|         render({...s.props, activeTabId:'Renamed', tabs:[{id:'Renamed'…
+     91|         await settle()
+     92|         expect(s.getContent()).toBe('unsaved A')
+       |                                ^
+     93|     })
+     94|     it('finishes hydration after a dependency changes while reading', …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  audit-lifecycle.probe.test.ts > temporary lifecycle audit probes > finishes hydration after a dependency changes while reading
+AssertionError: expected 'original A' to be 'original B' // Object.is equality
+
+Expected: "original B"
+Received: "original A"
+
+ ❯ audit-lifecycle.probe.test.ts:106:32
+    104|         finish('original B')
+    105|         await settle()
+    106|         expect(s.getContent()).toBe('original B')
+       |                                ^
+    107|     })
+    108| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  13:21:46
+   Duration  1.11s (transform 321ms, setup 0ms, import 423ms, tests 46ms, environment 1ms)

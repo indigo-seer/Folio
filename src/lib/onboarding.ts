@@ -14,8 +14,8 @@ Welcome — you're all set. Here are the essentials.
 
 - **New note** — \`Ctrl+N\`
 - **Quick switcher** — \`Ctrl+K\`
-- **Focus mode** — \`Ctrl+Shift+F\`
-- **Open vault** — \`Ctrl+O\`
+- **Focus mode** — \`Ctrl+,\`
+- **Typewriter mode** — \`Ctrl+.\`
 
 > On Mac, replace Ctrl with Cmd.
 

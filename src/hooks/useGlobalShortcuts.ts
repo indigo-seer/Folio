@@ -22,6 +22,16 @@ export function useGlobalShortcuts({
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const isCtrlOrCmd = e.metaKey || e.ctrlKey;
+            const target = e.target instanceof HTMLElement ? e.target : null;
+            const isEditingText = Boolean(
+                target?.closest('input, textarea, select, [contenteditable="true"]')
+                && !target?.closest('.ProseMirror'),
+            );
+            const hasOpenDialog = Boolean(document.querySelector('[role="dialog"][aria-modal="true"]'));
+
+            // Keep destructive/global shortcuts out of text fields and modal
+            // workflows. Escape and component-local keys remain available.
+            if (isEditingText || hasOpenDialog) return;
 
             // Cmd+, / Ctrl+, to toggle Focus Mode
             const isFocusModeToggle = isCtrlOrCmd && !e.shiftKey && (e.key === ',' || e.code === 'Comma');

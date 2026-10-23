@@ -2,6 +2,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    // Process environment must be finalized before Tokio creates worker
+    // threads. Mutating it afterwards is unsafe on Unix.
+    #[cfg(target_os = "linux")]
+    app_lib::configure_linux_webkit_env();
+
     // tauri-plugin-aptabase constructs a reqwest client during plugin init,
     // which requires a live Tokio reactor even before the event loop starts.
     // We create and enter a runtime here so that requirement is satisfied.

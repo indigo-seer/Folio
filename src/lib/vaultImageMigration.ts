@@ -1,5 +1,6 @@
 import { FileNode, fs } from './fs'
-import { hashPath, isTauri, loadConfig, saveConfig } from './config'
+import { hashPath, isTauri, loadConfig, updateConfig } from './config'
+import { getDocumentSession } from './documentSessions'
 import {
     decodeFileUrlToPath,
     ingestImageSourceToAttachments,
@@ -144,13 +145,21 @@ async function migrateHtmlImageTags(markdown: string, resolveReplacement: Replac
     })
 }
 
-async function migrateNoteContent(markdown: string, resolveReplacement: ReplacementResolver): Promise<{ output: string; changed: boolean }> {
+export async function migrateNoteContent(markdown: string, resolveReplacement: ReplacementResolver): Promise<{ output: string; changed: boolean }> {
     if (!markdown.includes('![') && !markdown.includes('<img')) {
         return { output: markdown, changed: false }
     }
 
+    const protectedSegments: string[] = []
+    const protect = (segment: string) => {
+        const token = `\uE000FOLIUM_CODE_${protectedSegments.length}\uE001`
+        protectedSegments.push(segment)
+        return token
+    }
     let changed = false
     let current = markdown
+        .replace(/^(?:```|~~~)[^\n]*\n[\s\S]*?^(?:```|~~~)\s*$/gm, protect)
+        .replace(/(`+)([^\n]*?)\1/g, protect)
 
     const standard = await migrateStandardMarkdownImages(current, resolveReplacement)
     current = standard.output
@@ -164,6 +173,7 @@ async function migrateNoteContent(markdown: string, resolveReplacement: Replacem
     current = htmlImages.output
     changed = changed || htmlImages.changed
 
+    current = current.replace(/\uE000FOLIUM_CODE_(\d+)\uE001/g, (_match, index) => protectedSegments[Number(index)] || '')
     return { output: current, changed }
 }
 
@@ -182,9 +192,9 @@ function pendingMapToRecord(pending: Map<string, Set<string>>): PendingBySource 
     return out
 }
 
-async function migrateVaultImages(vaultPath: string): Promise<{ pending: PendingBySource; discoveredImages: string[] }> {
+async function migrateVaultImages(vaultPath: string): Promise<{ pending: PendingBySource; discoveredImages: string[]; complete: boolean }> {
     if (!fs.writeBinaryFile) {
-        return { pending: {}, discoveredImages: [] }
+        return { pending: {}, discoveredImages: [], complete: false }
     }
 
     await ensureAttachmentFolder(vaultPath)
@@ -235,9 +245,14 @@ async function migrateVaultImages(vaultPath: string): Promise<{ pending: Pending
     }
 
     let migratedCount = 0
+    let failedNotes = 0
 
     for (const markdownPath of markdownPaths) {
         try {
+            if (getDocumentSession(markdownPath)?.dirty) {
+                failedNotes += 1
+                continue
+            }
             const raw = await fs.readFile(markdownPath)
             const noteAwareResolver: ReplacementResolver = async (source) => {
                 const result = await resolveReplacement(source)
@@ -255,9 +270,12 @@ async function migrateVaultImages(vaultPath: string): Promise<{ pending: Pending
             }
 
             if (!changed || output === raw) continue
+            const latest = await fs.readFile(markdownPath)
+            if (latest !== raw) throw new Error('Note changed while image migration was running')
             await fs.writeFile(markdownPath, output)
             migratedCount += 1
         } catch (err) {
+            failedNotes += 1
             console.warn('[Folium Migration] Failed to migrate note:', markdownPath, err)
         }
     }
@@ -269,6 +287,7 @@ async function migrateVaultImages(vaultPath: string): Promise<{ pending: Pending
     return {
         pending: pendingMapToRecord(pendingBySource),
         discoveredImages: Array.from(discoveredImages),
+        complete: failedNotes === 0,
     }
 }
 
@@ -326,6 +345,7 @@ async function retryPendingSources(vaultPath: string, pendingBySource: PendingBy
 
     for (const notePath of notePathsToUpdate) {
         try {
+            if (getDocumentSession(notePath)?.dirty) throw new Error('Note has unsaved edits')
             const raw = await fs.readFile(notePath)
             const { output, changed } = await migrateNoteContent(raw, async (source): Promise<ResolveResult> => {
                 const replacement = resolvedSources.get(source)
@@ -339,6 +359,8 @@ async function retryPendingSources(vaultPath: string, pendingBySource: PendingBy
             })
 
             if (changed && output !== raw) {
+                const latest = await fs.readFile(notePath)
+                if (latest !== raw) throw new Error('Note changed while image migration retry was running')
                 await fs.writeFile(notePath, output)
             }
         } catch (err) {
@@ -371,11 +393,13 @@ export async function runVaultImageMigrationInBackground(vaultPath: string, work
         if (currentVersion < IMAGE_INGESTION_MIGRATION_VERSION) {
             const migrationResult = await migrateVaultImages(vaultPath)
 
-            const latestConfig = await loadConfig()
-            const existingPending = normalizePending(latestConfig.migrations.imageIngestionPendingByWorkspace[resolvedWorkspaceId])
-            latestConfig.migrations.imageIngestionByWorkspace[resolvedWorkspaceId] = IMAGE_INGESTION_MIGRATION_VERSION
-            latestConfig.migrations.imageIngestionPendingByWorkspace[resolvedWorkspaceId] = mergePending(existingPending, migrationResult.pending)
-            await saveConfig(latestConfig)
+            await updateConfig(latestConfig => {
+                const existingPending = normalizePending(latestConfig.migrations.imageIngestionPendingByWorkspace[resolvedWorkspaceId])
+                if (migrationResult.complete) {
+                    latestConfig.migrations.imageIngestionByWorkspace[resolvedWorkspaceId] = IMAGE_INGESTION_MIGRATION_VERSION
+                }
+                latestConfig.migrations.imageIngestionPendingByWorkspace[resolvedWorkspaceId] = mergePending(existingPending, migrationResult.pending)
+            })
             void warmCacheForNote(migrationResult.discoveredImages)
             return
         }
@@ -383,9 +407,9 @@ export async function runVaultImageMigrationInBackground(vaultPath: string, work
         if (Object.keys(pendingForWorkspace).length === 0) return
 
         const updatedPending = await retryPendingSources(vaultPath, pendingForWorkspace)
-        const latestConfig = await loadConfig()
-        latestConfig.migrations.imageIngestionPendingByWorkspace[resolvedWorkspaceId] = updatedPending
-        await saveConfig(latestConfig)
+        await updateConfig(latestConfig => {
+            latestConfig.migrations.imageIngestionPendingByWorkspace[resolvedWorkspaceId] = updatedPending
+        })
     } catch (err) {
         console.warn('[Folium Migration] Startup image migration failed:', err)
     } finally {

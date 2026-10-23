@@ -1,0 +1,92 @@
+
+ RUN  v4.1.2 /mnt/storage/Projects/Development/Folio-main
+
+ × audit-filesystem.probe.test.ts > temporary filesystem audit probes > does not truncate an existing Untitled note 14ms
+   → expected '' to be 'valuable text' // Object.is equality
+ × audit-filesystem.probe.test.ts > temporary filesystem audit probes > rejects names escaping the selected vault 5ms
+   → promise resolved "'/vault/../outside.md'" instead of rejecting
+ × audit-filesystem.probe.test.ts > temporary filesystem audit probes > does not overwrite a rename destination 3ms
+   → expected 'A' to be 'B' // Object.is equality
+ × audit-filesystem.probe.test.ts > temporary filesystem audit probes > browser scan paths can be used for subsequent filesystem operations 5ms
+   → promise rejected "Error: No such subfolder: Vault" instead of resolving
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  audit-filesystem.probe.test.ts > temporary filesystem audit probes > does not truncate an existing Untitled note
+AssertionError: expected '' to be 'valuable text' // Object.is equality
+
+- Expected
++ Received
+
+- valuable text
+
+ ❯ audit-filesystem.probe.test.ts:16:48
+     14|         disk.set('/vault/Untitled.md','valuable text')
+     15|         await tauriFs.createFile('/vault','Untitled')
+     16|         expect(disk.get('/vault/Untitled.md')).toBe('valuable text')
+       |                                                ^
+     17|     })
+     18|     it('rejects names escaping the selected vault', async () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  audit-filesystem.probe.test.ts > temporary filesystem audit probes > rejects names escaping the selected vault
+AssertionError: promise resolved "'/vault/../outside.md'" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+"/vault/../outside.md"
+
+ ❯ audit-filesystem.probe.test.ts:19:63
+     17|     })
+     18|     it('rejects names escaping the selected vault', async () => {
+     19|         await expect(tauriFs.createFile('/vault','../outside')).reject…
+       |                                                               ^
+     20|     })
+     21|     it('does not overwrite a rename destination', async () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  audit-filesystem.probe.test.ts > temporary filesystem audit probes > does not overwrite a rename destination
+AssertionError: expected 'A' to be 'B' // Object.is equality
+
+Expected: "B"
+Received: "A"
+
+ ❯ audit-filesystem.probe.test.ts:24:41
+     22|         disk.set('/vault/A.md','A');disk.set('/vault/B.md','B')
+     23|         await tauriFs.renameFile('/vault/A.md','B')
+     24|         expect(disk.get('/vault/B.md')).toBe('B')
+       |                                         ^
+     25|     })
+     26|     it('browser scan paths can be used for subsequent filesystem opera…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  audit-filesystem.probe.test.ts > temporary filesystem audit probes > browser scan paths can be used for subsequent filesystem operations
+AssertionError: promise rejected "Error: No such subfolder: Vault" instead of resolving
+ ❯ audit-filesystem.probe.test.ts:35:56
+     33|         const selected = await browserFs.openVault()
+     34|         const tree = await browserFs.scanDirectory(selected!.path)
+     35|         await expect(browserFs.deleteFile(tree[0].path)).resolves.toBe…
+       |                                                        ^
+     36|     })
+     37| })
+
+Caused by: Error: No such subfolder: Vault
+ ❯ Object.getDirectoryHandle audit-filesystem.probe.test.ts:30:64
+ ❯ browserGetParentHandle src/lib/fs/browserAdapter.ts:46:33
+ ❯ Object.deleteFile src/lib/fs/browserAdapter.ts:177:36
+ ❯ audit-filesystem.probe.test.ts:35:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  13:20:09
+   Duration  757ms (transform 140ms, setup 0ms, import 202ms, tests 30ms, environment 0ms)
