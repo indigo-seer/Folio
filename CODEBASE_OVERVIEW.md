@@ -115,7 +115,7 @@ The current `Refactored-Parser` branch does not contain the sync implementation.
 - `npm test` / `pnpm test` runs Vitest.
 - Current verification status: 74 tests passing across 10 test files.
 - TypeScript project validation and the Vite production build pass.
-- CI and release workflows pin Node 22, pnpm 12.14, and Rust 1.88; installs and Rust commands use their lockfiles.
+- CI and release workflows pin Node 22, pnpm 12.14, and Rust 1.90; installs and Rust commands use their lockfiles.
 - Linux `cargo fmt --check`, `cargo check --locked`, and `cargo clippy --locked --all-targets --all-features -- -D warnings` pass.
 - `cargo test --locked` passes two native network-boundary tests covering public, private, reserved, and IPv4-mapped address handling.
 - The audit's preservation/lifecycle/adapter probes were converted into permanent production-path regression tests where the remediation was implemented. Original evidence remains in `docs/audits/2026-10-19/`.
